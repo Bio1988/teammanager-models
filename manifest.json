@@ -11,11 +11,6 @@
         "file": "koboldcpp-win64.exe",
         "size_mb": 605,
         "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-win64.exe"
-      },
-      "linux": {
-        "file": "koboldcpp-linux",
-        "size_mb": 45,
-        "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-linux"
       }
     },
     "chatterbox": {
