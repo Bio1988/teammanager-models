@@ -1,0 +1,72 @@
+{
+  "version": "1",
+  "generated": "2026-07-06T10:00:00Z",
+  "base_url": "https://forgejo.g-grp.com",
+  "repo": "Max/teammanager-models",
+  "assets": {
+    "koboldcpp": {
+      "version": "1.86",
+      "release_tag": "koboldcpp-v1.86",
+      "windows": {
+        "file": "koboldcpp-win64.exe",
+        "size_mb": 605,
+        "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-win64.exe"
+      },
+      "linux": {
+        "file": "koboldcpp-linux",
+        "size_mb": 45,
+        "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-linux"
+      }
+    },
+    "chatterbox": {
+      "version": "2.0.0",
+      "release_tag": "chatterbox-v2.0.0",
+      "server": {
+        "file": "chatterbox-server-v2.0.0.zip",
+        "size_mb": 15,
+        "url": "{base_url}/Max/teammanager-models/releases/download/chatterbox-v2.0.0/chatterbox-server-v2.0.0.zip"
+      },
+      "model": {
+        "file": "chatterbox-model.onnx",
+        "size_mb": 500,
+        "url": "{base_url}/Max/teammanager-models/releases/download/chatterbox-v2.0.0/chatterbox-model.onnx",
+        "note": "Chatterbox-TTS-Server manages its own model download. This URL is a mirror."
+      }
+    },
+    "models": {
+      "stt/whisper-base": {
+        "version": "1.0",
+        "release_tag": "whisper-v1",
+        "file": "ggml-base.en.bin",
+        "size_mb": 142,
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-v1/ggml-base.en.bin",
+        "type": "stt"
+      },
+      "tts/kokoro": {
+        "version": "1.0",
+        "release_tag": "kokoro-v1",
+        "file": "Kokoro_no_espeak_Q4.gguf",
+        "size_mb": 350,
+        "url": "{base_url}/Max/teammanager-models/releases/download/kokoro-v1/Kokoro_no_espeak_Q4.gguf",
+        "type": "tts"
+      },
+      "llm/qwen3-0.6b": {
+        "version": "1.0",
+        "release_tag": "qwen3-0.6b-q4",
+        "file": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+        "size_mb": 407,
+        "url": "{base_url}/Max/teammanager-models/releases/download/qwen3-0.6b-q4/Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+        "type": "llm"
+      }
+    },
+    "voice_profiles": {
+      "version": "1.0",
+      "release_tag": "voices-v1",
+      "description": "Bundled race engineer voice reference audio clips for Chatterbox voice cloning.",
+      "files": []
+    }
+  },
+  "checksums": {
+    "algorithm": "sha256"
+  }
+}
