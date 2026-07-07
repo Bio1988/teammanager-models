@@ -1,6 +1,6 @@
 {
-  "version": "2",
-  "generated": "2026-07-07T07:32:57Z",
+  "version": "3",
+  "generated": "2026-07-07T14:11:13Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -106,6 +106,126 @@
         "sha256": "083165f5bd897d9a52a97b2792bde0be9752cbe0f75a10ddbd1742c1b49bbe6e",
         "url": "{base_url}/Max/teammanager-models/releases/download/lfm2.5-1.2b-q3/LFM2.5-1.2B-Instruct-Q3_K_S.gguf",
         "type": "llm"
+      },
+      "whisper-base-q5_1": {
+        "version": "1.0",
+        "release_tag": "whisper-q5-v1",
+        "file": "ggml-base-q5_1.bin",
+        "local_file": "ggml-base-q5_1.bin",
+        "size_mb": 57,
+        "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-base-q5_1.bin",
+        "type": "stt"
+      },
+      "whisper-small-q5_1": {
+        "version": "1.0",
+        "release_tag": "whisper-q5-v1",
+        "file": "ggml-small-q5_1.bin",
+        "local_file": "ggml-small-q5_1.bin",
+        "size_mb": 182,
+        "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-small-q5_1.bin",
+        "type": "stt"
+      },
+      "whisper-large-v3-turbo-q5_0": {
+        "version": "1.0",
+        "release_tag": "whisper-q5-v1",
+        "file": "ggml-large-v3-turbo-q5_0.bin",
+        "local_file": "ggml-large-v3-turbo-q5_0.bin",
+        "size_mb": 548,
+        "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-large-v3-turbo-q5_0.bin",
+        "type": "stt"
+      },
+      "kokoro-onnx-int8": {
+        "version": "1.0",
+        "release_tag": "kokoro-onnx-v1",
+        "file": "model_quantized.onnx",
+        "local_file": "model_quantized.onnx",
+        "size_mb": 89,
+        "sha256": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+        "url": "{base_url}/Max/teammanager-models/releases/download/kokoro-onnx-v1/model_quantized.onnx",
+        "type": "tts"
+      },
+      "kokoro-onnx-q8f16": {
+        "version": "1.0",
+        "release_tag": "kokoro-onnx-v1",
+        "file": "model_q8f16.onnx",
+        "local_file": "model_q8f16.onnx",
+        "size_mb": 83,
+        "sha256": "04c658aec1b6008857c2ad10f8c589d4180d0ec427e7e6118ceb487e215c3cd0",
+        "url": "{base_url}/Max/teammanager-models/releases/download/kokoro-onnx-v1/model_q8f16.onnx",
+        "type": "tts"
+      },
+      "qwen3.5-2b-iq4_nl": {
+        "version": "1.0",
+        "release_tag": "qwen3.5-2b-v1",
+        "file": "Qwen3.5-2B-IQ4_NL.gguf",
+        "local_file": "Qwen3.5-2B-IQ4_NL.gguf",
+        "size_mb": 1157,
+        "sha256": "e430d87ebc5abbb269c2e2461f1a49b9c5dc79847c13c786dc3615d0b116c4ba",
+        "url": "{base_url}/Max/teammanager-models/releases/download/qwen3.5-2b-v1/Qwen3.5-2B-IQ4_NL.gguf",
+        "type": "llm"
+      },
+      "qwen3.5-2b-q4_k_m": {
+        "version": "1.0",
+        "release_tag": "qwen3.5-2b-v1",
+        "file": "Qwen3.5-2B-Q4_K_M.gguf",
+        "local_file": "Qwen3.5-2B-Q4_K_M.gguf",
+        "size_mb": 1222,
+        "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+        "url": "{base_url}/Max/teammanager-models/releases/download/qwen3.5-2b-v1/Qwen3.5-2B-Q4_K_M.gguf",
+        "type": "llm"
+      },
+      "smollm2-1.7b-q3_k_m": {
+        "version": "1.0",
+        "release_tag": "smollm2-1.7b-v1",
+        "file": "SmolLM2-1.7B-Instruct-Q3_K_M.gguf",
+        "local_file": "SmolLM2-1.7B-Instruct-Q3_K_M.gguf",
+        "size_mb": 821,
+        "sha256": "a2ce91737dfa2127c4fce6604b29218567f6343b16c560aab93efa025f958ecb",
+        "url": "{base_url}/Max/teammanager-models/releases/download/smollm2-1.7b-v1/SmolLM2-1.7B-Instruct-Q3_K_M.gguf",
+        "type": "llm"
+      },
+      "smollm2-1.7b-q4_k_m": {
+        "version": "1.0",
+        "release_tag": "smollm2-1.7b-v1",
+        "file": "SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+        "local_file": "SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+        "size_mb": 1007,
+        "sha256": "fab954d296aa25885960ed771a005343c220ac93ef78a53454e667e334935fe9",
+        "url": "{base_url}/Max/teammanager-models/releases/download/smollm2-1.7b-v1/SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+        "type": "llm"
+      },
+      "falcon3-1b-q4_k_m": {
+        "version": "1.0",
+        "release_tag": "falcon3-1b-v1",
+        "file": "Falcon3-1B-Instruct-Q4_K_M.gguf",
+        "local_file": "Falcon3-1B-Instruct-Q4_K_M.gguf",
+        "size_mb": 1009,
+        "sha256": "856e34792b706340545cd1b011d0d0a1a5a4b665da5f0de75d2a1e85eb4ac0d5",
+        "url": "{base_url}/Max/teammanager-models/releases/download/falcon3-1b-v1/Falcon3-1B-Instruct-Q4_K_M.gguf",
+        "type": "llm"
+      },
+      "granite3.3-2b-iq4_nl": {
+        "version": "1.0",
+        "release_tag": "granite3.3-2b-v1",
+        "file": "granite-3.3-2b-instruct-IQ4_NL.gguf",
+        "local_file": "granite-3.3-2b-instruct-IQ4_NL.gguf",
+        "size_mb": 1392,
+        "sha256": "7ac1b93a2a995e4ab5a2346f6b356dac8118a4ba105400a2e17d859777f2e01e",
+        "url": "{base_url}/Max/teammanager-models/releases/download/granite3.3-2b-v1/granite-3.3-2b-instruct-IQ4_NL.gguf",
+        "type": "llm"
+      },
+      "qwen3.5-4b-revised-q4_k_m": {
+        "version": "1.0",
+        "release_tag": "qwen3.5-4b-revised-v1",
+        "file": "Qwen3.5-4B-Revised-q4_k_m.gguf",
+        "local_file": "Qwen3.5-4B-Revised-q4_k_m.gguf",
+        "size_mb": 2583,
+        "sha256": "5368a5bc1bf6e68b74387be522e3c1c5c5628680ed02986a50a40e1dd676c0bf",
+        "url": "{base_url}/Max/teammanager-models/releases/download/qwen3.5-4b-revised-v1/Qwen3.5-4B-Revised-q4_k_m.gguf",
+        "type": "llm"
       }
     },
     "voice_profiles": {
@@ -127,7 +247,19 @@
       "Qwen_Qwen3-0.6B-Q4_K_M.gguf": "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14",
       "Qwen3.5-0.8B-Q4_K_M.gguf": "f5b14da98939b60bbe1019a964eba656407e1e0b64f1fe3003ff6d650e93bfec",
       "LFM2.5-1.2B-Instruct-Q3_K_S.gguf": "083165f5bd897d9a52a97b2792bde0be9752cbe0f75a10ddbd1742c1b49bbe6e",
-      "chatterbox-server-v2.0.0.zip": "fe30c44a6ed48b37e40dcffb6d30fcd47e7bfcc4f591fc9a16b01a54aede61b9"
+      "chatterbox-server-v2.0.0.zip": "fe30c44a6ed48b37e40dcffb6d30fcd47e7bfcc4f591fc9a16b01a54aede61b9",
+      "ggml-base-q5_1.bin": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+      "ggml-small-q5_1.bin": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "ggml-large-v3-turbo-q5_0.bin": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "model_quantized.onnx": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+      "model_q8f16.onnx": "04c658aec1b6008857c2ad10f8c589d4180d0ec427e7e6118ceb487e215c3cd0",
+      "Qwen3.5-2B-IQ4_NL.gguf": "e430d87ebc5abbb269c2e2461f1a49b9c5dc79847c13c786dc3615d0b116c4ba",
+      "Qwen3.5-2B-Q4_K_M.gguf": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+      "SmolLM2-1.7B-Instruct-Q3_K_M.gguf": "a2ce91737dfa2127c4fce6604b29218567f6343b16c560aab93efa025f958ecb",
+      "SmolLM2-1.7B-Instruct-Q4_K_M.gguf": "fab954d296aa25885960ed771a005343c220ac93ef78a53454e667e334935fe9",
+      "Falcon3-1B-Instruct-Q4_K_M.gguf": "856e34792b706340545cd1b011d0d0a1a5a4b665da5f0de75d2a1e85eb4ac0d5",
+      "granite-3.3-2b-instruct-IQ4_NL.gguf": "7ac1b93a2a995e4ab5a2346f6b356dac8118a4ba105400a2e17d859777f2e01e",
+      "Qwen3.5-4B-Revised-q4_k_m.gguf": "5368a5bc1bf6e68b74387be522e3c1c5c5628680ed02986a50a40e1dd676c0bf"
     }
   }
 }
