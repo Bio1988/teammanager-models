@@ -1,6 +1,6 @@
 {
-  "version": "1",
-  "generated": "2026-07-06T10:00:00Z",
+  "version": "2",
+  "generated": "2026-07-07T07:32:57Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -10,7 +10,14 @@
       "windows": {
         "file": "koboldcpp-win64.exe",
         "size_mb": 605,
+        "sha256": "0da35863b367567862be3693bbb1947f70532dd37b9ae733ec054b0a5194f0a6",
         "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-win64.exe"
+      },
+      "linux": {
+        "file": "koboldcpp-linux-x64",
+        "size_mb": 611,
+        "sha256": "a6b48bb7dc5364b8ea309faa9a6ec924dad2b56e12edde4775993530f3f16512",
+        "url": "{base_url}/Max/teammanager-models/releases/download/koboldcpp-v1.86/koboldcpp-linux-x64"
       }
     },
     "chatterbox": {
@@ -18,50 +25,109 @@
       "release_tag": "chatterbox-v2.0.0",
       "server": {
         "file": "chatterbox-server-v2.0.0.zip",
-        "size_mb": 15,
+        "size_mb": 20,
+        "sha256": "fe30c44a6ed48b37e40dcffb6d30fcd47e7bfcc4f591fc9a16b01a54aede61b9",
         "url": "{base_url}/Max/teammanager-models/releases/download/chatterbox-v2.0.0/chatterbox-server-v2.0.0.zip"
       },
       "model": {
-        "file": "chatterbox-model.onnx",
-        "size_mb": 500,
-        "url": "{base_url}/Max/teammanager-models/releases/download/chatterbox-v2.0.0/chatterbox-model.onnx",
-        "note": "Chatterbox-TTS-Server manages its own model download. This URL is a mirror."
+        "file": "",
+        "size_mb": 0,
+        "url": "",
+        "note": "Chatterbox-TTS-Server manages model download/cache during first start; TeamManager prepares the cache directory."
       }
     },
     "models": {
-      "stt/whisper-base": {
+      "whisper-base.en": {
         "version": "1.0",
         "release_tag": "whisper-v1",
         "file": "ggml-base.en.bin",
-        "size_mb": 142,
+        "local_file": "whisper-base.en.bin",
+        "size_mb": 141,
+        "sha256": "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002",
         "url": "{base_url}/Max/teammanager-models/releases/download/whisper-v1/ggml-base.en.bin",
         "type": "stt"
       },
-      "tts/kokoro": {
+      "whisper-tiny.en": {
+        "version": "1.0",
+        "release_tag": "whisper-v1",
+        "file": "ggml-tiny.en.bin",
+        "local_file": "whisper-tiny.en.bin",
+        "size_mb": 74,
+        "sha256": "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f",
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-v1/ggml-tiny.en.bin",
+        "type": "stt"
+      },
+      "whisper-small.en": {
+        "version": "1.0",
+        "release_tag": "whisper-v1",
+        "file": "ggml-small.en.bin",
+        "local_file": "whisper-small.en.bin",
+        "size_mb": 465,
+        "sha256": "c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d",
+        "url": "{base_url}/Max/teammanager-models/releases/download/whisper-v1/ggml-small.en.bin",
+        "type": "stt"
+      },
+      "kokoro": {
         "version": "1.0",
         "release_tag": "kokoro-v1",
         "file": "Kokoro_no_espeak_Q4.gguf",
-        "size_mb": 350,
+        "local_file": "Kokoro_no_espeak_Q4.gguf",
+        "size_mb": 189,
+        "sha256": "70c1c2afa5f2ca60008b180ac942ddaab011371372745e6f45265da3d2a7a852",
         "url": "{base_url}/Max/teammanager-models/releases/download/kokoro-v1/Kokoro_no_espeak_Q4.gguf",
         "type": "tts"
       },
-      "llm/qwen3-0.6b": {
+      "qwen3-0.6b-q4_k_m": {
         "version": "1.0",
         "release_tag": "qwen3-0.6b-q4",
         "file": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-        "size_mb": 407,
+        "local_file": "Qwen3-0.6B-Q4_K_M.gguf",
+        "size_mb": 462,
+        "sha256": "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14",
         "url": "{base_url}/Max/teammanager-models/releases/download/qwen3-0.6b-q4/Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+        "type": "llm"
+      },
+      "qwen3.5-0.8b-q4_k_m": {
+        "version": "1.0",
+        "release_tag": "qwen3.5-0.8b-q4",
+        "file": "Qwen3.5-0.8B-Q4_K_M.gguf",
+        "local_file": "Qwen3.5-0.8B-Q4_K_M.gguf",
+        "size_mb": 503,
+        "sha256": "f5b14da98939b60bbe1019a964eba656407e1e0b64f1fe3003ff6d650e93bfec",
+        "url": "{base_url}/Max/teammanager-models/releases/download/qwen3.5-0.8b-q4/Qwen3.5-0.8B-Q4_K_M.gguf",
+        "type": "llm"
+      },
+      "lfm2.5-1.2b-instruct-q3_k_s": {
+        "version": "1.0",
+        "release_tag": "lfm2.5-1.2b-q3",
+        "file": "LFM2.5-1.2B-Instruct-Q3_K_S.gguf",
+        "local_file": "LFM2.5-1.2B-Instruct-Q3_K_S.gguf",
+        "size_mb": 532,
+        "sha256": "083165f5bd897d9a52a97b2792bde0be9752cbe0f75a10ddbd1742c1b49bbe6e",
+        "url": "{base_url}/Max/teammanager-models/releases/download/lfm2.5-1.2b-q3/LFM2.5-1.2B-Instruct-Q3_K_S.gguf",
         "type": "llm"
       }
     },
     "voice_profiles": {
       "version": "1.0",
       "release_tag": "voices-v1",
-      "description": "Bundled race engineer voice reference audio clips for Chatterbox voice cloning.",
+      "description": "Bundled race engineer voice profiles are generated locally from TeamManager resources; no external voice profile archive is required.",
       "files": []
     }
   },
   "checksums": {
-    "algorithm": "sha256"
+    "algorithm": "sha256",
+    "files": {
+      "koboldcpp-win64.exe": "0da35863b367567862be3693bbb1947f70532dd37b9ae733ec054b0a5194f0a6",
+      "koboldcpp-linux-x64": "a6b48bb7dc5364b8ea309faa9a6ec924dad2b56e12edde4775993530f3f16512",
+      "ggml-base.en.bin": "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002",
+      "ggml-tiny.en.bin": "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f",
+      "ggml-small.en.bin": "c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d",
+      "Kokoro_no_espeak_Q4.gguf": "70c1c2afa5f2ca60008b180ac942ddaab011371372745e6f45265da3d2a7a852",
+      "Qwen_Qwen3-0.6B-Q4_K_M.gguf": "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14",
+      "Qwen3.5-0.8B-Q4_K_M.gguf": "f5b14da98939b60bbe1019a964eba656407e1e0b64f1fe3003ff6d650e93bfec",
+      "LFM2.5-1.2B-Instruct-Q3_K_S.gguf": "083165f5bd897d9a52a97b2792bde0be9752cbe0f75a10ddbd1742c1b49bbe6e",
+      "chatterbox-server-v2.0.0.zip": "fe30c44a6ed48b37e40dcffb6d30fcd47e7bfcc4f591fc9a16b01a54aede61b9"
+    }
   }
 }
