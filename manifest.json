@@ -1,6 +1,6 @@
 {
   "version": "3",
-  "generated": "2026-07-09T07:40:17Z",
+  "generated": "2026-07-11T10:29:46Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -246,6 +246,29 @@
       "installer_note": "Do not treat these entries as single-file assets until archive/release assets are created. Installer support should consume this section as repository snapshots or generated bundle assets.",
       "entries": [
         {
+          "id": "teammanager__pocket-runtime-win-cpu",
+          "source": "forgejo-release",
+          "repo_id": "Max/teammanager-models",
+          "artifact_id": "pocket-runtime-win-cpu-v2.1.0",
+          "family": "pocket-tts",
+          "role": "windows cpu runtime dependency",
+          "priority": "critical",
+          "version": "2.1.0",
+          "release_tag": "pocket-tts-v2.1.0",
+          "file": "pocket-runtime-win-cpu-v2.1.0.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip",
+          "bundle_file": "pocket-runtime-win-cpu-v2.1.0.zip",
+          "bundle_url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip",
+          "local_dir": "runtime/pocket-tts-worker",
+          "size_mb": 292,
+          "type": "voice-tts",
+          "status": "ok",
+          "license": "MIT and bundled upstream dependency licenses",
+          "notes": "CPU-only Windows private Python/Pocket runtime. Required before model/voice archives.",
+          "revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+          "source_url": "https://github.com/kyutai-labs/pocket-tts"
+        },
+        {
           "id": "kyutai__pocket-tts",
           "source": "huggingface",
           "repo_id": "kyutai/pocket-tts",
@@ -253,16 +276,18 @@
           "family": "pocket-tts",
           "role": "live voice cloning",
           "priority": "high",
-          "version": "1.0",
-          "release_tag": "voice-tts-library-v1",
+          "version": "2.1.0",
+          "release_tag": "pocket-tts-v2.1.0",
           "local_dir": "voice-tts-library/hf-snapshots/kyutai__pocket-tts",
-          "size_mb": 9364,
+          "size_mb": 209,
           "type": "voice-tts",
           "status": "ok",
-          "license": "",
-          "notes": "Primary live CPU candidate; gated terms accepted for MaxGles.",
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "notes": "Verified English live/clone model bundle; separate runtime and catalog voice bundle required.",
           "revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
-          "source_url": "https://huggingface.co/kyutai/pocket-tts"
+          "source_url": "https://huggingface.co/kyutai/pocket-tts",
+          "bundle_file": "pocket-model-en-v2.1.0.zip",
+          "bundle_url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-model-en-v2.1.0.zip"
         },
         {
           "id": "kyutai__pocket-tts-without-voice-cloning",
@@ -291,16 +316,18 @@
           "family": "pocket-tts",
           "role": "reference voice catalog",
           "priority": "normal",
-          "version": "1.0",
-          "release_tag": "voice-tts-library-v1",
+          "version": "2.1.0",
+          "release_tag": "pocket-tts-v2.1.0",
           "local_dir": "voice-tts-library/hf-snapshots/kyutai__tts-voices",
-          "size_mb": 1144,
+          "size_mb": 6,
           "type": "voice-tts",
           "status": "ok",
-          "license": "",
-          "notes": "Catalog voices; individual voice licenses may vary.",
+          "license": "CC0-1.0",
+          "notes": "Verified default Alba catalog voice bundle. Additional catalog voices remain optional.",
           "revision": "323332d33f997de8394f24a193e1a76df720e01a",
-          "source_url": "https://huggingface.co/kyutai/tts-voices"
+          "source_url": "https://huggingface.co/kyutai/tts-voices",
+          "bundle_file": "pocket-voice-alba-v2.1.0.zip",
+          "bundle_url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-voice-alba-v2.1.0.zip"
         },
         {
           "id": "neuphonic__neutts-nano",
@@ -852,6 +879,82 @@
           "notes": "Public HF repo inaccessible; copied local artifacts used in benchmark."
         }
       ]
+    },
+    "pocket_bundles": {
+      "version": "2.1.0",
+      "release_tag": "pocket-tts-v2.1.0",
+      "description": "Verified managed Pocket TTS Windows CPU runtime, English model, and Alba catalog voice archives. TeamManager downloads and atomically activates them explicitly; runtime remains offline after activation.",
+      "default_windows": {
+        "platform": "windows-amd64-cpu",
+        "package_version": "2.1.0",
+        "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+        "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
+        "default_language": "english",
+        "runtime": {
+          "id": "teammanager__pocket-runtime-win-cpu",
+          "kind": "runtime",
+          "platform": "windows-amd64-cpu",
+          "package_version": "2.1.0",
+          "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+          "release_tag": "pocket-tts-v2.1.0",
+          "file": "pocket-runtime-win-cpu-v2.1.0.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip",
+          "sha256": "c1762f24c642c592c08768ea8d669ffc348a2fad7a2907ff27502f956fb921b4",
+          "size_bytes": 306278585,
+          "license": "MIT and bundled upstream dependency licenses",
+          "attribution": "Pocket TTS by Kyutai Labs; dependency license files are included in the runtime archive.",
+          "extracted_root": "pocket-runtime-win-cpu-v2.1.0",
+          "layout": {
+            "python_path": "python/python.exe",
+            "worker_path": "worker.py"
+          },
+          "default": true
+        },
+        "english_model": {
+          "id": "kyutai__pocket-tts-english-model",
+          "kind": "model",
+          "platform": "windows-amd64-cpu",
+          "package_version": "2.1.0",
+          "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+          "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
+          "release_tag": "pocket-tts-v2.1.0",
+          "file": "pocket-model-en-v2.1.0.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-model-en-v2.1.0.zip",
+          "sha256": "97889ede2dad2f82dbcabe2e52cca4544fefb4cfb1ae5a201e7e69b15e87bcf5",
+          "size_bytes": 219090877,
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "attribution": "Pocket TTS English model by Kyutai Labs, kyutai/pocket-tts.",
+          "extracted_root": "pocket-model-en-v2.1.0",
+          "layout": {
+            "model_dir": "model",
+            "hf_cache_dir": "hf-cache",
+            "config_path": "model/config.yaml",
+            "language": "english"
+          },
+          "default": true
+        },
+        "catalog_voice": {
+          "id": "kyutai__pocket-voice-alba",
+          "kind": "voice",
+          "platform": "windows-amd64-cpu",
+          "package_version": "2.1.0",
+          "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+          "release_tag": "pocket-tts-v2.1.0",
+          "file": "pocket-voice-alba-v2.1.0.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-voice-alba-v2.1.0.zip",
+          "sha256": "86785daacad96b7e7d754540c02ce205f40fec2eceb62008130c30b30f2bdcab",
+          "size_bytes": 6145821,
+          "license": "CC0-1.0 catalog voice state",
+          "attribution": "Alba catalog voice state from Kyutai Pocket TTS / kyutai/tts-voices.",
+          "extracted_root": "pocket-voice-alba-v2.1.0",
+          "layout": {
+            "voice_dir": "voice",
+            "default_voice_id": "alba"
+          },
+          "default": true
+        }
+      },
+      "optional": []
     }
   },
   "checksums": {
