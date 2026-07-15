@@ -1,6 +1,6 @@
 {
   "version": "3",
-  "generated": "2026-07-11T10:29:46Z",
+  "generated": "2026-07-15T19:55:02Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -954,7 +954,560 @@
           "default": true
         }
       },
-      "optional": []
+      "language_packs": [
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-english-multilang-r1",
+              "file": "pocket-language-english-multilang-r1.zip",
+              "id": "pocket-language-english",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/english/config.yaml",
+                "language": "english",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "584739bb6aa13c21aa9cef8dcdbd382583273cc87e5406751717581ecfd877f8",
+              "size_bytes": 174919599,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-english-multilang-r1.zip"
+            }
+          ],
+          "display_name": "English",
+          "group": "individual",
+          "id": "language-english",
+          "kind": "language",
+          "languages": [
+            "english"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-german-multilang-r1",
+              "file": "pocket-language-german-multilang-r1.zip",
+              "id": "pocket-language-german",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/german/config.yaml",
+                "language": "german",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "0b40a1b868a6b5f36649b6078d16094b53059b122dcf7820973346ad4d08f83d",
+              "size_bytes": 174493125,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german-multilang-r1.zip"
+            }
+          ],
+          "display_name": "German",
+          "group": "individual",
+          "id": "language-german",
+          "kind": "language",
+          "languages": [
+            "german"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-italian-multilang-r1",
+              "file": "pocket-language-italian-multilang-r1.zip",
+              "id": "pocket-language-italian",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/italian/config.yaml",
+                "language": "italian",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "4add8bf4a3cfa08f258768a65adeed0a97d95cbaef746f605601a560047be8f2",
+              "size_bytes": 174761575,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Italian",
+          "group": "individual",
+          "id": "language-italian",
+          "kind": "language",
+          "languages": [
+            "italian"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-portuguese-multilang-r1",
+              "file": "pocket-language-portuguese-multilang-r1.zip",
+              "id": "pocket-language-portuguese",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/portuguese/config.yaml",
+                "language": "portuguese",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "56cdf4f32caca2fc0701f66d90ccf40b8a40863a80ebd3cbc428d9ec5ec7dd30",
+              "size_bytes": 174821657,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Portuguese",
+          "group": "individual",
+          "id": "language-portuguese",
+          "kind": "language",
+          "languages": [
+            "portuguese"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-spanish-multilang-r1",
+              "file": "pocket-language-spanish-multilang-r1.zip",
+              "id": "pocket-language-spanish",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/spanish/config.yaml",
+                "language": "spanish",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "77dc699359ea821ac8cb146db3c1c552352a0300d8eb905ba5271b3844ebef37",
+              "size_bytes": 174792128,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Spanish",
+          "group": "individual",
+          "id": "language-spanish",
+          "kind": "language",
+          "languages": [
+            "spanish"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-french_24l-multilang-r1",
+              "file": "pocket-language-french_24l-multilang-r1.zip",
+              "id": "pocket-language-french_24l",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/french_24l/config.yaml",
+                "language": "french_24l",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "618fa5e422afc8f587f265ebef8356d3be85b845e1ee63eba334221df4b02de3",
+              "size_bytes": 535708026,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-french_24l-multilang-r1.zip"
+            }
+          ],
+          "display_name": "French 24L",
+          "group": "individual",
+          "id": "language-french_24l",
+          "kind": "language",
+          "languages": [
+            "french_24l"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-german_24l-multilang-r1",
+              "file": "pocket-language-german_24l-multilang-r1.zip",
+              "id": "pocket-language-german_24l",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/german_24l/config.yaml",
+                "language": "german_24l",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "c6bcdad0ae8cdf13c91bd2379f48903259ad2f15c9eef94de5fc02b34ab674b8",
+              "size_bytes": 535731619,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german_24l-multilang-r1.zip"
+            }
+          ],
+          "display_name": "German 24L",
+          "group": "individual",
+          "id": "language-german_24l",
+          "kind": "language",
+          "languages": [
+            "german_24l"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-italian_24l-multilang-r1",
+              "file": "pocket-language-italian_24l-multilang-r1.zip",
+              "id": "pocket-language-italian_24l",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/italian_24l/config.yaml",
+                "language": "italian_24l",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "b0ec86cc5e8ff1665d2e33243e8153b7de445acde5ce2ce9941dfdf758609447",
+              "size_bytes": 535895963,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian_24l-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Italian 24L",
+          "group": "individual",
+          "id": "language-italian_24l",
+          "kind": "language",
+          "languages": [
+            "italian_24l"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-portuguese_24l-multilang-r1",
+              "file": "pocket-language-portuguese_24l-multilang-r1.zip",
+              "id": "pocket-language-portuguese_24l",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/portuguese_24l/config.yaml",
+                "language": "portuguese_24l",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "f93502563f4e722bf9c00de849d6bfcc24ba3fecea27d7f021d734f00e080527",
+              "size_bytes": 536099203,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese_24l-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Portuguese 24L",
+          "group": "individual",
+          "id": "language-portuguese_24l",
+          "kind": "language",
+          "languages": [
+            "portuguese_24l"
+          ]
+        },
+        {
+          "archives": [
+            {
+              "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+              "extracted_root": "pocket-language-spanish_24l-multilang-r1",
+              "file": "pocket-language-spanish_24l-multilang-r1.zip",
+              "id": "pocket-language-spanish_24l",
+              "kind": "model",
+              "layout": {
+                "config_path": "models/spanish_24l/config.yaml",
+                "language": "spanish_24l",
+                "model_dir": "models"
+              },
+              "license": "CC-BY-4.0 with upstream model-card terms",
+              "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+              "optional": true,
+              "package_revision": "multilang-r1",
+              "package_version": "2.1.0",
+              "platform": "windows-amd64-cpu",
+              "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+              "sha256": "37e62939b5c15b2c223739aab45715d753b1ed52de0f69fb086964d98b7570ce",
+              "size_bytes": 535993679,
+              "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish_24l-multilang-r1.zip"
+            }
+          ],
+          "display_name": "Spanish 24L",
+          "group": "individual",
+          "id": "language-spanish_24l",
+          "kind": "language",
+          "languages": [
+            "spanish_24l"
+          ]
+        }
+      ],
+      "optional": [
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-english-multilang-r1",
+          "file": "pocket-language-english-multilang-r1.zip",
+          "id": "pocket-language-english",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/english/config.yaml",
+            "language": "english",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "584739bb6aa13c21aa9cef8dcdbd382583273cc87e5406751717581ecfd877f8",
+          "size_bytes": 174919599,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-english-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-german-multilang-r1",
+          "file": "pocket-language-german-multilang-r1.zip",
+          "id": "pocket-language-german",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/german/config.yaml",
+            "language": "german",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "0b40a1b868a6b5f36649b6078d16094b53059b122dcf7820973346ad4d08f83d",
+          "size_bytes": 174493125,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-italian-multilang-r1",
+          "file": "pocket-language-italian-multilang-r1.zip",
+          "id": "pocket-language-italian",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/italian/config.yaml",
+            "language": "italian",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "4add8bf4a3cfa08f258768a65adeed0a97d95cbaef746f605601a560047be8f2",
+          "size_bytes": 174761575,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-portuguese-multilang-r1",
+          "file": "pocket-language-portuguese-multilang-r1.zip",
+          "id": "pocket-language-portuguese",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/portuguese/config.yaml",
+            "language": "portuguese",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "56cdf4f32caca2fc0701f66d90ccf40b8a40863a80ebd3cbc428d9ec5ec7dd30",
+          "size_bytes": 174821657,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-spanish-multilang-r1",
+          "file": "pocket-language-spanish-multilang-r1.zip",
+          "id": "pocket-language-spanish",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/spanish/config.yaml",
+            "language": "spanish",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "77dc699359ea821ac8cb146db3c1c552352a0300d8eb905ba5271b3844ebef37",
+          "size_bytes": 174792128,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-french_24l-multilang-r1",
+          "file": "pocket-language-french_24l-multilang-r1.zip",
+          "id": "pocket-language-french_24l",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/french_24l/config.yaml",
+            "language": "french_24l",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "618fa5e422afc8f587f265ebef8356d3be85b845e1ee63eba334221df4b02de3",
+          "size_bytes": 535708026,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-french_24l-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-german_24l-multilang-r1",
+          "file": "pocket-language-german_24l-multilang-r1.zip",
+          "id": "pocket-language-german_24l",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/german_24l/config.yaml",
+            "language": "german_24l",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "c6bcdad0ae8cdf13c91bd2379f48903259ad2f15c9eef94de5fc02b34ab674b8",
+          "size_bytes": 535731619,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german_24l-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-italian_24l-multilang-r1",
+          "file": "pocket-language-italian_24l-multilang-r1.zip",
+          "id": "pocket-language-italian_24l",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/italian_24l/config.yaml",
+            "language": "italian_24l",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "b0ec86cc5e8ff1665d2e33243e8153b7de445acde5ce2ce9941dfdf758609447",
+          "size_bytes": 535895963,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian_24l-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-portuguese_24l-multilang-r1",
+          "file": "pocket-language-portuguese_24l-multilang-r1.zip",
+          "id": "pocket-language-portuguese_24l",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/portuguese_24l/config.yaml",
+            "language": "portuguese_24l",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "f93502563f4e722bf9c00de849d6bfcc24ba3fecea27d7f021d734f00e080527",
+          "size_bytes": 536099203,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese_24l-multilang-r1.zip"
+        },
+        {
+          "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+          "extracted_root": "pocket-language-spanish_24l-multilang-r1",
+          "file": "pocket-language-spanish_24l-multilang-r1.zip",
+          "id": "pocket-language-spanish_24l",
+          "kind": "model",
+          "layout": {
+            "config_path": "models/spanish_24l/config.yaml",
+            "language": "spanish_24l",
+            "model_dir": "models"
+          },
+          "license": "CC-BY-4.0 with upstream model-card terms",
+          "model_revision": "4c8ad48f8a003909bc4f1122cbe88a4252124621",
+          "optional": true,
+          "package_revision": "multilang-r1",
+          "package_version": "2.1.0",
+          "platform": "windows-amd64-cpu",
+          "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+          "sha256": "37e62939b5c15b2c223739aab45715d753b1ed52de0f69fb086964d98b7570ce",
+          "size_bytes": 535993679,
+          "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish_24l-multilang-r1.zip"
+        }
+      ]
     }
   },
   "checksums": {
