@@ -1,0 +1,38 @@
+{
+  "schema": "teammanager-managed-whisper-authority-v1",
+  "authority_release": "whisper-authority-v1.9.1-r1",
+  "runtime_release": "whispercpp-v1.9.1",
+  "platform": "windows-amd64",
+  "signing": {
+    "algorithm": "Ed25519",
+    "key_id": "sha256:0f7cbba3263a46429f7edbb0e7c42cea5eaa6c111193fded4c74aca80db94537",
+    "public_key_hex": "e6a8a309e98a5f38f4c40938c26c216ecc75980215a365c7610386acedf4cccd",
+    "message_domain": "TeamManager managed Whisper authority v1"
+  },
+  "release_manifest": {
+    "schema_version": 3,
+    "file_name": "teammanager-whisper-runtime-only-win-x64-v1.9.1.manifest-v3.json",
+    "size_bytes": 3997,
+    "sha256": "580054f45ef7918837be16862e3fbd09a30e73f768fc2c305112b1f2ee00d232",
+    "forgejo_url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whispercpp-v1.9.1/teammanager-whisper-runtime-only-win-x64-v1.9.1.manifest-v3.json",
+    "github_url": "https://github.com/Bio1988/teammanager-models/releases/download/whispercpp-v1.9.1/whispercpp-v1.9.1-teammanager-whisper-runtime-only-win-x64-v1.9.1.manifest-v3.json"
+  },
+  "runtime": {
+    "release_identity": "sha256:6ac6eecf51eb0e84bf091bc06d7c2dbb700fef3e4b4e38bb6de1b852b47ba0b6",
+    "file_name": "teammanager-whisper-runtime-only-win-x64-v1.9.1.zip",
+    "size_bytes": 4505044,
+    "sha256": "6ac6eecf51eb0e84bf091bc06d7c2dbb700fef3e4b4e38bb6de1b852b47ba0b6",
+    "forgejo_url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whispercpp-v1.9.1/teammanager-whisper-runtime-only-win-x64-v1.9.1.zip",
+    "github_url": "https://github.com/Bio1988/teammanager-models/releases/download/whispercpp-v1.9.1/whispercpp-v1.9.1-teammanager-whisper-runtime-only-win-x64-v1.9.1.zip"
+  },
+  "baseline_model": {
+    "id": "base-q5_1",
+    "release": "whisper-q5-v1",
+    "release_identity": "sha256:422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+    "file_name": "ggml-base-q5_1.bin",
+    "size_bytes": 59707625,
+    "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+    "forgejo_url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-base-q5_1.bin",
+    "github_url": "https://github.com/Bio1988/teammanager-models/releases/download/whisper-q5-v1/whisper-q5-v1-ggml-base-q5_1.bin"
+  }
+}
