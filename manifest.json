@@ -952,6 +952,21 @@
             "default_voice_id": "alba"
           },
           "default": true
+        },
+        "state_compatibility_model": {
+          "schema": "pocket-state-model-v1",
+          "provider_kind": "pocket_tts_managed",
+          "pocket_package_version": "2.1.0",
+          "model_id": "kyutai/pocket-tts",
+          "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
+          "model_sha256": "473f47d99560bd50eb8b4509d3cacfe7f316ab20bdca86505403a2e6a936a6e9",
+          "model_config_sha256": "9083069e3d99a662955343c398acdffe4eb49bc06d568266c19858c2eca45335",
+          "clone_languages": [
+            {
+              "language": "english",
+              "cloning_weights_sha256": "473f47d99560bd50eb8b4509d3cacfe7f316ab20bdca86505403a2e6a936a6e9"
+            }
+          ]
         }
       },
       "language_packs": [

@@ -1,0 +1,74 @@
+name: publish-pocket-model-manifest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-pocket-model-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download canonical Pocket 2.1.0 English assets
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/pocket-authority"
+          base="${{ forgejo.server_url }}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0"
+          for name in pocket-model-en-v2.1.0.zip pocket-runtime-win-cpu-v2.1.0.zip pocket-voice-alba-v2.1.0.zip; do
+            curl --fail --silent --show-error --location "$base/$name" --output "$RUNNER_TEMP/pocket-authority/$name"
+          done
+      - name: Provision and cross-check signing key
+        env:
+          MODEL_MANIFEST_SIGNING_KEY_PEM: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_PEM }}
+          MODEL_MANIFEST_PUBLIC_KEY_PEM: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_PEM }}
+        run: |
+          set -eu
+          test -n "$MODEL_MANIFEST_SIGNING_KEY_PEM"
+          test -n "$MODEL_MANIFEST_PUBLIC_KEY_PEM"
+          install -m 0600 /dev/null "$RUNNER_TEMP/model-manifest-key.pem"
+          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pem"
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pub"
+          openssl pkey -in "$RUNNER_TEMP/model-manifest-key.pem" -pubout -out "$RUNNER_TEMP/derived.pub"
+          cmp "$RUNNER_TEMP/derived.pub" "$RUNNER_TEMP/model-manifest-key.pub"
+      - name: Derive, sign, verify, and test
+        run: |
+          set -eu
+          python3 scripts/publish-pocket-model-manifest.py \
+            --manifest manifest.json \
+            --artifact-root "$RUNNER_TEMP/pocket-authority" \
+            --signing-key "$RUNNER_TEMP/model-manifest-key.pem" \
+            --public-key "$RUNNER_TEMP/model-manifest-key.pub" \
+            --output-dir "$RUNNER_TEMP/published" \
+            --updated-manifest "$RUNNER_TEMP/manifest.json"
+          python3 -m unittest scripts/test_publish_pocket_model_manifest.py
+      - name: Publish immutable English clone MVP prerelease
+        env:
+          FORGEJO_TOKEN: ${{ secrets.MODEL_RELEASE_TOKEN }}
+        run: |
+          set -eu
+          test -n "$FORGEJO_TOKEN"
+          tag="teammanager-model-manifest-v3-english-clone-mvp.1"
+          api="${{ forgejo.server_url }}/api/v1/repos/${{ forgejo.repository }}"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Authorization: token $FORGEJO_TOKEN" "$api/releases/tags/$tag")" = 404
+          curl --fail --silent --show-error --request POST \
+            --header "Authorization: token $FORGEJO_TOKEN" --header 'Content-Type: application/json' \
+            --data "{\"tag_name\":\"$tag\",\"target_commitish\":\"${{ forgejo.sha }}\",\"name\":\"English Pocket clone MVP model manifest v3\",\"draft\":false,\"prerelease\":true}" \
+            "$api/releases" > "$RUNNER_TEMP/release.json"
+          release_id="$(python3 -c 'import json; print(json.load(open("'$RUNNER_TEMP'/release.json"))["id"])')"
+          for asset in "$RUNNER_TEMP"/published/*; do
+            name="$(basename "$asset")"
+            curl --fail --silent --show-error --request POST \
+              --header "Authorization: token $FORGEJO_TOKEN" --form "attachment=@$asset;filename=$name" \
+              "$api/releases/$release_id/assets?name=$name" > /dev/null
+          done
+      - name: Commit byte-identical reviewed authority
+        run: |
+          set -eu
+          cmp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json"
+          cp "$RUNNER_TEMP/manifest.json" manifest.json
+          cp "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sig" manifest.json.sig
+          cp "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sha256" manifest.json.sha256
+          git config user.name TeamManager Model Publisher
+          git config user.email teammanager-model-publisher@users.noreply.local
+          git add manifest.json manifest.json.sig manifest.json.sha256
+          git diff --cached --quiet || git commit -m "chore(models): publish English Pocket clone authority"
+          git push origin HEAD:${{ forgejo.ref_name }}
