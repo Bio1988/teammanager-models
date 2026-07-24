@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download immutable R2 inputs
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
         run: |
           set -eu
           mkdir -p "$RUNNER_TEMP/pocket-r2"
@@ -23,7 +25,8 @@ jobs:
             'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/e041936c75475d350b405bc870bcf7c22da4e9e6/languages/english/embeddings/alba.safetensors' \
             --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
           curl --fail --silent --show-error --location \
-            'https://raw.githubusercontent.com/Bio1988/race-engineer-go/d1d6362386f3628874b76e262d24c798c2298b6e/runtime/pocket-tts-worker/worker.py' \
+            --header "Authorization: token $FORGEJO_TOKEN" \
+            'https://forgejo.g-grp.com/Max/race-engineer-go/raw/commit/d1d6362386f3628874b76e262d24c798c2298b6e/runtime/pocket-tts-worker/worker.py' \
             --output "$RUNNER_TEMP/pocket-r2/worker.py"
 
       - name: Provision and cross-check signing key
