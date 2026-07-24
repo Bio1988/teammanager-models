@@ -2,6 +2,9 @@ name: publish-pocket-r2
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix/pocket-r2-authority
 
 jobs:
   publish-pocket-r2:
