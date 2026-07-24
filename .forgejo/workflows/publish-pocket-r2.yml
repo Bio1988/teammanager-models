@@ -59,7 +59,7 @@ jobs:
 
       - name: Publish immutable R2 assets and authority
         env:
-          FORGEJO_TOKEN: ${{ secrets.MODEL_RELEASE_TOKEN }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
         run: |
           set -eu
           test -n "$FORGEJO_TOKEN"
