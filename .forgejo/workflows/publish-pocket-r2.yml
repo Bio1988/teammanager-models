@@ -36,7 +36,7 @@ jobs:
             'https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-upstream-alba-e041936/alba.safetensors' \
             --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
 
-      - name: Provision and cross-check signing key
+      - name: Provision signing key
         env:
           MODEL_MANIFEST_SIGNING_KEY_PEM: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_PEM }}
           MODEL_MANIFEST_PUBLIC_KEY_PEM: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_PEM }}
@@ -47,7 +47,15 @@ jobs:
           install -m 0600 /dev/null "$RUNNER_TEMP/model-manifest-key.pem"
           printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pem"
           printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pub"
+
+      - name: Derive signing public key
+        run: |
+          set -eu
           openssl pkey -in "$RUNNER_TEMP/model-manifest-key.pem" -pubout -out "$RUNNER_TEMP/derived.pub"
+
+      - name: Cross-check signing public key
+        run: |
+          set -eu
           cmp "$RUNNER_TEMP/derived.pub" "$RUNNER_TEMP/model-manifest-key.pub"
 
       - name: Build, derive, sign, verify, and test
