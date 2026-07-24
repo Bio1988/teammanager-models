@@ -1,6 +1,6 @@
 {
   "version": "3",
-  "generated": "2026-07-15T19:55:02Z",
+  "generated": "2026-07-24T15:00:00Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -887,7 +887,7 @@
       "default_windows": {
         "platform": "windows-amd64-cpu",
         "package_version": "2.1.0",
-        "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
+        "package_revision": "teammanager-pocket-r2",
         "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
         "default_language": "english",
         "runtime": {
@@ -895,15 +895,15 @@
           "kind": "runtime",
           "platform": "windows-amd64-cpu",
           "package_version": "2.1.0",
-          "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
-          "release_tag": "pocket-tts-v2.1.0",
-          "file": "pocket-runtime-win-cpu-v2.1.0.zip",
-          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip",
-          "sha256": "c1762f24c642c592c08768ea8d669ffc348a2fad7a2907ff27502f956fb921b4",
-          "size_bytes": 306278585,
+          "package_revision": "teammanager-pocket-r2",
+          "release_tag": "pocket-tts-v2.1.0-r2",
+          "file": "pocket-runtime-win-cpu-v2.1.0-r2.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r2/pocket-runtime-win-cpu-v2.1.0-r2.zip",
+          "sha256": "062f2d0e01652d74b4b94db301184a0367cb470d4448c093794d16e5720bed13",
+          "size_bytes": 306398539,
           "license": "MIT and bundled upstream dependency licenses",
           "attribution": "Pocket TTS by Kyutai Labs; dependency license files are included in the runtime archive.",
-          "extracted_root": "pocket-runtime-win-cpu-v2.1.0",
+          "extracted_root": "pocket-runtime-win-cpu-v2.1.0-r2",
           "layout": {
             "python_path": "python/python.exe",
             "worker_path": "worker.py"
@@ -938,15 +938,15 @@
           "kind": "voice",
           "platform": "windows-amd64-cpu",
           "package_version": "2.1.0",
-          "package_revision": "9514983efd6411aa39ddf862391d16c38a062de7",
-          "release_tag": "pocket-tts-v2.1.0",
-          "file": "pocket-voice-alba-v2.1.0.zip",
-          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-voice-alba-v2.1.0.zip",
-          "sha256": "86785daacad96b7e7d754540c02ce205f40fec2eceb62008130c30b30f2bdcab",
-          "size_bytes": 6145821,
+          "package_revision": "teammanager-pocket-r2",
+          "release_tag": "pocket-tts-v2.1.0-r2",
+          "file": "pocket-voice-alba-v2.1.0-r2.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r2/pocket-voice-alba-v2.1.0-r2.zip",
+          "sha256": "73c0f19a9cc08285c9b78f6811909c5bc1e20e69bd06af54a3107048435f5c7f",
+          "size_bytes": 6195421,
           "license": "CC0-1.0 catalog voice state",
-          "attribution": "Alba catalog voice state from Kyutai Pocket TTS / kyutai/tts-voices.",
-          "extracted_root": "pocket-voice-alba-v2.1.0",
+          "attribution": "Official Alba catalog voice state from Kyutai Pocket TTS, immutable upstream revision e041936c75475d350b405bc870bcf7c22da4e9e6.",
+          "extracted_root": "pocket-voice-alba-v2.1.0-r2",
           "layout": {
             "voice_dir": "voice",
             "default_voice_id": "alba"
@@ -1550,7 +1550,9 @@
       "Falcon3-1B-Instruct-Q4_K_M.gguf": "856e34792b706340545cd1b011d0d0a1a5a4b665da5f0de75d2a1e85eb4ac0d5",
       "granite-3.3-2b-instruct-IQ4_NL.gguf": "7ac1b93a2a995e4ab5a2346f6b356dac8118a4ba105400a2e17d859777f2e01e",
       "Qwen3.5-4B-Revised-q4_k_m.gguf": "5368a5bc1bf6e68b74387be522e3c1c5c5628680ed02986a50a40e1dd676c0bf",
-      "voice-tts-library-manifest.json": "local-only:/opt/ai-box/models/voice-tts-library/manifest.json"
+      "voice-tts-library-manifest.json": "local-only:/opt/ai-box/models/voice-tts-library/manifest.json",
+      "pocket-runtime-win-cpu-v2.1.0-r2.zip": "062f2d0e01652d74b4b94db301184a0367cb470d4448c093794d16e5720bed13",
+      "pocket-voice-alba-v2.1.0-r2.zip": "73c0f19a9cc08285c9b78f6811909c5bc1e20e69bd06af54a3107048435f5c7f"
     }
   }
 }
