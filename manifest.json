@@ -1,6 +1,6 @@
 {
   "version": "3",
-  "generated": "2026-07-24T15:00:00Z",
+  "generated": "2026-07-24T16:30:00Z",
   "base_url": "https://forgejo.g-grp.com",
   "repo": "Max/teammanager-models",
   "assets": {
@@ -887,7 +887,7 @@
       "default_windows": {
         "platform": "windows-amd64-cpu",
         "package_version": "2.1.0",
-        "package_revision": "teammanager-pocket-r2",
+        "package_revision": "teammanager-pocket-r3",
         "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
         "default_language": "english",
         "runtime": {
@@ -895,15 +895,15 @@
           "kind": "runtime",
           "platform": "windows-amd64-cpu",
           "package_version": "2.1.0",
-          "package_revision": "teammanager-pocket-r2",
-          "release_tag": "pocket-tts-v2.1.0-r2",
-          "file": "pocket-runtime-win-cpu-v2.1.0-r2.zip",
-          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r2/pocket-runtime-win-cpu-v2.1.0-r2.zip",
-          "sha256": "062f2d0e01652d74b4b94db301184a0367cb470d4448c093794d16e5720bed13",
-          "size_bytes": 306398539,
+          "package_revision": "teammanager-pocket-r3",
+          "release_tag": "pocket-tts-v2.1.0-r3",
+          "file": "pocket-runtime-win-cpu-v2.1.0-r3.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-runtime-win-cpu-v2.1.0-r3.zip",
+          "sha256": "b6994cfc4fa48799c59473378baf0e228265cd4562ee61890615ac66b4df4713",
+          "size_bytes": 306398674,
           "license": "MIT and bundled upstream dependency licenses",
           "attribution": "Pocket TTS by Kyutai Labs; dependency license files are included in the runtime archive.",
-          "extracted_root": "pocket-runtime-win-cpu-v2.1.0-r2",
+          "extracted_root": "pocket-runtime-win-cpu-v2.1.0-r3",
           "layout": {
             "python_path": "python/python.exe",
             "worker_path": "worker.py"
@@ -938,15 +938,15 @@
           "kind": "voice",
           "platform": "windows-amd64-cpu",
           "package_version": "2.1.0",
-          "package_revision": "teammanager-pocket-r2",
-          "release_tag": "pocket-tts-v2.1.0-r2",
-          "file": "pocket-voice-alba-v2.1.0-r2.zip",
-          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r2/pocket-voice-alba-v2.1.0-r2.zip",
-          "sha256": "73c0f19a9cc08285c9b78f6811909c5bc1e20e69bd06af54a3107048435f5c7f",
+          "package_revision": "teammanager-pocket-r3",
+          "release_tag": "pocket-tts-v2.1.0-r3",
+          "file": "pocket-voice-alba-v2.1.0-r3.zip",
+          "url": "{base_url}/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-voice-alba-v2.1.0-r3.zip",
+          "sha256": "53dee14d891fe666e35151511888ca7281582c8c55268a02b2181220881a7f1d",
           "size_bytes": 6195421,
           "license": "CC0-1.0 catalog voice state",
           "attribution": "Official Alba catalog voice state from Kyutai Pocket TTS, immutable upstream revision e041936c75475d350b405bc870bcf7c22da4e9e6.",
-          "extracted_root": "pocket-voice-alba-v2.1.0-r2",
+          "extracted_root": "pocket-voice-alba-v2.1.0-r3",
           "layout": {
             "voice_dir": "voice",
             "default_voice_id": "alba"
@@ -1552,7 +1552,9 @@
       "Qwen3.5-4B-Revised-q4_k_m.gguf": "5368a5bc1bf6e68b74387be522e3c1c5c5628680ed02986a50a40e1dd676c0bf",
       "voice-tts-library-manifest.json": "local-only:/opt/ai-box/models/voice-tts-library/manifest.json",
       "pocket-runtime-win-cpu-v2.1.0-r2.zip": "062f2d0e01652d74b4b94db301184a0367cb470d4448c093794d16e5720bed13",
-      "pocket-voice-alba-v2.1.0-r2.zip": "73c0f19a9cc08285c9b78f6811909c5bc1e20e69bd06af54a3107048435f5c7f"
+      "pocket-voice-alba-v2.1.0-r2.zip": "73c0f19a9cc08285c9b78f6811909c5bc1e20e69bd06af54a3107048435f5c7f",
+      "pocket-runtime-win-cpu-v2.1.0-r3.zip": "b6994cfc4fa48799c59473378baf0e228265cd4562ee61890615ac66b4df4713",
+      "pocket-voice-alba-v2.1.0-r3.zip": "53dee14d891fe666e35151511888ca7281582c8c55268a02b2181220881a7f1d"
     }
   }
 }
