@@ -34,6 +34,14 @@ incomplete Forgejo release 22 (`pocket-tts-clone-weights-v2.1.0-r1`) is retained
 as non-authoritative historical staging and is never read by publication or
 desktop activation.
 
+`scripts/publish-pocket-r2.py` repairs the Windows consumer bundle without
+overwriting those historical inputs. It verifies the immutable Pocket 2.1.0
+base runtime, packages the reviewed TeamManager worker contract `0.3.0`, pins
+the official Kyutai Alba state at revision
+`e041936c75475d350b405bc870bcf7c22da4e9e6`, derives all R2 archive identities,
+and signs a new manifest authority. The prior `pocket-tts-v2.1.0` assets remain
+immutable and are non-authoritative for new desktop installs.
+
 ## Managed Whisper authority
 
 `scripts/publish-whisper-authority.py` is the producer for managed Whisper's

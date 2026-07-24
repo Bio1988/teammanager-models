@@ -1,0 +1,104 @@
+name: publish-pocket-r2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-pocket-r2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download immutable R2 inputs
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/pocket-r2"
+          curl --fail --silent --show-error --location \
+            'https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip' \
+            --output "$RUNNER_TEMP/pocket-r2/pocket-runtime-win-cpu-v2.1.0.zip"
+          curl --fail --silent --show-error --location \
+            'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/e041936c75475d350b405bc870bcf7c22da4e9e6/languages/english/embeddings/alba.safetensors' \
+            --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
+          curl --fail --silent --show-error --location \
+            'https://raw.githubusercontent.com/Bio1988/race-engineer-go/d1d6362386f3628874b76e262d24c798c2298b6e/runtime/pocket-tts-worker/worker.py' \
+            --output "$RUNNER_TEMP/pocket-r2/worker.py"
+
+      - name: Provision and cross-check signing key
+        env:
+          MODEL_MANIFEST_SIGNING_KEY_PEM: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_PEM }}
+          MODEL_MANIFEST_PUBLIC_KEY_PEM: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_PEM }}
+        run: |
+          set -eu
+          test -n "$MODEL_MANIFEST_SIGNING_KEY_PEM"
+          test -n "$MODEL_MANIFEST_PUBLIC_KEY_PEM"
+          install -m 0600 /dev/null "$RUNNER_TEMP/model-manifest-key.pem"
+          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pem"
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pub"
+          openssl pkey -in "$RUNNER_TEMP/model-manifest-key.pem" -pubout -out "$RUNNER_TEMP/derived.pub"
+          cmp "$RUNNER_TEMP/derived.pub" "$RUNNER_TEMP/model-manifest-key.pub"
+
+      - name: Build, derive, sign, verify, and test
+        run: |
+          set -eu
+          python3 scripts/publish-pocket-r2.py \
+            --manifest manifest.json \
+            --base-runtime "$RUNNER_TEMP/pocket-r2/pocket-runtime-win-cpu-v2.1.0.zip" \
+            --worker "$RUNNER_TEMP/pocket-r2/worker.py" \
+            --alba "$RUNNER_TEMP/pocket-r2/alba.safetensors" \
+            --generated '2026-07-24T15:00:00Z' \
+            --signing-key "$RUNNER_TEMP/model-manifest-key.pem" \
+            --public-key "$RUNNER_TEMP/model-manifest-key.pub" \
+            --output-dir "$RUNNER_TEMP/published" \
+            --updated-manifest manifest.json \
+            --updated-signature manifest.json.sig \
+            --updated-sidecar manifest.json.sha256
+          python3 -m unittest scripts/test_publish_pocket_r2.py
+
+      - name: Publish immutable R2 assets and authority
+        env:
+          FORGEJO_TOKEN: ${{ secrets.MODEL_RELEASE_TOKEN }}
+        run: |
+          set -eu
+          test -n "$FORGEJO_TOKEN"
+          api="${{ forgejo.server_url }}/api/v1/repos/${{ forgejo.repository }}"
+          create_release() {
+            tag="$1"
+            name="$2"
+            shift 2
+            test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --header "Authorization: token $FORGEJO_TOKEN" "$api/releases/tags/$tag")" = 404
+            curl --fail --silent --show-error --request POST \
+              --header "Authorization: token $FORGEJO_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data "{\"tag_name\":\"$tag\",\"target_commitish\":\"${{ forgejo.sha }}\",\"name\":\"$name\",\"draft\":false,\"prerelease\":true}" \
+              "$api/releases" > "$RUNNER_TEMP/release.json"
+            release_id="$(python3 -c 'import json; print(json.load(open("'$RUNNER_TEMP'/release.json"))["id"])')"
+            for asset in "$@"; do
+              asset_name="$(basename "$asset")"
+              curl --fail --silent --show-error --request POST \
+                --header "Authorization: token $FORGEJO_TOKEN" \
+                --form "attachment=@$asset;filename=$asset_name" \
+                "$api/releases/$release_id/assets?name=$asset_name" > /dev/null
+            done
+          }
+          create_release 'pocket-tts-v2.1.0-r2' \
+            'Pocket TTS 2.1.0 TeamManager R2 runtime and official Alba' \
+            "$RUNNER_TEMP/published/pocket-runtime-win-cpu-v2.1.0-r2.zip" \
+            "$RUNNER_TEMP/published/pocket-voice-alba-v2.1.0-r2.zip"
+          create_release 'teammanager-model-manifest-v3-pocket-r2.1' \
+            'TeamManager model manifest v3 Pocket R2 authority' \
+            "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json" \
+            "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sig" \
+            "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sha256"
+
+      - name: Commit byte-identical reviewed authority
+        run: |
+          set -eu
+          cmp manifest.json "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json"
+          cmp manifest.json.sig "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sig"
+          cmp manifest.json.sha256 "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sha256"
+          git config user.name TeamManager Model Publisher
+          git config user.email teammanager-model-publisher@users.noreply.local
+          git add manifest.json manifest.json.sig manifest.json.sha256
+          git diff --cached --quiet || git commit -m 'fix(pocket): publish official Alba and clone worker R2'
+          git push origin HEAD:${{ forgejo.ref_name }}
