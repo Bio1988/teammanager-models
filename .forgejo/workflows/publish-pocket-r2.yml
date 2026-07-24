@@ -33,7 +33,7 @@ jobs:
         run: |
           set -eu
           curl --fail --silent --show-error --location \
-            'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/e041936c75475d350b405bc870bcf7c22da4e9e6/languages/english/embeddings/alba.safetensors' \
+            'https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-upstream-alba-e041936/alba.safetensors' \
             --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
 
       - name: Provision and cross-check signing key
