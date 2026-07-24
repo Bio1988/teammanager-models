@@ -37,6 +37,7 @@ jobs:
             --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
 
       - name: Provision signing key
+        # App trust anchor: 3278622606e9f0f1a0ff912bbe27aa61b4623dfdeaa7ec8275f62c987da769d2
         env:
           MODEL_MANIFEST_SIGNING_KEY_PEM: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_PEM }}
           MODEL_MANIFEST_PUBLIC_KEY_PEM: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_PEM }}
