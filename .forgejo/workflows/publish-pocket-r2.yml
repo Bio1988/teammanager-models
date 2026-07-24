@@ -39,15 +39,15 @@ jobs:
       - name: Provision signing key
         # App trust anchor: 3278622606e9f0f1a0ff912bbe27aa61b4623dfdeaa7ec8275f62c987da769d2
         env:
-          MODEL_MANIFEST_SIGNING_KEY_PEM: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_PEM }}
-          MODEL_MANIFEST_PUBLIC_KEY_PEM: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_PEM }}
+          MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
+          MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
         run: |
           set -eu
-          test -n "$MODEL_MANIFEST_SIGNING_KEY_PEM"
-          test -n "$MODEL_MANIFEST_PUBLIC_KEY_PEM"
+          test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"
+          test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
           install -m 0600 /dev/null "$RUNNER_TEMP/model-manifest-key.pem"
-          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pem"
-          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_PEM" > "$RUNNER_TEMP/model-manifest-key.pub"
+          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/model-manifest-key.pem"
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$RUNNER_TEMP/model-manifest-key.pub"
 
       - name: Derive signing public key
         run: |
