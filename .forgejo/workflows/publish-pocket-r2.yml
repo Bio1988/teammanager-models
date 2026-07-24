@@ -17,13 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download immutable R2 inputs
+      - name: Prepare immutable R2 inputs
         run: |
           set -eu
           mkdir -p "$RUNNER_TEMP/pocket-r2"
+
+      - name: Download pinned base runtime
+        run: |
+          set -eu
           curl --fail --silent --show-error --location \
             'https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-runtime-win-cpu-v2.1.0.zip' \
             --output "$RUNNER_TEMP/pocket-r2/pocket-runtime-win-cpu-v2.1.0.zip"
+
+      - name: Download official pinned Alba
+        run: |
+          set -eu
           curl --fail --silent --show-error --location \
             'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/e041936c75475d350b405bc870bcf7c22da4e9e6/languages/english/embeddings/alba.safetensors' \
             --output "$RUNNER_TEMP/pocket-r2/alba.safetensors"
