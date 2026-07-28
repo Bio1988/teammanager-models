@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -66,6 +67,7 @@ class PocketModelAuthorityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exactly English"):
                 module.validate_state_compatibility_model(model)
 
+    @unittest.skipUnless(shutil.which("openssl"), "OpenSSL is required for Ed25519 signing verification")
     def test_signs_exact_manifest_bytes_and_verifies_raw_signature(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
