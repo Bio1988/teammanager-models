@@ -60,15 +60,13 @@ jobs:
               --header "Authorization: token $FORGEJO_TOKEN" --form "attachment=@$asset;filename=$name" \
               "$api/releases/$release_id/assets?name=$name" > /dev/null
           done
-      - name: Commit byte-identical reviewed authority
+      - name: Commit published manifest source
         run: |
           set -eu
           cmp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json"
           cp "$RUNNER_TEMP/manifest.json" manifest.json
-          cp "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sig" manifest.json.sig
-          cp "$RUNNER_TEMP/published/teammanager-model-manifest-v3.json.sha256" manifest.json.sha256
           git config user.name TeamManager Model Publisher
           git config user.email teammanager-model-publisher@users.noreply.local
-          git add manifest.json manifest.json.sig manifest.json.sha256
-          git diff --cached --quiet || git commit -m "chore(models): publish English Pocket clone authority"
+          git add manifest.json
+          git diff --cached --quiet || git commit -m "chore(models): publish model manifest source"
           git push origin HEAD:${{ forgejo.ref_name }}

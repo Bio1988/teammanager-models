@@ -1,82 +1,42 @@
 # TeamManager Models
 
-Versioned model artifacts for TeamManager — KoboldCPP, Chatterbox, STT/TTS/LLM models.
+`manifest.json` is the source catalog for TeamManager model assets. It stays in
+the current nested shape because Race Engineer consumes its published versioned
+release format today.
 
-## Manifest
+## Release integrity
 
-`manifest.json` is the installer/runtime dependency catalog used by TeamManager/DRE-Go setup flows.
+The publisher produces one versioned manifest release plus two integrity
+companions:
 
-Top-level asset groups:
+- `<manifest>.sig`: one Ed25519 signature over the exact manifest bytes;
+- `<manifest>.sha256`: SHA-256 for transport integrity.
 
-- `koboldcpp` — managed KoboldCPP binaries.
-- `chatterbox` — managed Chatterbox server payload.
-- `models` — single-file STT/TTS/LLM assets that are already exposed as Forgejo release downloads.
-- `voice_profiles` — bundled/generated race engineer voice profile metadata.
-- `voice_tts_library` — multi-file voice/TTS model dependency catalog for Pocket TTS, NeuTTS, Chatterbox, KokoClone, MOSS, LuxTTS, Sopro, ZipVoice, and archived local X-Voice artifacts.
+Race Engineer fetches those three files from the same versioned Forgejo release
+when Pocket compatibility metadata is present. Individual artifacts retain their
+own SHA-256 fields in `manifest.json`. The source checkout deliberately has no
+signature or hash sidecar: only a published, versioned release is an installable
+manifest authority.
 
-`voice_tts_library` entries are mirrored locally on the AI-Box under `/opt/ai-box/models/voice-tts-library`. They are catalogued here so the installer/runtime can grow support for snapshot or bundle downloads without relying on memory or ad-hoc paths.
+Managed Whisper remains protected by its runtime release manifest and the
+installer's archive/model SHA-256 checks. It does not consume a separate Models
+repository authority object.
 
-Important: `voice_tts_library` entries are not all single release-asset URLs yet. Existing `models` entries are immediately downloadable release assets; `voice_tts_library` entries describe repository snapshots or local artifacts that must be consumed by snapshot-aware installer code or promoted into release bundles before public installer distribution.
+## Publication
 
-## Pocket clone compatibility authority
-
-`scripts/publish-pocket-model-manifest.py` is the only producer for the closed
-`assets.pocket_bundles.default_windows.state_compatibility_model` object. It
-derives the English model, config, and cloning-weight SHA-256 values directly
-from `pocket-model-en-v2.1.0.zip`, verifies the canonical runtime and Alba
-archives, signs the exact versioned manifest bytes with Ed25519, verifies that
-detached signature, emits a lowercase manifest SHA-256 sidecar, and only then
-emits branch-manifest bytes.
-
-The clone MVP is English-only. Its immutable inputs are the already-published
-`pocket-tts-v2.1.0` assets; no additional language archive is an MVP gate. The
-incomplete Forgejo release 22 (`pocket-tts-clone-weights-v2.1.0-r1`) is retained
-as non-authoritative historical staging and is never read by publication or
-desktop activation.
-
-`scripts/publish-pocket-r2.py` repairs the Windows consumer bundle without
-overwriting those historical inputs. It verifies the immutable Pocket 2.1.0
-base runtime, packages the reviewed TeamManager worker contract `0.3.0`, pins
-the official Kyutai Alba state at revision
-`e041936c75475d350b405bc870bcf7c22da4e9e6`, derives all R2 archive identities,
-and signs a new manifest authority. The prior `pocket-tts-v2.1.0` assets remain
-immutable and are non-authoritative for new desktop installs.
-
-## Managed Whisper authority
-
-`scripts/publish-whisper-authority.py` is the producer for managed Whisper's
-closed `teammanager-managed-whisper-authority-v1` release object. It validates
-the already-published schema-v3 manifest, runtime-only archive, and
-`base-q5_1` bytes; signs the Whisper-specific domain plus exact JSON bytes with
-Ed25519; self-verifies the raw 64-byte signature; and emits a lowercase SHA-256
-sidecar. Forgejo is canonical and the GitHub URLs in the authority are a
-byte-identical, fully verified fallback only.
-
-Publication validates every runtime ZIP member against the schema-v3 inventory,
-pins the reviewed input sizes and SHA-256 values in the producer, then validates
-the final JSON/signature/sidecar tuple again. The checked-in
-authority is generated from Forgejo releases `whispercpp-v1.9.1` and
-`whisper-q5-v1`; it does not authorize the older full runtime archive or any
-optional model. To perform the same offline validation after downloading the
-three pinned inputs:
+`scripts/publish-pocket-model-manifest.py` derives the active English Pocket
+compatibility values from the three reviewed Pocket archives, creates the signed
+versioned manifest, verifies it, and publishes the three release files. No
+private key is stored in this repository.
 
 ```sh
-python3 scripts/publish-whisper-authority.py \
-  --validate-authority whisper-authority/teammanager-whisper-authority-v1.json \
-  --signature whisper-authority/teammanager-whisper-authority-v1.json.sig \
-  --sidecar whisper-authority/teammanager-whisper-authority-v1.json.sha256 \
-  --release-manifest /path/to/teammanager-whisper-runtime-only-win-x64-v1.9.1.manifest-v3.json \
-  --runtime /path/to/teammanager-whisper-runtime-only-win-x64-v1.9.1.zip \
-  --model /path/to/ggml-base-q5_1.bin \
-  --public-key /path/to/teammanager-model-manifest-ed25519.pub
+python3 -m unittest discover -s scripts -p "test_*.py"
 ```
 
-The Ed25519 signed message is the ASCII domain
-`TeamManager managed Whisper authority v1`, one NUL byte, and the exact JSON
-bytes. The `.sig` file is raw 64-byte Ed25519 output; the `.sha256` file is one
-lowercase hex digest plus LF. Tests are offline and use temporary fixture keys
-and archives only: `python3 -m unittest scripts/test_publish_whisper_authority.py`.
+## Remaining consumer migration
 
-No production private key is stored here. The Forgejo workflow reads it only
-from the model-manifest signing secret. Test keys exist only inside deterministic
-unit-test temporary directories and cannot activate TeamManager release code.
+`manifest.json` still has the existing detailed nested schema and optional
+language-pack records because Race Engineer currently parses that schema. Some
+optional multilingual records are not yet a public installer path; do not change
+or publish them until a consumer-facing release plan exists. A later, coordinated
+Race Engineer migration can reduce the schema to the smaller asset-list format.
