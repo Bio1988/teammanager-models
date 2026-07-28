@@ -6,7 +6,7 @@ and duplicate checksum catalogs are deliberately not kept here.
 
 ## Release integrity
 
-The publisher produces one versioned manifest release plus two integrity
+The active Pocket R3 release contains one versioned manifest plus two integrity
 companions:
 
 - `<manifest>.sig`: one Ed25519 signature over the exact manifest bytes;
@@ -15,23 +15,23 @@ companions:
 Race Engineer fetches those three files from the same versioned Forgejo release
 when Pocket compatibility metadata is present. Individual artifacts retain their
 own SHA-256 fields in `manifest.json`. The source checkout deliberately has no
-signature or hash sidecar: only a published, versioned release is an installable
-manifest authority.
+signature or hash sidecar: only the already published, versioned R3 release is
+installable.
 
 Managed Whisper remains protected by its runtime release manifest and the
 installer's archive/model SHA-256 checks. It does not consume a separate Models
 repository authority object.
 
-## Publication
-
-`scripts/publish-pocket-model-manifest.py` derives the active English Pocket
-compatibility values from the three reviewed Pocket archives, creates the signed
-versioned manifest, verifies it, and publishes the three release files. No
-private key is stored in this repository.
+## Validation
 
 ```sh
 python3 -m unittest discover -s scripts -p "test_*.py"
 ```
+
+The obsolete one-shot English MVP publisher was removed after Pocket R3 replaced
+its inputs and immutable release tag. Existing release assets remain unchanged.
+Any future asset release needs a small current publication path reviewed against
+the then-active manifest and consumers; no private key belongs in this repository.
 
 ## Current consumer contract
 
