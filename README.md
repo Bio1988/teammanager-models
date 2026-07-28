@@ -1,8 +1,9 @@
 # TeamManager Models
 
-`manifest.json` is the source catalog for TeamManager model assets. It stays in
-the current nested shape because Race Engineer consumes its published versioned
-release format today.
+`manifest.json` is the source catalog for the active managed Pocket bundles and
+the temporary voice/TTS planning catalog. Retired generic model, Chatterbox,
+KoboldCPP, voice-profile, and duplicate checksum catalogs are deliberately not
+kept here.
 
 ## Release integrity
 
@@ -35,8 +36,7 @@ python3 -m unittest discover -s scripts -p "test_*.py"
 
 ## Remaining consumer migration
 
-`manifest.json` still has the existing detailed nested schema and optional
-language-pack records because Race Engineer currently parses that schema. Some
-optional multilingual records are not yet a public installer path; do not change
-or publish them until a consumer-facing release plan exists. A later, coordinated
-Race Engineer migration can reduce the schema to the smaller asset-list format.
+`manifest.json` retains the current Pocket default, optional language/catalog
+packs, and clone compatibility metadata because Race Engineer consumes them in
+its published release format. The remaining `voice_tts_library` catalog is a
+temporary plan-only consumer and can be removed in a later coordinated slice.
