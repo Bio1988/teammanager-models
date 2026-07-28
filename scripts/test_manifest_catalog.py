@@ -12,7 +12,7 @@ class ManifestCatalogTests(unittest.TestCase):
 
         self.assertIsInstance(manifest.get("version"), str)
         self.assertIsInstance(manifest.get("assets"), dict)
-        self.assertEqual(set(manifest["assets"]), {"pocket_bundles", "voice_tts_library"})
+        self.assertEqual(set(manifest["assets"]), {"pocket_bundles"})
         self.assertIn("pocket_bundles", manifest["assets"])
         self.assertIn("state_compatibility_model", manifest["assets"]["pocket_bundles"]["default_windows"])
         self.assertNotIn("checksums", manifest)

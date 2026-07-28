@@ -1,9 +1,8 @@
 # TeamManager Models
 
-`manifest.json` is the source catalog for the active managed Pocket bundles and
-the temporary voice/TTS planning catalog. Retired generic model, Chatterbox,
-KoboldCPP, voice-profile, and duplicate checksum catalogs are deliberately not
-kept here.
+`manifest.json` is the source catalog for the active managed Pocket bundles.
+Retired generic model, Chatterbox, KoboldCPP, voice-profile, voice/TTS planning,
+and duplicate checksum catalogs are deliberately not kept here.
 
 ## Release integrity
 
@@ -34,9 +33,8 @@ private key is stored in this repository.
 python3 -m unittest discover -s scripts -p "test_*.py"
 ```
 
-## Remaining consumer migration
+## Current consumer contract
 
 `manifest.json` retains the current Pocket default, optional language/catalog
 packs, and clone compatibility metadata because Race Engineer consumes them in
-its published release format. The remaining `voice_tts_library` catalog is a
-temporary plan-only consumer and can be removed in a later coordinated slice.
+its published release format. No separate voice/TTS planning catalog remains.
