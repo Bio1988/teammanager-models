@@ -1,0 +1,545 @@
+{
+  "schema_version": 4,
+  "assets": [
+    {
+      "id": "teammanager__pocket-runtime-win-cpu",
+      "provider": "pocket_tts",
+      "kind": "runtime",
+      "version": "2.1.0-r3",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-v2.1.0-r3",
+      "file": "pocket-runtime-win-cpu-v2.1.0-r3.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-runtime-win-cpu-v2.1.0-r3.zip",
+      "size_bytes": 306398674,
+      "sha256": "b6994cfc4fa48799c59473378baf0e228265cd4562ee61890615ac66b4df4713",
+      "license": "MIT and bundled upstream dependency licenses",
+      "attribution": "Pocket TTS by Kyutai Labs; dependency license files are included in the runtime archive.",
+      "extracted_root": "pocket-runtime-win-cpu-v2.1.0-r3",
+      "layout": {
+        "python_path": "python/python.exe",
+        "worker_path": "worker.py"
+      }
+    },
+    {
+      "id": "kyutai__pocket-tts-english-model",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-v2.1.0",
+      "file": "pocket-model-en-v2.1.0.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-model-en-v2.1.0.zip",
+      "size_bytes": 219090877,
+      "sha256": "97889ede2dad2f82dbcabe2e52cca4544fefb4cfb1ae5a201e7e69b15e87bcf5",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Pocket TTS English model by Kyutai Labs, kyutai/pocket-tts.",
+      "extracted_root": "pocket-model-en-v2.1.0",
+      "layout": {
+        "model_dir": "model",
+        "hf_cache_dir": "hf-cache",
+        "config_path": "model/config.yaml",
+        "language": "english"
+      }
+    },
+    {
+      "id": "kyutai__pocket-voice-alba",
+      "provider": "pocket_tts",
+      "kind": "voice",
+      "version": "2.1.0-r3",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-v2.1.0-r3",
+      "file": "pocket-voice-alba-v2.1.0-r3.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-voice-alba-v2.1.0-r3.zip",
+      "size_bytes": 6195421,
+      "sha256": "53dee14d891fe666e35151511888ca7281582c8c55268a02b2181220881a7f1d",
+      "license": "CC0-1.0 catalog voice state",
+      "attribution": "Official Alba catalog voice state from Kyutai Pocket TTS, immutable upstream revision e041936c75475d350b405bc870bcf7c22da4e9e6.",
+      "extracted_root": "pocket-voice-alba-v2.1.0-r3",
+      "layout": {
+        "voice_dir": "voice",
+        "default_voice_id": "alba"
+      }
+    },
+    {
+      "id": "pocket-language-english",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-english-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-english-multilang-r1.zip",
+      "size_bytes": 174919599,
+      "sha256": "584739bb6aa13c21aa9cef8dcdbd382583273cc87e5406751717581ecfd877f8",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-english-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/english/config.yaml",
+        "language": "english"
+      }
+    },
+    {
+      "id": "pocket-language-german",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-german-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german-multilang-r1.zip",
+      "size_bytes": 174493125,
+      "sha256": "0b40a1b868a6b5f36649b6078d16094b53059b122dcf7820973346ad4d08f83d",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-german-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/german/config.yaml",
+        "language": "german"
+      }
+    },
+    {
+      "id": "pocket-language-italian",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-italian-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian-multilang-r1.zip",
+      "size_bytes": 174761575,
+      "sha256": "4add8bf4a3cfa08f258768a65adeed0a97d95cbaef746f605601a560047be8f2",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-italian-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/italian/config.yaml",
+        "language": "italian"
+      }
+    },
+    {
+      "id": "pocket-language-portuguese",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-portuguese-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese-multilang-r1.zip",
+      "size_bytes": 174821657,
+      "sha256": "56cdf4f32caca2fc0701f66d90ccf40b8a40863a80ebd3cbc428d9ec5ec7dd30",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-portuguese-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/portuguese/config.yaml",
+        "language": "portuguese"
+      }
+    },
+    {
+      "id": "pocket-language-spanish",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-spanish-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish-multilang-r1.zip",
+      "size_bytes": 174792128,
+      "sha256": "77dc699359ea821ac8cb146db3c1c552352a0300d8eb905ba5271b3844ebef37",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-spanish-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/spanish/config.yaml",
+        "language": "spanish"
+      }
+    },
+    {
+      "id": "pocket-language-french_24l",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-french_24l-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-french_24l-multilang-r1.zip",
+      "size_bytes": 535708026,
+      "sha256": "618fa5e422afc8f587f265ebef8356d3be85b845e1ee63eba334221df4b02de3",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-french_24l-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/french_24l/config.yaml",
+        "language": "french_24l"
+      }
+    },
+    {
+      "id": "pocket-language-german_24l",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-german_24l-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-german_24l-multilang-r1.zip",
+      "size_bytes": 535731619,
+      "sha256": "c6bcdad0ae8cdf13c91bd2379f48903259ad2f15c9eef94de5fc02b34ab674b8",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-german_24l-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/german_24l/config.yaml",
+        "language": "german_24l"
+      }
+    },
+    {
+      "id": "pocket-language-italian_24l",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-italian_24l-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-italian_24l-multilang-r1.zip",
+      "size_bytes": 535895963,
+      "sha256": "b0ec86cc5e8ff1665d2e33243e8153b7de445acde5ce2ce9941dfdf758609447",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-italian_24l-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/italian_24l/config.yaml",
+        "language": "italian_24l"
+      }
+    },
+    {
+      "id": "pocket-language-portuguese_24l",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-portuguese_24l-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-portuguese_24l-multilang-r1.zip",
+      "size_bytes": 536099203,
+      "sha256": "f93502563f4e722bf9c00de849d6bfcc24ba3fecea27d7f021d734f00e080527",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-portuguese_24l-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/portuguese_24l/config.yaml",
+        "language": "portuguese_24l"
+      }
+    },
+    {
+      "id": "pocket-language-spanish_24l",
+      "provider": "pocket_tts",
+      "kind": "model",
+      "version": "2.1.0-multilang-r1",
+      "platform": "windows-amd64-cpu",
+      "release_tag": "pocket-tts-multilang-v2.1.0-r1",
+      "file": "pocket-language-spanish_24l-multilang-r1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-multilang-v2.1.0-r1/pocket-language-spanish_24l-multilang-r1.zip",
+      "size_bytes": 535993679,
+      "sha256": "37e62939b5c15b2c223739aab45715d753b1ed52de0f69fb086964d98b7570ce",
+      "license": "CC-BY-4.0 with upstream model-card terms",
+      "attribution": "Kyutai Pocket TTS, CC-BY-4.0; TeamManager packaging only, unmodified model weights.",
+      "extracted_root": "pocket-language-spanish_24l-multilang-r1",
+      "layout": {
+        "model_dir": "models",
+        "config_path": "models/spanish_24l/config.yaml",
+        "language": "spanish_24l"
+      }
+    },
+    {
+      "id": "whispercpp-runtime-windows-amd64-1.9.1",
+      "provider": "whispercpp",
+      "kind": "runtime",
+      "version": "1.9.1",
+      "platform": "windows-amd64",
+      "release_tag": "whispercpp-v1.9.1",
+      "file": "teammanager-whisper-runtime-only-win-x64-v1.9.1.zip",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whispercpp-v1.9.1/teammanager-whisper-runtime-only-win-x64-v1.9.1.zip",
+      "size_bytes": 4505044,
+      "sha256": "6ac6eecf51eb0e84bf091bc06d7c2dbb700fef3e4b4e38bb6de1b852b47ba0b6",
+      "license": "MIT and bundled upstream dependency licenses",
+      "attribution": "whisper.cpp v1.9.1 by the ggml-org project; runtime-only TeamManager packaging.",
+      "members": [
+        {
+          "path": "Release/ggml-base.dll",
+          "size_bytes": 656384,
+          "sha256": "8be6f3e06388b3a9aac75d29bec86363e2e2f5b0cee86ce6438866bcac0bcf86"
+        },
+        {
+          "path": "Release/ggml-cpu-alderlake.dll",
+          "size_bytes": 790528,
+          "sha256": "323408503da53ccc67248b26d711f16d73d2d6239f7703a00a6a18b60ed5b8b8"
+        },
+        {
+          "path": "Release/ggml-cpu-cannonlake.dll",
+          "size_bytes": 833536,
+          "sha256": "0f659d98b823bb871c7845787bba7485facd220099cf58aa773652b9b842ab2e"
+        },
+        {
+          "path": "Release/ggml-cpu-cascadelake.dll",
+          "size_bytes": 830976,
+          "sha256": "8116b0e516134139de29400c536ecf06fe708ce1a078a96d30b562b30d524fbe"
+        },
+        {
+          "path": "Release/ggml-cpu-haswell.dll",
+          "size_bytes": 791552,
+          "sha256": "e5925923a47672392f9e9c8c92e4b9b65ea473948bf4f568a0300a3a42485135"
+        },
+        {
+          "path": "Release/ggml-cpu-icelake.dll",
+          "size_bytes": 830976,
+          "sha256": "b726d528bee0c811c6b2ad8775357379d651cabb487bbf800331697fe73da187"
+        },
+        {
+          "path": "Release/ggml-cpu-sandybridge.dll",
+          "size_bytes": 783360,
+          "sha256": "1c49c64817233b2447ca305b41c66afa4bed31b058bc190a98af2a30cc703542"
+        },
+        {
+          "path": "Release/ggml-cpu-skylakex.dll",
+          "size_bytes": 833536,
+          "sha256": "06082dc62a09a82fbba4aab49b2c049b96db84c5fc561a446a8ddbfb9b20bf86"
+        },
+        {
+          "path": "Release/ggml-cpu-sse42.dll",
+          "size_bytes": 772096,
+          "sha256": "9a8f55ff1dfad231aa6250ac52c330c5bfa5c4c37691c8b591a68b52090ce40c"
+        },
+        {
+          "path": "Release/ggml-cpu-x64.dll",
+          "size_bytes": 776704,
+          "sha256": "45ff644d301b8a1fffc7c5e3864205047360eb197814c7311f366d106bb5b19f"
+        },
+        {
+          "path": "Release/ggml.dll",
+          "size_bytes": 67584,
+          "sha256": "db753141098018ab482796052a61e727ee0106cbc280f28397f6a111b5e667d7"
+        },
+        {
+          "path": "Release/parakeet.dll",
+          "size_bytes": 536064,
+          "sha256": "6b95a072bdba1bdf1ad252f658c0fce6d21250951a99ef1898fbc737131f76d3"
+        },
+        {
+          "path": "Release/SDL2.dll",
+          "size_bytes": 2500096,
+          "sha256": "de23db1694a3c7a4a735e7ecd3d214b2023cc2267922c6c35d30c7fc7370d677"
+        },
+        {
+          "path": "Release/whisper-server.exe",
+          "size_bytes": 725504,
+          "sha256": "2c1ef08694756eda280e79b8217da63ee2af33c87ac3d5f27d68f9f3f966fd32"
+        },
+        {
+          "path": "Release/whisper.dll",
+          "size_bytes": 1366016,
+          "sha256": "b31690c12461517fe9774e61318ab63a69972b948151feed98b913be35f708b6"
+        }
+      ]
+    },
+    {
+      "id": "whisper-base-q5_1",
+      "provider": "whispercpp",
+      "kind": "model",
+      "version": "whisper-q5-v1",
+      "platform": "windows-amd64",
+      "release_tag": "whisper-q5-v1",
+      "file": "ggml-base-q5_1.bin",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-base-q5_1.bin",
+      "size_bytes": 59707625,
+      "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+      "license": "MIT",
+      "attribution": "OpenAI Whisper multilingual base model, quantized for whisper.cpp."
+    },
+    {
+      "id": "whisper-small-q5_1",
+      "provider": "whispercpp",
+      "kind": "model",
+      "version": "whisper-q5-v1",
+      "platform": "windows-amd64",
+      "release_tag": "whisper-q5-v1",
+      "file": "ggml-small-q5_1.bin",
+      "url": "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-small-q5_1.bin",
+      "size_bytes": 190085487,
+      "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "license": "MIT",
+      "attribution": "OpenAI Whisper multilingual small model, quantized for whisper.cpp."
+    }
+  ],
+  "profiles": {
+    "pocket-default-windows": {
+      "provider": "pocket_tts",
+      "asset_ids": [
+        "teammanager__pocket-runtime-win-cpu",
+        "kyutai__pocket-tts-english-model",
+        "kyutai__pocket-voice-alba"
+      ],
+      "state_compatibility": {
+        "schema": "pocket-state-model-v1",
+        "provider_kind": "pocket_tts_managed",
+        "pocket_package_version": "2.1.0",
+        "model_id": "kyutai/pocket-tts",
+        "model_revision": "39592ff23c9ef80098bb74895d104c26275fe2c9",
+        "model_sha256": "473f47d99560bd50eb8b4509d3cacfe7f316ab20bdca86505403a2e6a936a6e9",
+        "model_config_sha256": "9083069e3d99a662955343c398acdffe4eb49bc06d568266c19858c2eca45335",
+        "clone_languages": [
+          {
+            "language": "english",
+            "cloning_weights_sha256": "473f47d99560bd50eb8b4509d3cacfe7f316ab20bdca86505403a2e6a936a6e9"
+          }
+        ]
+      }
+    },
+    "whisper-default-windows": {
+      "provider": "whispercpp",
+      "runtime_asset_id": "whispercpp-runtime-windows-amd64-1.9.1",
+      "default_model_id": "whisper-base-q5_1",
+      "optional_model_ids": [
+        "whisper-small-q5_1"
+      ],
+      "server_executable": "Release/whisper-server.exe",
+      "required_dlls": [
+        "Release/SDL2.dll",
+        "Release/ggml-base.dll",
+        "Release/ggml-cpu-alderlake.dll",
+        "Release/ggml-cpu-cannonlake.dll",
+        "Release/ggml-cpu-cascadelake.dll",
+        "Release/ggml-cpu-haswell.dll",
+        "Release/ggml-cpu-icelake.dll",
+        "Release/ggml-cpu-sandybridge.dll",
+        "Release/ggml-cpu-skylakex.dll",
+        "Release/ggml-cpu-sse42.dll",
+        "Release/ggml-cpu-x64.dll",
+        "Release/ggml.dll",
+        "Release/parakeet.dll",
+        "Release/whisper.dll"
+      ]
+    }
+  },
+  "packs": [
+    {
+      "id": "language-english",
+      "kind": "language",
+      "display_name": "English",
+      "languages": [
+        "english"
+      ],
+      "asset_ids": [
+        "pocket-language-english"
+      ]
+    },
+    {
+      "id": "language-german",
+      "kind": "language",
+      "display_name": "German",
+      "languages": [
+        "german"
+      ],
+      "asset_ids": [
+        "pocket-language-german"
+      ]
+    },
+    {
+      "id": "language-italian",
+      "kind": "language",
+      "display_name": "Italian",
+      "languages": [
+        "italian"
+      ],
+      "asset_ids": [
+        "pocket-language-italian"
+      ]
+    },
+    {
+      "id": "language-portuguese",
+      "kind": "language",
+      "display_name": "Portuguese",
+      "languages": [
+        "portuguese"
+      ],
+      "asset_ids": [
+        "pocket-language-portuguese"
+      ]
+    },
+    {
+      "id": "language-spanish",
+      "kind": "language",
+      "display_name": "Spanish",
+      "languages": [
+        "spanish"
+      ],
+      "asset_ids": [
+        "pocket-language-spanish"
+      ]
+    },
+    {
+      "id": "language-french_24l",
+      "kind": "language",
+      "display_name": "French 24L",
+      "languages": [
+        "french_24l"
+      ],
+      "asset_ids": [
+        "pocket-language-french_24l"
+      ]
+    },
+    {
+      "id": "language-german_24l",
+      "kind": "language",
+      "display_name": "German 24L",
+      "languages": [
+        "german_24l"
+      ],
+      "asset_ids": [
+        "pocket-language-german_24l"
+      ]
+    },
+    {
+      "id": "language-italian_24l",
+      "kind": "language",
+      "display_name": "Italian 24L",
+      "languages": [
+        "italian_24l"
+      ],
+      "asset_ids": [
+        "pocket-language-italian_24l"
+      ]
+    },
+    {
+      "id": "language-portuguese_24l",
+      "kind": "language",
+      "display_name": "Portuguese 24L",
+      "languages": [
+        "portuguese_24l"
+      ],
+      "asset_ids": [
+        "pocket-language-portuguese_24l"
+      ]
+    },
+    {
+      "id": "language-spanish_24l",
+      "kind": "language",
+      "display_name": "Spanish 24L",
+      "languages": [
+        "spanish_24l"
+      ],
+      "asset_ids": [
+        "pocket-language-spanish_24l"
+      ]
+    }
+  ]
+}
