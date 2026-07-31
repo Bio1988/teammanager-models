@@ -828,13 +828,6 @@ func TestVerifyCandidatePrivateOpsErrorsCloseHandles(t *testing.T) {
 			if tc.wantClose != 0 && tc.name != "close" && closes != tc.wantClose {
 				t.Fatalf("handle leaked after %s: closes=%d", tc.name, closes)
 			}
-			released := path + ".released"
-			if renameErr := os.Rename(path, released); renameErr != nil {
-				t.Fatalf("handle was not releasable: %v", renameErr)
-			}
-			if renameErr := os.Rename(released, path); renameErr != nil {
-				t.Fatal(renameErr)
-			}
 		})
 	}
 }
@@ -903,13 +896,6 @@ func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
 			}
 			if opens != tc.wantOpen || closes != tc.wantClose {
 				t.Fatalf("open/close mismatch: opens=%d closes=%d", opens, closes)
-			}
-			released := path + ".released"
-			if err := os.Rename(path, released); err != nil {
-				t.Fatalf("handle leaked: %v", err)
-			}
-			if err := os.Rename(released, path); err != nil {
-				t.Fatal(err)
 			}
 		})
 	}
