@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -240,6 +241,64 @@ func candidateRelease(product, repo, filename string, contents []byte) alpha.Rel
 	r.SHA256 = hex.EncodeToString(sum[:])
 	return r
 }
+
+type failingCandidateFile struct {
+	file      *os.File
+	readErr   error
+	statErrAt int
+	closeErr  error
+	stats     int
+}
+
+func (f *failingCandidateFile) Read(p []byte) (int, error) {
+	if f.readErr != nil {
+		return 0, f.readErr
+	}
+	return f.file.Read(p)
+}
+func (f *failingCandidateFile) Stat() (os.FileInfo, error) {
+	f.stats++
+	if f.stats == f.statErrAt {
+		return nil, errors.New("injected stat")
+	}
+	return f.file.Stat()
+}
+func (f *failingCandidateFile) Close() error {
+	err := f.file.Close()
+	if f.closeErr != nil {
+		return f.closeErr
+	}
+	return err
+}
+func TestVerifyCandidateReachableHandleErrors(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	for _, tc := range []struct {
+		name, want string
+		readErr    error
+		statErrAt  int
+		closeErr   error
+	}{{"read", "cannot be read", errors.New("read"), 0, nil}, {"pre stat", "cannot be stated", nil, 1, nil}, {"post stat", "cannot be re-stated", nil, 2, nil}, {"close", "cannot be closed", nil, 0, errors.New("close")}} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := os.WriteFile(path, contents, 0600); err != nil {
+				t.Fatal(err)
+			}
+			ops := candidateOps{lstat: os.Lstat, sameFile: os.SameFile, open: func(name string) (candidateFile, error) {
+				f, err := os.Open(name)
+				if err != nil {
+					return nil, err
+				}
+				return &failingCandidateFile{file: f, readErr: tc.readErr, statErrAt: tc.statErrAt, closeErr: tc.closeErr}, nil
+			}}
+			err := verifyCandidateWithOps(path, r, ops)
+			if err == nil || !contains(err.Error(), tc.want) {
+				t.Fatalf("wanted %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
 func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	d := t.TempDir()
 	contents := []byte("candidate installer")
@@ -372,11 +431,19 @@ func TestVerifyCandidateCommandTrustsBeforeCandidateReads(t *testing.T) {
 		t.Fatalf("candidate replay check failed: %v %s", err, out)
 	}
 	args = args[:len(args)-2]
-	if err := os.WriteFile(sigPath, []byte("not-a-signature"), 0600); err != nil {
+	badSig := ed25519.Sign(priv, alpha.SignedPayload(manifest))
+	badSig[0] ^= 1
+	if err := os.Remove(racePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(relayPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(badSig)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	out, err = exec.Command("go", args...).CombinedOutput()
-	if err == nil || !contains(string(out), "signature") || contains(string(out), "cannot be inspected") {
+	if err == nil || !contains(string(out), "invalid detached signature") || contains(string(out), "cannot be inspected") {
 		t.Fatalf("trust failure read candidate: %v %s", err, out)
 	}
 }
