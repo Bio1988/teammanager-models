@@ -275,9 +275,10 @@ func rejectClosedJSON(b []byte) error {
 					if !ok {
 						return errors.New("JSON object key is not a string")
 					}
-					if allowed != nil && seen[ks] {
+					if seen[ks] {
 						return fmt.Errorf("duplicate JSON key %q", ks)
 					}
+					seen[ks] = true
 					var child objectSchema
 					if allowed != nil {
 						var ok bool
@@ -285,7 +286,6 @@ func rejectClosedJSON(b []byte) error {
 						if !ok {
 							return fmt.Errorf("unknown or non-canonical JSON key %q", ks)
 						}
-						seen[ks] = true
 					}
 					if e := value(child); e != nil {
 						return e

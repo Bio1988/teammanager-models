@@ -134,9 +134,11 @@ func TestSignedExactDuplicateKeysReachClosedJSONGate(t *testing.T) {
 	}
 	base := valid(now)
 	vectors := map[string][]byte{
-		"top-level":    append(append([]byte{}, base[:len(base)-1]...), []byte(`,"schema":1}`)...),
-		"key_rotation": []byte(strings.Replace(string(base), `"status":"active"`, `"status":"active","status":"active"`, 1)),
-		"release":      []byte(strings.Replace(string(base), `"product":"race_engineer"`, `"product":"race_engineer","product":"race_engineer"`, 1)),
+		"top-level":         append(append([]byte{}, base[:len(base)-1]...), []byte(`,"schema":1}`)...),
+		"key_rotation":      []byte(strings.Replace(string(base), `"status":"active"`, `"status":"active","status":"active"`, 1)),
+		"release":           []byte(strings.Replace(string(base), `"product":"race_engineer"`, `"product":"race_engineer","product":"race_engineer"`, 1)),
+		"scalar object":     []byte(strings.Replace(string(base), `"schema":1`, `"schema":{"x":1,"x":1}`, 1)),
+		"root array object": []byte(`[{"x":1,"x":1}]`),
 	}
 	for name, b := range vectors {
 		t.Run(name, func(t *testing.T) {
