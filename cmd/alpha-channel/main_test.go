@@ -485,3 +485,293 @@ func TestVerifyCandidateCommandTrustsBeforeCandidateReads(t *testing.T) {
 		t.Fatalf("trust failure read candidate: %v %s", err, out)
 	}
 }
+
+func TestVerifyCandidateCommandOptionParityOrderingAndPrivateOutput(t *testing.T) {
+	d := t.TempDir()
+	now := time.Now().UTC()
+	raceBytes, relayBytes := []byte("race candidate"), []byte("relay candidate")
+	race := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", raceBytes)
+	relay := candidateRelease("relay", "teammanager-relay", "RelaySetup.exe", relayBytes)
+	m := alpha.Manifest{Schema: 1, Channel: "alpha", KeyID: "alpha-1", KeyRotation: alpha.KeyRotation{Status: "active", NotBefore: now.Add(-time.Hour).Format(time.RFC3339), NotAfter: now.Add(time.Hour).Format(time.RFC3339)}, GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339), ReleaseSequence: 7, AuthenticodePolicy: "not-required", RaceEngineer: race, Relay: relay}
+	manifest, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath, sigPath, keyPath := filepath.Join(d, "alpha.json"), filepath.Join(d, "alpha.json.sig"), filepath.Join(d, "alpha.pub")
+	if err := os.WriteFile(manifestPath, manifest, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(priv, alpha.SignedPayload(manifest)))), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, []byte(base64.StdEncoding.EncodeToString(pub)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	racePath, relayPath := filepath.Join(d, race.Filename), filepath.Join(d, relay.Filename)
+	if err := os.WriteFile(racePath, raceBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(relayPath, relayBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"run", ".", "verify-candidate", "--manifest", manifestPath, "--signature", sigPath, "--public-key", keyPath, "--race-installer", racePath, "--relay-installer", relayPath}
+	run := func(extra ...string) (string, error) { return runAlphaChannel(base, extra...) }
+	if out, err := run("--min-sequence", "6", "--race-version", "0.1.0-alpha.6", "--relay-version", "0.1.0-alpha.6"); err != nil || !contains(out, "verified candidate") {
+		t.Fatalf("all shared trust flags must succeed: %v %s", err, out)
+	}
+	if err := os.Remove(racePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(relayPath); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, want string
+		extra      []string
+	}{
+		{"replay before race", "release_sequence is not newer", []string{"--min-sequence", "7"}},
+		{"race downgrade before race", "race_engineer version is not newer", []string{"--race-version", "0.1.0-alpha.7"}},
+		{"relay downgrade before race", "relay version is not newer", []string{"--race-version", "0.1.0-alpha.6", "--relay-version", "0.1.0-alpha.7"}},
+		{"race before relay", "race_engineer candidate cannot be inspected", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := run(tc.extra...)
+			if err == nil || !contains(out, tc.want) || contains(out, relay.Filename) {
+				t.Fatalf("want %q before candidate IO, err=%v output=%s", tc.want, err, out)
+			}
+		})
+	}
+	if err := os.WriteFile(racePath, raceBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := run()
+	if err == nil || !contains(out, "relay candidate cannot be inspected") {
+		t.Fatalf("relay was not checked after successful race: %v %s", err, out)
+	}
+	bad := ed25519.Sign(priv, alpha.SignedPayload(manifest))
+	bad[0] ^= 1 // stays exactly ed25519.SignatureSize; this is a crypto failure, not a parse failure.
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(bad)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out, err = run()
+	if err == nil || !contains(out, "invalid detached signature") || contains(out, racePath) || contains(out, keyPath) || contains(out, sigPath) || contains(out, string(manifest)) || contains(out, base64.StdEncoding.EncodeToString(bad)) {
+		t.Fatalf("trust error disclosed input or reached candidates: %v %s", err, out)
+	}
+}
+
+func runAlphaChannel(base []string, extra ...string) (string, error) {
+	args := append(append([]string{}, base...), extra...)
+	out, err := exec.Command("go", args...).CombinedOutput()
+	return string(out), err
+}
+
+func TestVerifyCandidateFinalIdentityAndNoWriteSnapshot(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(d, "nested"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(d, "nested", "sentinel"), []byte("untouched"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	before := treeSnapshot(t, d)
+	calls := 0
+	err := verifyCandidateWithOps(path, r, candidateOps{
+		lstat:    os.Lstat,
+		open:     func(name string) (candidateFile, error) { return os.Open(name) },
+		sameFile: func(a, b os.FileInfo) bool { calls++; return calls != 3 && os.SameFile(a, b) },
+	})
+	if err == nil || !contains(err.Error(), "path changed during verification") || calls != 3 {
+		t.Fatalf("final identity gate/counter mismatch: err=%v calls=%d", err, calls)
+	}
+	after := treeSnapshot(t, d)
+	if len(before) != len(after) {
+		t.Fatalf("verifier wrote tree: before=%v after=%v", before, after)
+	}
+	for name, sum := range before {
+		if after[name] != sum {
+			t.Fatalf("verifier wrote %s", name)
+		}
+	}
+}
+
+func treeSnapshot(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			out[rel] = "dir"
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		s := sha256.Sum256(b)
+		out[rel] = info.Mode().String() + ":" + hex.EncodeToString(s[:])
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func TestVerifyCandidateRejectsInvalidSignedSizeBeforeArtifactIO(t *testing.T) {
+	contents := []byte("candidate installer")
+	base := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	for _, tc := range []struct {
+		name string
+		size int64
+	}{
+		{"zero", 0},
+		{"over eight GiB", (8 << 30) + 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := base
+			r.Size = tc.size
+			lstats, opens := 0, 0
+			err := verifyCandidateWithOps("RaceSetup.exe", r, candidateOps{
+				lstat:    func(string) (os.FileInfo, error) { lstats++; return nil, errors.New("must not inspect") },
+				open:     func(string) (candidateFile, error) { opens++; return nil, errors.New("must not open") },
+				sameFile: os.SameFile,
+			})
+			if err == nil || !contains(err.Error(), "signed size is outside") || lstats != 0 || opens != 0 {
+				t.Fatalf("err=%v, lstats=%d, opens=%d", err, lstats, opens)
+			}
+		})
+	}
+
+	// The upper bound itself is allowed to reach the artifact gate without an
+	// allocation proportional to signed size.  The fake file stops at Stat.
+	r := base
+	r.Size = 8 << 30
+	info, err := os.Stat(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	opens := 0
+	err = verifyCandidateWithOps("RaceSetup.exe", r, candidateOps{
+		lstat: func(string) (os.FileInfo, error) { return info, nil },
+		open: func(string) (candidateFile, error) {
+			opens++
+			f, err := os.Open(os.Args[0])
+			if err != nil {
+				return nil, err
+			}
+			return f, nil
+		},
+		sameFile: func(_, _ os.FileInfo) bool { return true },
+	})
+	if err == nil || !contains(err.Error(), "size does not match") || opens != 1 {
+		t.Fatalf("max size did not reach artifact gate: err=%v opens=%d", err, opens)
+	}
+}
+
+func TestVerifyCandidatePrivateOpsErrorsCloseHandles(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name, want          string
+		configure           func(*candidateOps, *int)
+		wantOpen, wantClose int
+	}{
+		{"initial lstat", "cannot be inspected", func(o *candidateOps, _ *int) {
+			o.lstat = func(string) (os.FileInfo, error) { return nil, errors.New("lstat") }
+		}, 0, 0},
+		{"open", "cannot be opened", func(o *candidateOps, _ *int) {
+			o.open = func(string) (candidateFile, error) { return nil, errors.New("open") }
+		}, 1, 0},
+		{"initial handle stat", "cannot be stated", func(o *candidateOps, _ *int) { o.open = trackedOpen(path, 1, nil) }, 1, 0},
+		{"initial identity", "changed before", func(o *candidateOps, _ *int) { o.sameFile = func(_, _ os.FileInfo) bool { return false } }, 1, 1},
+		{"read", "cannot be read", func(o *candidateOps, _ *int) { o.open = trackedOpen(path, 0, errors.New("read")) }, 1, 0},
+		{"final handle stat", "cannot be re-stated", func(o *candidateOps, _ *int) { o.open = trackedOpen(path, 2, nil) }, 1, 0},
+		{"close", "cannot be closed", func(o *candidateOps, _ *int) {
+			o.open = func(string) (candidateFile, error) {
+				f, e := os.Open(path)
+				if e != nil {
+					return nil, e
+				}
+				return &failingCandidateFile{file: f, closeErr: errors.New("close")}, nil
+			}
+		}, 1, 0},
+		{"final lstat", "cannot be finally inspected", func(o *candidateOps, _ *int) {
+			calls := 0
+			o.lstat = func(name string) (os.FileInfo, error) {
+				calls++
+				if calls == 2 {
+					return nil, errors.New("final")
+				}
+				return os.Lstat(name)
+			}
+		}, 1, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opens, closes := 0, 0
+			op := candidateOps{lstat: os.Lstat, open: func(name string) (candidateFile, error) {
+				f, e := os.Open(name)
+				if e != nil {
+					return nil, e
+				}
+				return &closeCountingFile{File: f, closes: &closes}, nil
+			}, sameFile: os.SameFile}
+			tc.configure(&op, &closes)
+			// Configured open functions are still counted at the seam boundary.
+			originalOpen := op.open
+			op.open = func(name string) (candidateFile, error) { opens++; return originalOpen(name) }
+			err := verifyCandidateWithOps(path, r, op)
+			if err == nil || !contains(err.Error(), tc.want) || opens != tc.wantOpen {
+				t.Fatalf("err=%v opens=%d", err, opens)
+			}
+			if tc.wantClose != 0 && tc.name != "close" && closes != tc.wantClose {
+				t.Fatalf("handle leaked after %s: closes=%d", tc.name, closes)
+			}
+			released := path + ".released"
+			if renameErr := os.Rename(path, released); renameErr != nil {
+				t.Fatalf("handle was not releasable: %v", renameErr)
+			}
+			if renameErr := os.Rename(released, path); renameErr != nil {
+				t.Fatal(renameErr)
+			}
+		})
+	}
+}
+
+type closeCountingFile struct {
+	*os.File
+	closes *int
+}
+
+func (f *closeCountingFile) Close() error { *f.closes++; return f.File.Close() }
+
+func trackedOpen(path string, statErrAt int, readErr error) func(string) (candidateFile, error) {
+	return func(string) (candidateFile, error) {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		return &failingCandidateFile{file: f, statErrAt: statErrAt, readErr: readErr}, nil
+	}
+}

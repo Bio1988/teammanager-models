@@ -99,6 +99,12 @@ type candidateOps struct {
 }
 
 func verifyCandidateWithOps(path string, r alpha.Release, ops candidateOps) error {
+	// This is deliberately repeated here, rather than relying solely on the
+	// manifest validator: this private helper must never turn a malformed
+	// signed-size into an unbounded or negative stream limit.
+	if r.Size <= 0 || r.Size > 8<<30 {
+		return fmt.Errorf("%s candidate signed size is outside the allowed range", r.Product)
+	}
 	if filepath.Base(path) != r.Filename {
 		return fmt.Errorf("%s candidate basename does not match manifest", r.Product)
 	}
