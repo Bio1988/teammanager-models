@@ -115,6 +115,9 @@ func verifyCandidateWithOps(path string, r alpha.Release, ops candidateOps) erro
 	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
 		return fmt.Errorf("%s candidate is not a regular non-symlink file", r.Product)
 	}
+	if before.Size() != r.Size {
+		return fmt.Errorf("%s candidate size does not match manifest", r.Product)
+	}
 	f, err := ops.open(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be opened", r.Product)
@@ -170,10 +173,11 @@ func verifyCandidateWithOps(path string, r alpha.Release, ops candidateOps) erro
 	if hex.EncodeToString(h.Sum(nil)) != r.SHA256 {
 		return fmt.Errorf("%s candidate SHA-256 does not match manifest", r.Product)
 	}
-	if err := f.Close(); err != nil {
+	err = f.Close()
+	closed = true // Close was attempted; never retry it from the deferred cleanup.
+	if err != nil {
 		return fmt.Errorf("%s candidate cannot be closed", r.Product)
 	}
-	closed = true
 	final, err := ops.lstat(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be finally inspected", r.Product)

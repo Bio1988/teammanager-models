@@ -365,8 +365,12 @@ func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	if err := os.WriteFile(path, contents, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCandidate(filepath.Join(d, "wrong.exe"), r); err == nil {
-		t.Fatal("accepted wrong basename")
+	wrong := filepath.Join(d, "wrong.exe")
+	if err := os.WriteFile(wrong, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCandidate(wrong, r); err == nil || err.Error() != "race_engineer candidate basename does not match manifest" {
+		t.Fatalf("basename gate drift: %v", err)
 	}
 	if err := verifyCandidate(filepath.Join(d, "missing-parent", r.Filename), r); err == nil {
 		t.Fatal("accepted missing candidate")
@@ -400,6 +404,64 @@ func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	if err := verifyCandidate(path, r); err == nil {
 		t.Fatal("accepted huge signed size")
 	}
+}
+
+func TestVerifyCandidatePreOpenOpsGates(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name, path, want string
+		info             os.FileInfo
+	}{
+		{"basename", filepath.Join(d, "other.exe"), "race_engineer candidate basename does not match manifest", info},
+		{"symlink", path, "race_engineer candidate is not a regular non-symlink file", testFileInfo{FileInfo: info, mode: info.Mode() | os.ModeSymlink}},
+		{"initial size", path, "race_engineer candidate size does not match manifest", testFileInfo{FileInfo: info, size: r.Size + 1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lstates, opens := 0, 0
+			err := verifyCandidateWithOps(tc.path, r, candidateOps{
+				lstat:    func(string) (os.FileInfo, error) { lstates++; return tc.info, nil },
+				open:     func(string) (candidateFile, error) { opens++; return nil, errors.New("must not open") },
+				sameFile: os.SameFile,
+			})
+			wantLstat := 1
+			if tc.name == "basename" {
+				wantLstat = 0
+			}
+			if err == nil || err.Error() != tc.want || lstates != wantLstat || opens != 0 {
+				t.Fatalf("err=%v lstat=%d open=%d", err, lstates, opens)
+			}
+		})
+	}
+}
+
+type testFileInfo struct {
+	os.FileInfo
+	mode os.FileMode
+	size int64
+}
+
+func (i testFileInfo) Mode() os.FileMode {
+	if i.mode != 0 {
+		return i.mode
+	}
+	return i.FileInfo.Mode()
+}
+func (i testFileInfo) Size() int64 {
+	if i.size != 0 {
+		return i.size
+	}
+	return i.FileInfo.Size()
 }
 func TestVerifyCandidateRejectsFinalPathSwap(t *testing.T) {
 	d := t.TempDir()
@@ -520,8 +582,26 @@ func TestVerifyCandidateCommandOptionParityOrderingAndPrivateOutput(t *testing.T
 	}
 	base := []string{"run", ".", "verify-candidate", "--manifest", manifestPath, "--signature", sigPath, "--public-key", keyPath, "--race-installer", racePath, "--relay-installer", relayPath}
 	run := func(extra ...string) (string, error) { return runAlphaChannel(base, extra...) }
+	for _, missing := range []string{"--manifest", "--signature", "--public-key", "--race-installer", "--relay-installer"} {
+		t.Run("missing "+missing, func(t *testing.T) {
+			args := []string{"run", ".", "verify-candidate"}
+			for i := 3; i < len(base); i += 2 {
+				if base[i] != missing {
+					args = append(args, base[i], base[i+1])
+				}
+			}
+			out, err := exec.Command("go", args...).CombinedOutput()
+			if err == nil || !contains(string(out), "--manifest, --signature, --public-key, --race-installer, and --relay-installer are required") {
+				t.Fatalf("missing %s: %v %s", missing, err, out)
+			}
+		})
+	}
 	if out, err := run("--min-sequence", "6", "--race-version", "0.1.0-alpha.6", "--relay-version", "0.1.0-alpha.6"); err != nil || !contains(out, "verified candidate") {
 		t.Fatalf("all shared trust flags must succeed: %v %s", err, out)
+	}
+	out, err := run("--race-installer", relayPath, "--relay-installer", racePath)
+	if err == nil || !contains(out, "race_engineer candidate basename does not match manifest") || contains(out, relay.Filename) {
+		t.Fatalf("swapped candidates did not fail at Race first: %v %s", err, out)
 	}
 	if err := os.Remove(racePath); err != nil {
 		t.Fatal(err)
@@ -548,7 +628,7 @@ func TestVerifyCandidateCommandOptionParityOrderingAndPrivateOutput(t *testing.T
 	if err := os.WriteFile(racePath, raceBytes, 0600); err != nil {
 		t.Fatal(err)
 	}
-	out, err := run()
+	out, err = run()
 	if err == nil || !contains(out, "relay candidate cannot be inspected") {
 		t.Fatalf("relay was not checked after successful race: %v %s", err, out)
 	}
@@ -668,7 +748,7 @@ func TestVerifyCandidateRejectsInvalidSignedSizeBeforeArtifactIO(t *testing.T) {
 	}
 	opens := 0
 	err = verifyCandidateWithOps("RaceSetup.exe", r, candidateOps{
-		lstat: func(string) (os.FileInfo, error) { return info, nil },
+		lstat: func(string) (os.FileInfo, error) { return testFileInfo{FileInfo: info, size: r.Size}, nil },
 		open: func(string) (candidateFile, error) {
 			opens++
 			f, err := os.Open(os.Args[0])
@@ -757,6 +837,121 @@ func TestVerifyCandidatePrivateOpsErrorsCloseHandles(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, want                        string
+		statErrAt, sameFileAt, lstatErrAt int
+		readErr, openErr, closeErr        error
+		stream                            []byte
+		wantOpen, wantClose               int
+	}{
+		{"initial lstat", "race_engineer candidate cannot be inspected", 0, 0, 1, nil, nil, nil, nil, 0, 0},
+		{"open", "race_engineer candidate cannot be opened", 0, 0, 0, nil, errors.New("open"), nil, nil, 1, 0},
+		{"success", "", 0, 0, 0, nil, nil, nil, nil, 1, 1},
+		{"initial handle stat", "race_engineer candidate cannot be stated", 1, 0, 0, nil, nil, nil, nil, 1, 1},
+		{"initial same file", "race_engineer candidate changed before verification", 0, 1, 0, nil, nil, nil, nil, 1, 1},
+		{"read", "race_engineer candidate cannot be read", 0, 0, 0, errors.New("read"), nil, nil, nil, 1, 1},
+		{"truncated stream", "race_engineer candidate was truncated during verification", 0, 0, 0, nil, nil, nil, contents[:len(contents)-1], 1, 1},
+		{"appended stream", "race_engineer candidate grew during verification", 0, 0, 0, nil, nil, nil, append(append([]byte{}, contents...), 'x'), 1, 1},
+		{"changed stream", "race_engineer candidate SHA-256 does not match manifest", 0, 0, 0, nil, nil, nil, append([]byte("x"), contents[1:]...), 1, 1},
+		{"final handle stat", "race_engineer candidate cannot be re-stated", 2, 0, 0, nil, nil, nil, nil, 1, 1},
+		{"second same file", "race_engineer candidate changed during verification", 0, 2, 0, nil, nil, nil, nil, 1, 1},
+		{"close", "race_engineer candidate cannot be closed", 0, 0, 0, nil, nil, errors.New("close"), nil, 1, 1},
+		{"final lstat", "race_engineer candidate cannot be finally inspected", 0, 0, 2, nil, nil, nil, nil, 1, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opens, closes, lstatCalls, sameFileCalls := 0, 0, 0, 0
+			err := verifyCandidateWithOps(path, r, candidateOps{
+				lstat: func(name string) (os.FileInfo, error) {
+					lstatCalls++
+					if lstatCalls == tc.lstatErrAt {
+						return nil, errors.New("final lstat")
+					}
+					return os.Lstat(name)
+				},
+				open: func(name string) (candidateFile, error) {
+					opens++
+					if tc.openErr != nil {
+						return nil, tc.openErr
+					}
+					f, err := os.Open(name)
+					if err != nil {
+						return nil, err
+					}
+					return &countedCandidateFile{File: f, closes: &closes, statErrAt: tc.statErrAt, readErr: tc.readErr, closeErr: tc.closeErr, stream: tc.stream}, nil
+				},
+				sameFile: func(a, b os.FileInfo) bool {
+					sameFileCalls++
+					return sameFileCalls != tc.sameFileAt && os.SameFile(a, b)
+				},
+			})
+			if tc.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil || err.Error() != tc.want || strings.Contains(err.Error(), path) || strings.Contains(err.Error(), string(contents)) {
+				t.Fatalf("unsafe or unexpected error: %v", err)
+			}
+			if opens != tc.wantOpen || closes != tc.wantClose {
+				t.Fatalf("open/close mismatch: opens=%d closes=%d", opens, closes)
+			}
+			released := path + ".released"
+			if err := os.Rename(path, released); err != nil {
+				t.Fatalf("handle leaked: %v", err)
+			}
+			if err := os.Rename(released, path); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+type countedCandidateFile struct {
+	*os.File
+	closes            *int
+	stats, statErrAt  int
+	readErr, closeErr error
+	stream            []byte
+	offset            int
+}
+
+func (f *countedCandidateFile) Read(p []byte) (int, error) {
+	if f.readErr != nil {
+		return 0, f.readErr
+	}
+	if f.stream != nil {
+		if f.offset >= len(f.stream) {
+			return 0, io.EOF
+		}
+		n := copy(p, f.stream[f.offset:])
+		f.offset += n
+		return n, nil
+	}
+	return f.File.Read(p)
+}
+func (f *countedCandidateFile) Stat() (os.FileInfo, error) {
+	f.stats++
+	if f.stats == f.statErrAt {
+		return nil, errors.New("stat")
+	}
+	return f.File.Stat()
+}
+func (f *countedCandidateFile) Close() error {
+	*f.closes++
+	err := f.File.Close()
+	if f.closeErr != nil {
+		return f.closeErr
+	}
+	return err
 }
 
 type closeCountingFile struct {
