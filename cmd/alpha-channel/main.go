@@ -22,10 +22,11 @@ import (
 )
 
 const (
-	maxManifestBytes = 64 << 10
-	domain           = "TeamManager Alpha Channel v1\x00"
-	forgejoHost      = "forgejo.g-grp.com"
-	forgejoOwner     = "Max"
+	maxManifestBytes  = 64 << 10
+	maxSignatureBytes = 4 << 10
+	domain            = "TeamManager Alpha Channel v1\x00"
+	forgejoHost       = "forgejo.g-grp.com"
+	forgejoOwner      = "Max"
 )
 
 var versionRE = regexp.MustCompile(`^0\.[0-9]+\.[0-9]+-alpha\.[1-9][0-9]*$`)
@@ -381,6 +382,9 @@ func readKey(p string) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
+	return decodeKeyBytes(b)
+}
+func decodeKeyBytes(b []byte) ([]byte, error) {
 	s := strings.TrimSpace(string(b))
 	if v, e := hex.DecodeString(s); e == nil {
 		return v, nil
@@ -394,12 +398,31 @@ func readKey(p string) ([]byte, error) {
 	return b, nil
 }
 func readSignature(p string) ([]byte, error) {
-	b, err := readKey(p)
+	b, err := readFileBounded(p, maxSignatureBytes)
+	if err != nil {
+		return nil, err
+	}
+	b, err = decodeKeyBytes(b)
 	if err != nil {
 		return nil, err
 	}
 	if len(b) != ed25519.SignatureSize {
 		return nil, errors.New("signature must be raw, base64, or hex Ed25519 bytes")
+	}
+	return b, nil
+}
+func readFileBounded(name string, limit int64) ([]byte, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(b)) > limit {
+		return nil, fmt.Errorf("file exceeds %d bytes", limit)
 	}
 	return b, nil
 }

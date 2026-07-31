@@ -138,6 +138,16 @@ func TestPairFailureCleansItsManifest(t *testing.T) {
 		t.Fatal("existing signature changed")
 	}
 }
+func TestSignatureReadIsBounded(t *testing.T) {
+	d := t.TempDir()
+	p := filepath.Join(d, "oversized.sig")
+	if err := os.WriteFile(p, make([]byte, maxSignatureBytes+1), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readSignature(p); err == nil {
+		t.Fatal("oversized signature accepted")
+	}
+}
 func TestExpiryFutureReplayDowngradeAndRedirect(t *testing.T) {
 	now := time.Now().UTC()
 	var m manifest

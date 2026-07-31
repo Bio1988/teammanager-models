@@ -58,6 +58,10 @@ manifest was created, it removes that manifest; if cleanup itself fails it
 reports the partial state and every later publication fails closed rather than
 replacing it.
 
+Detached signatures are read with a 4 KiB bound before raw, hex, base64, or PEM
+decoding. Public and private key files are local operator inputs; only the
+remote channel signature is subject to that transport boundary.
+
 ## Later activation sequence
 
 1. Build Race Engineer and Relay from exact Forgejo commits and create their
