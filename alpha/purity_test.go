@@ -11,11 +11,8 @@ import (
 	"testing"
 )
 
-var allowedImports = map[string]bool{
-	"bytes": true, "crypto/ed25519": true, "encoding/json": true,
-	"errors": true, "fmt": true, "io": true, "regexp": true,
-	"strconv": true, "strings": true, "time": true, "unicode/utf8": true,
-}
+var allowedImports = map[string]bool{"bytes": true, "crypto/ed25519": true, "encoding/json": true, "errors": true, "fmt": true, "io": true, "regexp": true, "strconv": true, "strings": true, "time": true, "unicode/utf8": true}
+var allowedSelectors = map[string]map[string]bool{"fmt": {"Errorf": true}, "time": {"Minute": true, "Parse": true, "RFC3339": true, "Time": true, "UTC": true}}
 
 func TestPurePackageImportsOnlyApprovedStdlib(t *testing.T) {
 	for _, name := range productionGoFiles(t) {
@@ -28,19 +25,21 @@ func TestPurePackageImportsOnlyApprovedStdlib(t *testing.T) {
 		}
 	}
 }
-
-func TestPuritySentinelRejectsAliasedClockAndOutputMutations(t *testing.T) {
+func TestPuritySentinelRejectsBoundaryMutations(t *testing.T) {
 	for name, source := range map[string]string{
-		"aliased clock":  `package alpha; import t "time"; func f() { _ = t.Now() }`,
+		"alias now":      `package alpha; import t "time"; func f() { _ = t.Now() }`,
 		"implicit clock": `package alpha; import "time"; func f() { _ = time.After(time.Second); _ = time.Since(time.Time{}); time.Sleep(time.Second) }`,
-		"output":         `package alpha; import p "fmt"; func f() { p.Println("side effect") }`,
+		"dot time":       `package alpha; import . "time"; func f() { _ = Now() }`,
+		"blank import":   `package alpha; import _ "net/http"`,
+		"load location":  `package alpha; import "time"; func f() { _, _ = time.LoadLocation("Local") }`,
+		"print":          `package alpha; import p "fmt"; func f() { p.Println("side effect") }`,
+		"scan":           `package alpha; import "fmt"; func f() { var s string; _, _ = fmt.Scan(&s) }`,
 	} {
 		if err := checkPureSource(name, []byte(source)); err == nil {
 			t.Fatalf("accepted %s", name)
 		}
 	}
 }
-
 func checkPureSource(name string, source []byte) error {
 	f, err := parser.ParseFile(token.NewFileSet(), name, source, 0)
 	if err != nil {
@@ -51,6 +50,9 @@ func checkPureSource(name string, source []byte) error {
 		path := strings.Trim(imp.Path.Value, `"`)
 		if !allowedImports[path] {
 			return fmt.Errorf("pure package imports non-approved dependency %q", path)
+		}
+		if imp.Name != nil && (imp.Name.Name == "." || imp.Name.Name == "_") {
+			return fmt.Errorf("pure package uses forbidden import form %q", imp.Name.Name)
 		}
 		alias := path[strings.LastIndex(path, "/")+1:]
 		if imp.Name != nil {
@@ -68,22 +70,14 @@ func checkPureSource(name string, source []byte) error {
 		if !ok {
 			return true
 		}
-		switch aliases[ident.Name] {
-		case "time":
-			switch selector.Sel.Name {
-			case "Now", "Since", "Until", "After", "AfterFunc", "NewTimer", "NewTicker", "Tick", "Sleep":
-				violation = fmt.Errorf("non-injected time source time.%s", selector.Sel.Name)
-			}
-		case "fmt":
-			if strings.HasPrefix(selector.Sel.Name, "Print") {
-				violation = fmt.Errorf("output side effect fmt.%s", selector.Sel.Name)
-			}
+		path := aliases[ident.Name]
+		if allowed, constrained := allowedSelectors[path]; constrained && !allowed[selector.Sel.Name] {
+			violation = fmt.Errorf("pure package uses non-approved %s.%s", path, selector.Sel.Name)
 		}
 		return violation == nil
 	})
 	return violation
 }
-
 func productionGoFiles(t *testing.T) []string {
 	t.Helper()
 	files, err := filepath.Glob("*.go")

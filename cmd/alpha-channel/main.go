@@ -224,6 +224,8 @@ func cliError(err error) error {
 		"alpha.KeyRotation", "main.keyRotation",
 		"alpha.Release", "main.release",
 		"Manifest.", "manifest.",
+		"KeyRotation.", "keyRotation.",
+		"Release.", "release.",
 	).Replace(s)
 	return errors.New(s)
 }

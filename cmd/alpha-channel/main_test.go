@@ -150,6 +150,12 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 	keyRotationType["key_rotation"] = "wrong"
 	releaseType := cloneObject(t, object)
 	releaseType["race_engineer"] = "wrong"
+	keyRotationScalar := cloneObject(t, object)
+	keyRotationScalar["key_rotation"].(map[string]any)["status"] = 1
+	raceReleaseScalar := cloneObject(t, object)
+	raceReleaseScalar["race_engineer"].(map[string]any)["product"] = 1
+	relayReleaseScalar := cloneObject(t, object)
+	relayReleaseScalar["relay"].(map[string]any)["filename"] = 1
 	unknown := append(append([]byte{}, b[:len(b)-1]...), []byte(`,"unknown":true}`)...)
 	for _, tc := range []struct {
 		name     string
@@ -160,6 +166,9 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 		{"root", []byte(`[]`), "Go value of type main.manifest"},
 		{"key rotation type", marshalObject(t, keyRotationType), "type main.keyRotation"},
 		{"release type", marshalObject(t, releaseType), "type main.release"},
+		{"key rotation scalar", marshalObject(t, keyRotationScalar), "keyRotation.key_rotation.status"},
+		{"race release scalar", marshalObject(t, raceReleaseScalar), "release.race_engineer.product"},
+		{"relay release scalar", marshalObject(t, relayReleaseScalar), "release.relay.filename"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := os.WriteFile(manifestPath, tc.manifest, 0600); err != nil {
