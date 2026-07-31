@@ -84,10 +84,14 @@ func verifyCandidateCmd(args []string) {
 }
 
 func verifyCandidate(path string, r alpha.Release) error {
+	return verifyCandidateWithLstat(path, r, os.Lstat)
+}
+
+func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (os.FileInfo, error)) error {
 	if filepath.Base(path) != r.Filename {
 		return fmt.Errorf("%s candidate basename does not match manifest", r.Product)
 	}
-	before, err := os.Lstat(path)
+	before, err := lstat(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be inspected", r.Product)
 	}
@@ -98,7 +102,12 @@ func verifyCandidate(path string, r alpha.Release) error {
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be opened", r.Product)
 	}
-	defer f.Close()
+	closed := false
+	defer func() {
+		if !closed {
+			_ = f.Close()
+		}
+	}()
 	opened, err := f.Stat()
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be stated", r.Product)
@@ -142,6 +151,17 @@ func verifyCandidate(path string, r alpha.Release) error {
 	}
 	if hex.EncodeToString(h.Sum(nil)) != r.SHA256 {
 		return fmt.Errorf("%s candidate SHA-256 does not match manifest", r.Product)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("%s candidate cannot be closed", r.Product)
+	}
+	closed = true
+	final, err := lstat(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be finally inspected", r.Product)
+	}
+	if final.Mode()&os.ModeSymlink != 0 || !final.Mode().IsRegular() || final.Size() != r.Size || !os.SameFile(opened, final) {
+		return fmt.Errorf("%s candidate path changed during verification", r.Product)
 	}
 	return nil
 }

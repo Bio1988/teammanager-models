@@ -65,7 +65,11 @@ go run ./cmd/alpha-channel publish --manifest candidate.json --private-key exter
 
 `verify-candidate` is an offline pre-publication check. After the normal trust
 transition succeeds, it checks that each local regular, non-symlink installer
-has the signed basename, exact size, and SHA-256. It does not check Forgejo
+has the signed basename, exact size, and SHA-256 through one opened handle,
+then observes the same path identity and size again. Its success is only a
+point-in-time observation: it is not an atomic snapshot, lock, stability, or
+post-return guarantee. Stage candidates quiescently; a later publisher or
+installer must verify the bytes it consumes again. It does not check Forgejo
 release existence or immutability, make a public re-download, publish assets,
 or authorize channel activation.
 

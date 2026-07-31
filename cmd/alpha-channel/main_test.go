@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -250,6 +251,12 @@ func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	if err := verifyCandidate(path, r); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Remove(path); err != nil {
+		t.Fatalf("verified handle was not closed: %v", err)
+	}
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
 	tampered := append([]byte{}, contents...)
 	tampered[0] ^= 1
 	if err := os.WriteFile(path, tampered, 0600); err != nil {
@@ -279,14 +286,46 @@ func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	if err := verifyCandidate(path, r); err == nil {
 		t.Fatal("accepted wrong hash")
 	}
-	if err := os.Symlink(path, filepath.Join(d, "RaceSetup-link.exe")); err == nil {
-		if err := verifyCandidate(filepath.Join(d, "RaceSetup-link.exe"), candidateRelease("race_engineer", "race-engineer-go", "RaceSetup-link.exe", contents)); err == nil {
-			t.Fatal("accepted symlink")
+	link := filepath.Join(d, "RaceSetup-link.exe")
+	if err := os.Symlink(path, link); err != nil {
+		if runtime.GOOS != "windows" {
+			t.Fatalf("cannot create mandatory symlink: %v", err)
 		}
+		t.Logf("Windows symlink check skipped: %v", err)
+	} else if err := verifyCandidate(link, candidateRelease("race_engineer", "race-engineer-go", "RaceSetup-link.exe", contents)); err == nil {
+		t.Fatal("accepted symlink")
 	}
 	r.Size = 1 << 62
 	if err := verifyCandidate(path, r); err == nil {
 		t.Fatal("accepted huge signed size")
+	}
+}
+func TestVerifyCandidateRejectsFinalPathSwap(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path, replacement := filepath.Join(d, r.Filename), filepath.Join(d, "replacement.exe")
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(replacement, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	err := verifyCandidateWithLstat(path, r, func(name string) (os.FileInfo, error) {
+		calls++
+		if calls == 2 {
+			if err := os.Remove(path); err != nil {
+				return nil, err
+			}
+			if err := os.Rename(replacement, path); err != nil {
+				return nil, err
+			}
+		}
+		return os.Lstat(name)
+	})
+	if err == nil || !contains(err.Error(), "path changed") {
+		t.Fatalf("accepted final path swap: %v", err)
 	}
 }
 func TestVerifyCandidateCommandTrustsBeforeCandidateReads(t *testing.T) {
