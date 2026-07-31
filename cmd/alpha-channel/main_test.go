@@ -165,12 +165,24 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 	raceReleaseArray := cloneObject(t, object)
 	raceReleaseArray["race_engineer"].(map[string]any)["product"] = []any{"race_engineer"}
 	unknown := append(append([]byte{}, b[:len(b)-1]...), []byte(`,"unknown":true}`)...)
+	unknownBeforeDuplicate := []byte(strings.Replace(string(b), `{"schema":1`, `{"unknown":true,"schema":1`, 1))
+	unknownBeforeDuplicate = append(unknownBeforeDuplicate[:len(unknownBeforeDuplicate)-1], []byte(`,"schema":1}`)...)
+	typeBeforeUnknown := []byte(strings.Replace(string(b), `"schema":1`, `"schema":{"x":1}`, 1))
+	typeBeforeUnknown = append(typeBeforeUnknown[:len(typeBeforeUnknown)-1], []byte(`,"unknown":true}`)...)
+	nestedTypeBeforeUnknown := []byte(strings.Replace(string(b), `"status":"active"`, `"status":{"x":1}`, 1))
+	nestedTypeBeforeUnknown = append(nestedTypeBeforeUnknown[:len(nestedTypeBeforeUnknown)-1], []byte(`,"unknown":true}`)...)
+	unknownBeforeNestedDuplicate := []byte(strings.Replace(string(b), `{"schema":1`, `{"unknown":true,"schema":1`, 1))
+	unknownBeforeNestedDuplicate = []byte(strings.Replace(string(unknownBeforeNestedDuplicate), `"status":"active"`, `"status":"active","status":"active"`, 1))
 	for _, tc := range []struct {
 		name     string
 		manifest []byte
 		want     string
 	}{
 		{"unknown", unknown, `json: unknown field "unknown"`},
+		{"unknown before duplicate", unknownBeforeDuplicate, `duplicate JSON key "schema"`},
+		{"unknown before nested duplicate", unknownBeforeNestedDuplicate, `duplicate JSON key "status"`},
+		{"type before unknown", typeBeforeUnknown, "manifest.schema"},
+		{"nested type before unknown", nestedTypeBeforeUnknown, "keyRotation.key_rotation.status"},
 		{"root", []byte(`[]`), "Go value of type main.manifest"},
 		{"key rotation type", marshalObject(t, keyRotationType), "type main.keyRotation"},
 		{"release type", marshalObject(t, releaseType), "type main.release"},

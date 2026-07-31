@@ -107,9 +107,10 @@ func ParseManifest(b []byte, now time.Time) (Manifest, error) {
 	if !utf8.Valid(b) {
 		return Manifest{}, errors.New("manifest is not valid UTF-8")
 	}
-	if err := rejectClosedJSON(b); err != nil {
+	if err := rejectDuplicates(b); err != nil {
 		return Manifest{}, err
 	}
+	canonicalErr := rejectNonCanonicalKeys(b)
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
 	var m Manifest
@@ -118,6 +119,9 @@ func ParseManifest(b []byte, now time.Time) (Manifest, error) {
 	}
 	if dec.Decode(&struct{}{}) != io.EOF {
 		return Manifest{}, errors.New("trailing JSON data")
+	}
+	if canonicalErr != nil {
+		return Manifest{}, canonicalErr
 	}
 	if err := ValidateManifest(m, now); err != nil {
 		return Manifest{}, err
@@ -254,10 +258,10 @@ func validateRelease(r Release, product, repo string) error {
 	}
 	return nil
 }
-func rejectClosedJSON(b []byte) error {
+func rejectDuplicates(b []byte) error {
 	d := json.NewDecoder(bytes.NewReader(b))
-	var value func(objectSchema) error
-	value = func(allowed objectSchema) error {
+	var value func() error
+	value = func() error {
 		t, e := d.Token()
 		if e != nil {
 			return e
@@ -279,6 +283,54 @@ func rejectClosedJSON(b []byte) error {
 						return fmt.Errorf("duplicate JSON key %q", ks)
 					}
 					seen[ks] = true
+					if e := value(); e != nil {
+						return e
+					}
+				}
+				_, e = d.Token()
+				return e
+			}
+			if x == '[' {
+				for d.More() {
+					if e := value(); e != nil {
+						return e
+					}
+				}
+				_, e = d.Token()
+				return e
+			}
+		}
+		return nil
+	}
+	if err := value(); err != nil {
+		return err
+	}
+	if d.More() {
+		return errors.New("trailing JSON data")
+	}
+	return nil
+}
+
+func rejectNonCanonicalKeys(b []byte) error {
+	d := json.NewDecoder(bytes.NewReader(b))
+	var value func(objectSchema) error
+	value = func(allowed objectSchema) error {
+		t, e := d.Token()
+		if e != nil {
+			return e
+		}
+		switch x := t.(type) {
+		case json.Delim:
+			if x == '{' {
+				for d.More() {
+					k, e := d.Token()
+					if e != nil {
+						return e
+					}
+					ks, ok := k.(string)
+					if !ok {
+						return errors.New("JSON object key is not a string")
+					}
 					var child objectSchema
 					if allowed != nil {
 						var ok bool
