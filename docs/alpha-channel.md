@@ -46,6 +46,17 @@ schema/key-ID review; no content/model key is a rotation path.
 
 ## Offline tooling
 
+Importers that already possess manifest bytes, the detached signature, and a
+pinned application public key can use the side-effect-free library:
+
+```
+alpha.VerifyTrustTransition(manifest, signature, publicKey, alpha.VerifyOptions{...})
+```
+
+It performs no filesystem, network, process, download, installation, or trust
+record persistence operation. The consumer owns its retained accepted sequence
+and installed versions through `VerifyOptions`.
+
 ```
 go run ./cmd/alpha-channel verify --manifest candidate.json --signature candidate.json.sig --public-key alpha-update.pub --min-sequence 12
 go run ./cmd/alpha-channel publish --manifest candidate.json --private-key external-alpha-1.key --dry-run
