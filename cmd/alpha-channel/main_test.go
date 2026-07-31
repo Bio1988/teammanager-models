@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -244,6 +245,8 @@ func candidateRelease(product, repo, filename string, contents []byte) alpha.Rel
 
 type failingCandidateFile struct {
 	file      *os.File
+	stream    []byte
+	offset    int
 	readErr   error
 	statErrAt int
 	closeErr  error
@@ -253,6 +256,14 @@ type failingCandidateFile struct {
 func (f *failingCandidateFile) Read(p []byte) (int, error) {
 	if f.readErr != nil {
 		return 0, f.readErr
+	}
+	if f.stream != nil {
+		if f.offset >= len(f.stream) {
+			return 0, io.EOF
+		}
+		n := copy(p, f.stream[f.offset:])
+		f.offset += n
+		return n, nil
 	}
 	return f.file.Read(p)
 }
@@ -291,6 +302,33 @@ func TestVerifyCandidateReachableHandleErrors(t *testing.T) {
 					return nil, err
 				}
 				return &failingCandidateFile{file: f, readErr: tc.readErr, statErrAt: tc.statErrAt, closeErr: tc.closeErr}, nil
+			}}
+			err := verifyCandidateWithOps(path, r, ops)
+			if err == nil || !contains(err.Error(), tc.want) {
+				t.Fatalf("wanted %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+func TestVerifyCandidateObservedStreamGates(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	for _, tc := range []struct {
+		name, want string
+		stream     []byte
+	}{{"truncated", contents[:len(contents)-1], "truncated"}, {"appended", append(append([]byte{}, contents...), 'x'), "grew"}, {"same-size tamper", append([]byte("x"), contents[1:]...), "SHA-256"}} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := os.WriteFile(path, contents, 0600); err != nil {
+				t.Fatal(err)
+			}
+			ops := candidateOps{lstat: os.Lstat, sameFile: os.SameFile, open: func(name string) (candidateFile, error) {
+				f, err := os.Open(name)
+				if err != nil {
+					return nil, err
+				}
+				return &failingCandidateFile{file: f, stream: tc.stream}, nil
 			}}
 			err := verifyCandidateWithOps(path, r, ops)
 			if err == nil || !contains(err.Error(), tc.want) {
