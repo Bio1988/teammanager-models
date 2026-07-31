@@ -215,6 +215,16 @@ func cliError(err error) error {
 	if err == nil {
 		return nil
 	}
-	return errors.New(strings.ReplaceAll(err.Error(), "Manifest.", "manifest."))
+	s := err.Error()
+	if key, ok := strings.CutPrefix(s, "unknown or non-canonical JSON key "); ok {
+		return fmt.Errorf("json: unknown field %s", key)
+	}
+	s = strings.NewReplacer(
+		"alpha.Manifest", "main.manifest",
+		"alpha.KeyRotation", "main.keyRotation",
+		"alpha.Release", "main.release",
+		"Manifest.", "manifest.",
+	).Replace(s)
+	return errors.New(s)
 }
 func die(s string) { fmt.Fprintln(os.Stderr, "alpha-channel:", s); os.Exit(1) }

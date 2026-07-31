@@ -142,7 +142,57 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 	if err == nil || !contains(string(out), "struct field manifest.schema") {
 		t.Fatalf("expected legacy JSON type error, err=%v output=%s", err, out)
 	}
+	var object map[string]any
+	if err := json.Unmarshal(b, &object); err != nil {
+		t.Fatal(err)
+	}
+	keyRotationType := cloneObject(t, object)
+	keyRotationType["key_rotation"] = "wrong"
+	releaseType := cloneObject(t, object)
+	releaseType["race_engineer"] = "wrong"
+	unknown := append(append([]byte{}, b[:len(b)-1]...), []byte(`,"unknown":true}`)...)
+	for _, tc := range []struct {
+		name     string
+		manifest []byte
+		want     string
+	}{
+		{"unknown", unknown, `json: unknown field "unknown"`},
+		{"root", []byte(`[]`), "Go value of type main.manifest"},
+		{"key rotation type", marshalObject(t, keyRotationType), "type main.keyRotation"},
+		{"release type", marshalObject(t, releaseType), "type main.release"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := os.WriteFile(manifestPath, tc.manifest, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(priv, alpha.SignedPayload(tc.manifest)))), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command("go", "run", ".", "verify", "--manifest", manifestPath, "--signature", sigPath, "--public-key", keyPath)
+			out, err := cmd.CombinedOutput()
+			if err == nil || !contains(string(out), tc.want) {
+				t.Fatalf("expected %q, err=%v output=%s", tc.want, err, out)
+			}
+		})
+	}
 }
 func contains(s, want string) bool {
 	return len(s) >= len(want) && (s == want || strings.Contains(s, want))
+}
+func cloneObject(t *testing.T, value map[string]any) map[string]any {
+	t.Helper()
+	b := marshalObject(t, value)
+	var copy map[string]any
+	if err := json.Unmarshal(b, &copy); err != nil {
+		t.Fatal(err)
+	}
+	return copy
+}
+func marshalObject(t *testing.T, value map[string]any) []byte {
+	t.Helper()
+	b, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

@@ -126,6 +126,28 @@ func TestCaseFoldCollisionsAreRejectedBeforeStructDecoding(t *testing.T) {
 	}
 }
 
+func TestSignedExactDuplicateKeysReachClosedJSONGate(t *testing.T) {
+	now := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := valid(now)
+	vectors := map[string][]byte{
+		"top-level":    append(append([]byte{}, base[:len(base)-1]...), []byte(`,"schema":1}`)...),
+		"key_rotation": []byte(strings.Replace(string(base), `"status":"active"`, `"status":"active","status":"active"`, 1)),
+		"release":      []byte(strings.Replace(string(base), `"product":"race_engineer"`, `"product":"race_engineer","product":"race_engineer"`, 1)),
+	}
+	for name, b := range vectors {
+		t.Run(name, func(t *testing.T) {
+			sig := ed25519.Sign(priv, alpha.SignedPayload(b))
+			if _, err := alpha.VerifyTrustTransition(b, sig, pub, alpha.VerifyOptions{Now: now}); err == nil || !strings.Contains(err.Error(), "duplicate JSON key") {
+				t.Fatalf("exact duplicate did not reach closed JSON gate: %v", err)
+			}
+		})
+	}
+}
+
 func caseCollisionVectors(t *testing.T, now time.Time) []string {
 	t.Helper()
 	var root map[string]any
