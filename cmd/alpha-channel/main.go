@@ -84,21 +84,32 @@ func verifyCandidateCmd(args []string) {
 }
 
 func verifyCandidate(path string, r alpha.Release) error {
-	return verifyCandidateWithLstat(path, r, os.Lstat)
+	return verifyCandidateWithOps(path, r, candidateOps{lstat: os.Lstat, open: func(name string) (candidateFile, error) { return os.Open(name) }, sameFile: os.SameFile})
 }
 
-func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (os.FileInfo, error)) error {
+type candidateFile interface {
+	Read([]byte) (int, error)
+	Stat() (os.FileInfo, error)
+	Close() error
+}
+type candidateOps struct {
+	lstat    func(string) (os.FileInfo, error)
+	open     func(string) (candidateFile, error)
+	sameFile func(os.FileInfo, os.FileInfo) bool
+}
+
+func verifyCandidateWithOps(path string, r alpha.Release, ops candidateOps) error {
 	if filepath.Base(path) != r.Filename {
 		return fmt.Errorf("%s candidate basename does not match manifest", r.Product)
 	}
-	before, err := lstat(path)
+	before, err := ops.lstat(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be inspected", r.Product)
 	}
 	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
 		return fmt.Errorf("%s candidate is not a regular non-symlink file", r.Product)
 	}
-	f, err := os.Open(path)
+	f, err := ops.open(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be opened", r.Product)
 	}
@@ -112,7 +123,7 @@ func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be stated", r.Product)
 	}
-	if !opened.Mode().IsRegular() || !os.SameFile(before, opened) {
+	if !opened.Mode().IsRegular() || !ops.sameFile(before, opened) {
 		return fmt.Errorf("%s candidate changed before verification", r.Product)
 	}
 	if opened.Size() != r.Size {
@@ -120,9 +131,10 @@ func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (
 	}
 	h := sha256.New()
 	buf := make([]byte, 64<<10)
+	reader := io.LimitReader(f, r.Size+1)
 	var total int64
 	for {
-		n, readErr := f.Read(buf)
+		n, readErr := reader.Read(buf)
 		if n > 0 {
 			total += int64(n)
 			if total > r.Size {
@@ -146,7 +158,7 @@ func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be re-stated", r.Product)
 	}
-	if !after.Mode().IsRegular() || !os.SameFile(opened, after) || after.Size() != r.Size {
+	if !after.Mode().IsRegular() || !ops.sameFile(opened, after) || after.Size() != r.Size {
 		return fmt.Errorf("%s candidate changed during verification", r.Product)
 	}
 	if hex.EncodeToString(h.Sum(nil)) != r.SHA256 {
@@ -156,11 +168,11 @@ func verifyCandidateWithLstat(path string, r alpha.Release, lstat func(string) (
 		return fmt.Errorf("%s candidate cannot be closed", r.Product)
 	}
 	closed = true
-	final, err := lstat(path)
+	final, err := ops.lstat(path)
 	if err != nil {
 		return fmt.Errorf("%s candidate cannot be finally inspected", r.Product)
 	}
-	if final.Mode()&os.ModeSymlink != 0 || !final.Mode().IsRegular() || final.Size() != r.Size || !os.SameFile(opened, final) {
+	if final.Mode()&os.ModeSymlink != 0 || !final.Mode().IsRegular() || final.Size() != r.Size || !ops.sameFile(opened, final) {
 		return fmt.Errorf("%s candidate path changed during verification", r.Product)
 	}
 	return nil

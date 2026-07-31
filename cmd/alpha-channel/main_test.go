@@ -271,10 +271,14 @@ func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
 	if err := verifyCandidate(filepath.Join(d, "wrong.exe"), r); err == nil {
 		t.Fatal("accepted wrong basename")
 	}
-	if err := verifyCandidate(filepath.Join(d, r.Filename+".missing"), r); err == nil {
+	if err := verifyCandidate(filepath.Join(d, "missing-parent", r.Filename), r); err == nil {
 		t.Fatal("accepted missing candidate")
 	}
-	if err := verifyCandidate(d, r); err == nil {
+	dirCandidate := filepath.Join(d, "dir", r.Filename)
+	if err := os.MkdirAll(dirCandidate, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCandidate(dirCandidate, r); err == nil {
 		t.Fatal("accepted directory")
 	}
 	r.Size++
@@ -312,7 +316,7 @@ func TestVerifyCandidateRejectsFinalPathSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	err := verifyCandidateWithLstat(path, r, func(name string) (os.FileInfo, error) {
+	err := verifyCandidateWithOps(path, r, candidateOps{lstat: func(name string) (os.FileInfo, error) {
 		calls++
 		if calls == 2 {
 			if err := os.Remove(path); err != nil {
@@ -323,7 +327,7 @@ func TestVerifyCandidateRejectsFinalPathSwap(t *testing.T) {
 			}
 		}
 		return os.Lstat(name)
-	})
+	}, open: func(name string) (candidateFile, error) { return os.Open(name) }, sameFile: os.SameFile})
 	if err == nil || !contains(err.Error(), "path changed") {
 		t.Fatalf("accepted final path swap: %v", err)
 	}
