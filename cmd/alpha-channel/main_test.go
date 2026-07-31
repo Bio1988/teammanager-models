@@ -72,6 +72,67 @@ func TestReadBoundAndCreateOnce(t *testing.T) {
 		t.Fatal("oversized signature accepted")
 	}
 }
+func TestTrustInputReadFailuresDoNotDisclosePaths(t *testing.T) {
+	secretPath := `C:\private\TOP-SECRET-input`
+	pathErr := func(string, int64) ([]byte, error) {
+		return nil, &os.PathError{Op: "open", Path: secretPath, Err: os.ErrPermission}
+	}
+	keyErr := func(string) ([]byte, error) {
+		return nil, &os.PathError{Op: "open", Path: secretPath, Err: os.ErrPermission}
+	}
+	for _, tc := range []struct {
+		name, want string
+		call       func() error
+	}{
+		{"manifest", "unable to read candidate manifest", func() error { _, err := readManifestWith(secretPath, pathErr); return err }},
+		{"signature", "unable to read candidate signature", func() error { _, err := readSignatureWith(secretPath, pathErr); return err }},
+		{"public key", "unable to read candidate public key", func() error { _, err := readPublicWith(secretPath, keyErr); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.call()
+			if err == nil || err.Error() != tc.want || strings.Contains(err.Error(), secretPath) || strings.Contains(err.Error(), "TOP-SECRET") {
+				t.Fatalf("unsafe trust-input error: %v", err)
+			}
+		})
+	}
+}
+func TestVerifyCommandMissingTrustInputsDoNotDisclosePaths(t *testing.T) {
+	d := t.TempDir()
+	now := time.Now().UTC()
+	manifest := manifestBytes(now)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(d, "alpha.json")
+	sigPath := filepath.Join(d, "alpha.json.sig")
+	keyPath := filepath.Join(d, "alpha.pub")
+	if err := os.WriteFile(manifestPath, manifest, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(priv, alpha.SignedPayload(manifest)))), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, []byte(base64.StdEncoding.EncodeToString(pub)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	secretDir := filepath.Join(d, "TOP-SECRET-operator-directory")
+	for _, tc := range []struct {
+		name, want         string
+		manifest, sig, key string
+	}{
+		{"manifest", "unable to read candidate manifest", filepath.Join(secretDir, "manifest"), sigPath, keyPath},
+		{"signature", "unable to read candidate signature", manifestPath, filepath.Join(secretDir, "signature"), keyPath},
+		{"public key", "unable to read candidate public key", manifestPath, sigPath, filepath.Join(secretDir, "public-key")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := exec.Command("go", "run", ".", "verify", "--manifest", tc.manifest, "--signature", tc.sig, "--public-key", tc.key).CombinedOutput()
+			if err == nil || !contains(string(out), "alpha-channel: "+tc.want) || contains(string(out), secretDir) || contains(string(out), "TOP-SECRET") || contains(string(out), string(manifest)) {
+				t.Fatalf("unsafe CLI error: %v %s", err, out)
+			}
+		})
+	}
+}
 func TestPairFailureCleansItsManifest(t *testing.T) {
 	d := t.TempDir()
 	if err := os.WriteFile(filepath.Join(d, "alpha.json.sig"), []byte("existing"), 0600); err != nil {

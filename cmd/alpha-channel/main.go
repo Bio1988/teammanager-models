@@ -220,16 +220,25 @@ func verifyManifest(b, sig []byte, pub ed25519.PublicKey, o alpha.VerifyOptions)
 	return alpha.VerifyTrustTransition(b, sig, pub, o)
 }
 func readManifest(name string) ([]byte, error) {
-	b, err := readFileBounded(name, alpha.MaxManifestBytes)
+	return readManifestWith(name, readFileBounded)
+}
+func readManifestWith(name string, readBounded func(string, int64) ([]byte, error)) ([]byte, error) {
+	b, err := readBounded(name, alpha.MaxManifestBytes)
 	if err != nil && strings.HasPrefix(err.Error(), "file exceeds ") {
 		return nil, alpha.ErrManifestTooLarge
 	}
-	return b, err
+	if err != nil {
+		return nil, errors.New("unable to read candidate manifest")
+	}
+	return b, nil
 }
 func readSignature(name string) ([]byte, error) {
-	b, err := readFileBounded(name, alpha.MaxSignatureBytes)
+	return readSignatureWith(name, readFileBounded)
+}
+func readSignatureWith(name string, readBounded func(string, int64) ([]byte, error)) ([]byte, error) {
+	b, err := readBounded(name, alpha.MaxSignatureBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("unable to read candidate signature")
 	}
 	b, err = decodeKeyBytes(b)
 	if err != nil {
@@ -241,9 +250,12 @@ func readSignature(name string) ([]byte, error) {
 	return b, nil
 }
 func readPublic(p string) (ed25519.PublicKey, error) {
-	b, e := readKey(p)
+	return readPublicWith(p, readKey)
+}
+func readPublicWith(p string, read func(string) ([]byte, error)) (ed25519.PublicKey, error) {
+	b, e := read(p)
 	if e != nil {
-		return nil, e
+		return nil, errors.New("unable to read candidate public key")
 	}
 	if len(b) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(b), nil
