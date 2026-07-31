@@ -148,6 +148,22 @@ func TestSignedExactDuplicateKeysReachClosedJSONGate(t *testing.T) {
 	}
 }
 
+func TestScalarContainersReachTypeGateWithoutAcceptance(t *testing.T) {
+	now := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	var m map[string]any
+	if err := json.Unmarshal(valid(now), &m); err != nil {
+		t.Fatal(err)
+	}
+	m["schema"] = map[string]any{"unknown": true}
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := alpha.ParseManifest(b, now); err == nil {
+		t.Fatal("scalar object was accepted")
+	}
+}
+
 func caseCollisionVectors(t *testing.T, now time.Time) []string {
 	t.Helper()
 	var root map[string]any

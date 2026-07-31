@@ -156,6 +156,14 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 	raceReleaseScalar["race_engineer"].(map[string]any)["product"] = 1
 	relayReleaseScalar := cloneObject(t, object)
 	relayReleaseScalar["relay"].(map[string]any)["filename"] = 1
+	schemaObject := cloneObject(t, object)
+	schemaObject["schema"] = map[string]any{"x": 1}
+	schemaArray := cloneObject(t, object)
+	schemaArray["schema"] = []any{1}
+	keyRotationObject := cloneObject(t, object)
+	keyRotationObject["key_rotation"].(map[string]any)["status"] = map[string]any{"x": 1}
+	raceReleaseArray := cloneObject(t, object)
+	raceReleaseArray["race_engineer"].(map[string]any)["product"] = []any{"race_engineer"}
 	unknown := append(append([]byte{}, b[:len(b)-1]...), []byte(`,"unknown":true}`)...)
 	for _, tc := range []struct {
 		name     string
@@ -169,6 +177,10 @@ func TestVerifyCommandReadsFilesAndPreservesLibraryResult(t *testing.T) {
 		{"key rotation scalar", marshalObject(t, keyRotationScalar), "keyRotation.key_rotation.status"},
 		{"race release scalar", marshalObject(t, raceReleaseScalar), "release.race_engineer.product"},
 		{"relay release scalar", marshalObject(t, relayReleaseScalar), "release.relay.filename"},
+		{"schema object", marshalObject(t, schemaObject), "manifest.schema"},
+		{"schema array", marshalObject(t, schemaArray), "manifest.schema"},
+		{"key rotation object", marshalObject(t, keyRotationObject), "keyRotation.key_rotation.status"},
+		{"release array", marshalObject(t, raceReleaseArray), "release.race_engineer.product"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := os.WriteFile(manifestPath, tc.manifest, 0600); err != nil {

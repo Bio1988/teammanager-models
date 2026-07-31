@@ -12,7 +12,7 @@ import (
 )
 
 var allowedImports = map[string]bool{"bytes": true, "crypto/ed25519": true, "encoding/json": true, "errors": true, "fmt": true, "io": true, "regexp": true, "strconv": true, "strings": true, "time": true, "unicode/utf8": true}
-var allowedSelectors = map[string]map[string]bool{"fmt": {"Errorf": true}, "time": {"Minute": true, "Parse": true, "RFC3339": true, "Time": true, "UTC": true}}
+var allowedSelectors = map[string]map[string]bool{"crypto/ed25519": {"PublicKey": true, "PublicKeySize": true, "SignatureSize": true, "Verify": true}, "fmt": {"Errorf": true}, "time": {"Minute": true, "Parse": true, "RFC3339": true, "Time": true, "UTC": true}}
 
 func TestPurePackageImportsOnlyApprovedStdlib(t *testing.T) {
 	for _, name := range productionGoFiles(t) {
@@ -34,6 +34,7 @@ func TestPuritySentinelRejectsBoundaryMutations(t *testing.T) {
 		"load location":  `package alpha; import "time"; func f() { _, _ = time.LoadLocation("Local") }`,
 		"print":          `package alpha; import p "fmt"; func f() { p.Println("side effect") }`,
 		"scan":           `package alpha; import "fmt"; func f() { var s string; _, _ = fmt.Scan(&s) }`,
+		"entropy":        `package alpha; import "crypto/ed25519"; func f() { _, _, _ = ed25519.GenerateKey(nil) }`,
 	} {
 		if err := checkPureSource(name, []byte(source)); err == nil {
 			t.Fatalf("accepted %s", name)
