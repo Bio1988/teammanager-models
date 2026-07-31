@@ -59,8 +59,19 @@ and installed versions through `VerifyOptions`.
 
 ```
 go run ./cmd/alpha-channel verify --manifest candidate.json --signature candidate.json.sig --public-key alpha-update.pub --min-sequence 12
+go run ./cmd/alpha-channel verify-candidate --manifest candidate.json --signature candidate.json.sig --public-key alpha-update.pub --race-installer RaceSetup.exe --relay-installer RelaySetup.exe --min-sequence 12
 go run ./cmd/alpha-channel publish --manifest candidate.json --private-key external-alpha-1.key --dry-run
 ```
+
+`verify-candidate` is an offline pre-publication check. After the normal trust
+transition succeeds, it checks that each local regular, non-symlink installer
+has the signed basename, exact size, and SHA-256 through one opened handle,
+then observes the same path identity and size again. Its success is only a
+point-in-time observation: it is not an atomic snapshot, lock, stability, or
+post-return guarantee. Stage candidates quiescently; a later publisher or
+installer must verify the bytes it consumes again. It does not check Forgejo
+release existence or immutability, make a public re-download, publish assets,
+or authorize channel activation.
 
 `publish` refuses to overwrite `alpha.json` or `alpha.json.sig`; its dry run
 still requires the external private key and writes nothing. Real output uses

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -18,17 +19,21 @@ import (
 	"forgejo.g-grp.com/Max/teammanager-models/alpha"
 )
 
+const maxPublicKeyBytes = 4 << 10
+
 func main() {
 	if len(os.Args) < 2 {
-		die("usage: alpha-channel verify|publish")
+		die("usage: alpha-channel verify|verify-candidate|publish")
 	}
 	switch os.Args[1] {
 	case "verify":
 		verifyCmd(os.Args[2:])
+	case "verify-candidate":
+		verifyCandidateCmd(os.Args[2:])
 	case "publish":
 		publishCmd(os.Args[2:])
 	default:
-		die("usage: alpha-channel verify|publish")
+		die("usage: alpha-channel verify|verify-candidate|publish")
 	}
 }
 func verifyCmd(args []string) {
@@ -52,6 +57,137 @@ func verifyCmd(args []string) {
 	m, err := verifyManifest(b, s, pub, alpha.VerifyOptions{MinSequence: *min, RaceVersion: *rv, RelayVersion: *lv, Now: time.Now().UTC()})
 	must(cliError(err))
 	fmt.Printf("verified alpha channel sequence %d: race_engineer %s, relay %s\n", m.ReleaseSequence, m.RaceEngineer.Version, m.Relay.Version)
+}
+func verifyCandidateCmd(args []string) {
+	fs := flag.NewFlagSet("verify-candidate", flag.ExitOnError)
+	mf := fs.String("manifest", "", "manifest path")
+	sig := fs.String("signature", "", "detached signature path")
+	key := fs.String("public-key", "", "pinned application update public key")
+	raceInstaller := fs.String("race-installer", "", "local Race Engineer installer candidate")
+	relayInstaller := fs.String("relay-installer", "", "local Relay installer candidate")
+	min := fs.Uint64("min-sequence", 0, "last accepted sequence")
+	rv := fs.String("race-version", "", "installed race version")
+	lv := fs.String("relay-version", "", "installed relay version")
+	fs.Parse(args)
+	if *mf == "" || *sig == "" || *key == "" || *raceInstaller == "" || *relayInstaller == "" {
+		die("--manifest, --signature, --public-key, --race-installer, and --relay-installer are required")
+	}
+	b, err := readManifest(*mf)
+	must(err)
+	s, err := readSignature(*sig)
+	must(err)
+	pub, err := readPublic(*key)
+	must(err)
+	m, err := verifyManifest(b, s, pub, alpha.VerifyOptions{MinSequence: *min, RaceVersion: *rv, RelayVersion: *lv, Now: time.Now().UTC()})
+	must(cliError(err))
+	must(verifyCandidate(*raceInstaller, m.RaceEngineer))
+	must(verifyCandidate(*relayInstaller, m.Relay))
+	fmt.Printf("verified candidate race_engineer %s %s; relay %s %s\n", m.RaceEngineer.Version, m.RaceEngineer.Commit, m.Relay.Version, m.Relay.Commit)
+}
+
+func verifyCandidate(path string, r alpha.Release) error {
+	return verifyCandidateWithOps(path, r, candidateOps{lstat: os.Lstat, open: func(name string) (candidateFile, error) { return os.Open(name) }, sameFile: os.SameFile})
+}
+
+type candidateFile interface {
+	Read([]byte) (int, error)
+	Stat() (os.FileInfo, error)
+	Close() error
+}
+type candidateOps struct {
+	lstat    func(string) (os.FileInfo, error)
+	open     func(string) (candidateFile, error)
+	sameFile func(os.FileInfo, os.FileInfo) bool
+}
+
+func verifyCandidateWithOps(path string, r alpha.Release, ops candidateOps) error {
+	// This is deliberately repeated here, rather than relying solely on the
+	// manifest validator: this private helper must never turn a malformed
+	// signed-size into an unbounded or negative stream limit.
+	if r.Size <= 0 || r.Size > 8<<30 {
+		return fmt.Errorf("%s candidate signed size is outside the allowed range", r.Product)
+	}
+	if filepath.Base(path) != r.Filename {
+		return fmt.Errorf("%s candidate basename does not match manifest", r.Product)
+	}
+	before, err := ops.lstat(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be inspected", r.Product)
+	}
+	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
+		return fmt.Errorf("%s candidate is not a regular non-symlink file", r.Product)
+	}
+	if before.Size() != r.Size {
+		return fmt.Errorf("%s candidate size does not match manifest", r.Product)
+	}
+	f, err := ops.open(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be opened", r.Product)
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			_ = f.Close()
+		}
+	}()
+	opened, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be stated", r.Product)
+	}
+	if !opened.Mode().IsRegular() || !ops.sameFile(before, opened) {
+		return fmt.Errorf("%s candidate changed before verification", r.Product)
+	}
+	if opened.Size() != r.Size {
+		return fmt.Errorf("%s candidate size does not match manifest", r.Product)
+	}
+	h := sha256.New()
+	buf := make([]byte, 64<<10)
+	reader := io.LimitReader(f, r.Size+1)
+	var total int64
+	for {
+		n, readErr := reader.Read(buf)
+		if n > 0 {
+			total += int64(n)
+			if total > r.Size {
+				return fmt.Errorf("%s candidate grew during verification", r.Product)
+			}
+			if _, err := h.Write(buf[:n]); err != nil {
+				return err
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return fmt.Errorf("%s candidate cannot be read", r.Product)
+		}
+	}
+	if total != r.Size {
+		return fmt.Errorf("%s candidate was truncated during verification", r.Product)
+	}
+	after, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be re-stated", r.Product)
+	}
+	if !after.Mode().IsRegular() || !ops.sameFile(opened, after) || after.Size() != r.Size {
+		return fmt.Errorf("%s candidate changed during verification", r.Product)
+	}
+	if hex.EncodeToString(h.Sum(nil)) != r.SHA256 {
+		return fmt.Errorf("%s candidate SHA-256 does not match manifest", r.Product)
+	}
+	err = f.Close()
+	closed = true // Close was attempted; never retry it from the deferred cleanup.
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be closed", r.Product)
+	}
+	final, err := ops.lstat(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be finally inspected", r.Product)
+	}
+	if final.Mode()&os.ModeSymlink != 0 || !final.Mode().IsRegular() || final.Size() != r.Size || !ops.sameFile(opened, final) {
+		return fmt.Errorf("%s candidate path changed during verification", r.Product)
+	}
+	return nil
 }
 func publishCmd(args []string) {
 	fs := flag.NewFlagSet("publish", flag.ExitOnError)
@@ -86,16 +222,25 @@ func verifyManifest(b, sig []byte, pub ed25519.PublicKey, o alpha.VerifyOptions)
 	return alpha.VerifyTrustTransition(b, sig, pub, o)
 }
 func readManifest(name string) ([]byte, error) {
-	b, err := readFileBounded(name, alpha.MaxManifestBytes)
+	return readManifestWith(name, readFileBounded)
+}
+func readManifestWith(name string, readBounded func(string, int64) ([]byte, error)) ([]byte, error) {
+	b, err := readBounded(name, alpha.MaxManifestBytes)
 	if err != nil && strings.HasPrefix(err.Error(), "file exceeds ") {
 		return nil, alpha.ErrManifestTooLarge
 	}
-	return b, err
+	if err != nil {
+		return nil, errors.New("unable to read candidate manifest")
+	}
+	return b, nil
 }
 func readSignature(name string) ([]byte, error) {
-	b, err := readFileBounded(name, alpha.MaxSignatureBytes)
+	return readSignatureWith(name, readFileBounded)
+}
+func readSignatureWith(name string, readBounded func(string, int64) ([]byte, error)) ([]byte, error) {
+	b, err := readBounded(name, alpha.MaxSignatureBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("unable to read candidate signature")
 	}
 	b, err = decodeKeyBytes(b)
 	if err != nil {
@@ -107,9 +252,16 @@ func readSignature(name string) ([]byte, error) {
 	return b, nil
 }
 func readPublic(p string) (ed25519.PublicKey, error) {
-	b, e := readKey(p)
+	return readPublicWith(p, readFileBounded)
+}
+func readPublicWith(p string, readBounded func(string, int64) ([]byte, error)) (ed25519.PublicKey, error) {
+	b, e := readBounded(p, maxPublicKeyBytes)
 	if e != nil {
-		return nil, e
+		return nil, errors.New("unable to read candidate public key")
+	}
+	b, e = decodeKeyBytes(b)
+	if e != nil {
+		return nil, errors.New("public key must be raw base64/hex or Ed25519 PKIX PEM/DER")
 	}
 	if len(b) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(b), nil
@@ -164,7 +316,14 @@ func readFileBounded(name string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	b, err := io.ReadAll(io.LimitReader(f, limit+1))
+	b, err := readBounded(f, limit)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+func readBounded(r io.Reader, limit int64) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, err
 	}
