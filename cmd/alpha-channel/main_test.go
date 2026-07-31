@@ -318,7 +318,7 @@ func TestVerifyCandidateObservedStreamGates(t *testing.T) {
 	for _, tc := range []struct {
 		name, want string
 		stream     []byte
-	}{{"truncated", contents[:len(contents)-1], "truncated"}, {"appended", append(append([]byte{}, contents...), 'x'), "grew"}, {"same-size tamper", append([]byte("x"), contents[1:]...), "SHA-256"}} {
+	}{{name: "truncated", stream: contents[:len(contents)-1], want: "truncated"}, {name: "appended", stream: append(append([]byte{}, contents...), 'x'), want: "grew"}, {name: "same-size tamper", stream: append([]byte("x"), contents[1:]...), want: "SHA-256"}} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := os.WriteFile(path, contents, 0600); err != nil {
 				t.Fatal(err)
