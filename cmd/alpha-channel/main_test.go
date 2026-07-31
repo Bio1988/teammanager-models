@@ -77,7 +77,7 @@ func TestTrustInputReadFailuresDoNotDisclosePaths(t *testing.T) {
 	pathErr := func(string, int64) ([]byte, error) {
 		return nil, &os.PathError{Op: "open", Path: secretPath, Err: os.ErrPermission}
 	}
-	keyErr := func(string) ([]byte, error) {
+	keyErr := func(string, int64) ([]byte, error) {
 		return nil, &os.PathError{Op: "open", Path: secretPath, Err: os.ErrPermission}
 	}
 	for _, tc := range []struct {
@@ -95,6 +95,42 @@ func TestTrustInputReadFailuresDoNotDisclosePaths(t *testing.T) {
 			}
 		})
 	}
+}
+func TestPublicKeyReadIsBounded(t *testing.T) {
+	d := t.TempDir()
+	exact := filepath.Join(d, "exact.pub")
+	over := filepath.Join(d, "over.pub")
+	if err := os.WriteFile(exact, make([]byte, maxPublicKeyBytes), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readPublic(exact); err == nil || err.Error() != "public key must be raw base64/hex or Ed25519 PKIX PEM/DER" {
+		t.Fatalf("exact bound did not reach key parser: %v", err)
+	}
+	if err := os.WriteFile(over, make([]byte, maxPublicKeyBytes+1), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readPublic(over); err == nil || err.Error() != "unable to read candidate public key" || strings.Contains(err.Error(), over) {
+		t.Fatalf("oversized public key leaked or passed: %v", err)
+	}
+	limit := int64(0)
+	if _, err := readPublicWith("injected", func(_ string, got int64) ([]byte, error) {
+		limit = got
+		return make([]byte, ed25519.PublicKeySize), nil
+	}); err != nil || limit != maxPublicKeyBytes {
+		t.Fatalf("public key reader bound=%d err=%v", limit, err)
+	}
+	if _, err := readBounded(infiniteReader{}, maxPublicKeyBytes); err == nil || err.Error() != "file exceeds 4096 bytes" {
+		t.Fatalf("infinite reader was not bounded: %v", err)
+	}
+}
+
+type infiniteReader struct{}
+
+func (infiniteReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 'x'
+	}
+	return len(p), nil
 }
 func TestVerifyCommandMissingTrustInputsDoNotDisclosePaths(t *testing.T) {
 	d := t.TempDir()
@@ -901,26 +937,40 @@ func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
 	if err := os.WriteFile(path, contents, 0600); err != nil {
 		t.Fatal(err)
 	}
+	baseInfo, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name, want                        string
 		statErrAt, sameFileAt, lstatErrAt int
 		readErr, openErr, closeErr        error
 		stream                            []byte
+		statInfoAt                        int
+		statInfo, finalInfo               os.FileInfo
 		wantOpen, wantClose               int
 	}{
-		{"initial lstat", "race_engineer candidate cannot be inspected", 0, 0, 1, nil, nil, nil, nil, 0, 0},
-		{"open", "race_engineer candidate cannot be opened", 0, 0, 0, nil, errors.New("open"), nil, nil, 1, 0},
-		{"success", "", 0, 0, 0, nil, nil, nil, nil, 1, 1},
-		{"initial handle stat", "race_engineer candidate cannot be stated", 1, 0, 0, nil, nil, nil, nil, 1, 1},
-		{"initial same file", "race_engineer candidate changed before verification", 0, 1, 0, nil, nil, nil, nil, 1, 1},
-		{"read", "race_engineer candidate cannot be read", 0, 0, 0, errors.New("read"), nil, nil, nil, 1, 1},
-		{"truncated stream", "race_engineer candidate was truncated during verification", 0, 0, 0, nil, nil, nil, contents[:len(contents)-1], 1, 1},
-		{"appended stream", "race_engineer candidate grew during verification", 0, 0, 0, nil, nil, nil, append(append([]byte{}, contents...), 'x'), 1, 1},
-		{"changed stream", "race_engineer candidate SHA-256 does not match manifest", 0, 0, 0, nil, nil, nil, append([]byte("x"), contents[1:]...), 1, 1},
-		{"final handle stat", "race_engineer candidate cannot be re-stated", 2, 0, 0, nil, nil, nil, nil, 1, 1},
-		{"second same file", "race_engineer candidate changed during verification", 0, 2, 0, nil, nil, nil, nil, 1, 1},
-		{"close", "race_engineer candidate cannot be closed", 0, 0, 0, nil, nil, errors.New("close"), nil, 1, 1},
-		{"final lstat", "race_engineer candidate cannot be finally inspected", 0, 0, 2, nil, nil, nil, nil, 1, 1},
+		{name: "initial lstat", want: "race_engineer candidate cannot be inspected", lstatErrAt: 1, wantOpen: 0, wantClose: 0},
+		{name: "open", want: "race_engineer candidate cannot be opened", openErr: errors.New("open"), wantOpen: 1, wantClose: 0},
+		{name: "success", wantOpen: 1, wantClose: 1},
+		{name: "initial handle stat", want: "race_engineer candidate cannot be stated", statErrAt: 1, wantOpen: 1, wantClose: 1},
+		{name: "opened handle size", want: "race_engineer candidate size does not match manifest", statInfoAt: 1, statInfo: testFileInfo{FileInfo: baseInfo, size: r.Size + 1}, wantOpen: 1, wantClose: 1},
+		{name: "opened handle nonregular", want: "race_engineer candidate changed before verification", statInfoAt: 1, statInfo: testFileInfo{FileInfo: baseInfo, mode: os.ModeDir}, wantOpen: 1, wantClose: 1},
+		{name: "initial same file", want: "race_engineer candidate changed before verification", sameFileAt: 1, wantOpen: 1, wantClose: 1},
+		{name: "read", want: "race_engineer candidate cannot be read", readErr: errors.New("read"), wantOpen: 1, wantClose: 1},
+		{name: "truncated stream", want: "race_engineer candidate was truncated during verification", stream: contents[:len(contents)-1], wantOpen: 1, wantClose: 1},
+		{name: "appended stream", want: "race_engineer candidate grew during verification", stream: append(append([]byte{}, contents...), 'x'), wantOpen: 1, wantClose: 1},
+		{name: "changed stream", want: "race_engineer candidate SHA-256 does not match manifest", stream: append([]byte("x"), contents[1:]...), wantOpen: 1, wantClose: 1},
+		{name: "final handle stat", want: "race_engineer candidate cannot be re-stated", statErrAt: 2, wantOpen: 1, wantClose: 1},
+		{name: "post-read nonregular", want: "race_engineer candidate changed during verification", statInfoAt: 2, statInfo: testFileInfo{FileInfo: baseInfo, mode: os.ModeDir}, wantOpen: 1, wantClose: 1},
+		{name: "post-read size", want: "race_engineer candidate changed during verification", statInfoAt: 2, statInfo: testFileInfo{FileInfo: baseInfo, size: r.Size + 1}, wantOpen: 1, wantClose: 1},
+		{name: "second same file", want: "race_engineer candidate changed during verification", sameFileAt: 2, wantOpen: 1, wantClose: 1},
+		{name: "close", want: "race_engineer candidate cannot be closed", closeErr: errors.New("close"), wantOpen: 1, wantClose: 1},
+		{name: "final lstat", want: "race_engineer candidate cannot be finally inspected", lstatErrAt: 2, wantOpen: 1, wantClose: 1},
+		{name: "final nonregular", want: "race_engineer candidate path changed during verification", finalInfo: testFileInfo{FileInfo: baseInfo, mode: os.ModeDir}, wantOpen: 1, wantClose: 1},
+		{name: "final symlink", want: "race_engineer candidate path changed during verification", finalInfo: testFileInfo{FileInfo: baseInfo, mode: baseInfo.Mode() | os.ModeSymlink}, wantOpen: 1, wantClose: 1},
+		{name: "final size", want: "race_engineer candidate path changed during verification", finalInfo: testFileInfo{FileInfo: baseInfo, size: r.Size + 1}, wantOpen: 1, wantClose: 1},
+		{name: "final same file", want: "race_engineer candidate path changed during verification", sameFileAt: 3, wantOpen: 1, wantClose: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			opens, closes, lstatCalls, sameFileCalls := 0, 0, 0, 0
@@ -929,6 +979,9 @@ func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
 					lstatCalls++
 					if lstatCalls == tc.lstatErrAt {
 						return nil, errors.New("final lstat")
+					}
+					if lstatCalls == 2 && tc.finalInfo != nil {
+						return tc.finalInfo, nil
 					}
 					return os.Lstat(name)
 				},
@@ -941,11 +994,11 @@ func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
 					if err != nil {
 						return nil, err
 					}
-					return &countedCandidateFile{File: f, closes: &closes, statErrAt: tc.statErrAt, readErr: tc.readErr, closeErr: tc.closeErr, stream: tc.stream}, nil
+					return &countedCandidateFile{File: f, closes: &closes, statErrAt: tc.statErrAt, statInfoAt: tc.statInfoAt, statInfo: tc.statInfo, readErr: tc.readErr, closeErr: tc.closeErr, stream: tc.stream}, nil
 				},
 				sameFile: func(a, b os.FileInfo) bool {
 					sameFileCalls++
-					return sameFileCalls != tc.sameFileAt && os.SameFile(a, b)
+					return sameFileCalls != tc.sameFileAt
 				},
 			})
 			if tc.want == "" {
@@ -964,11 +1017,12 @@ func TestVerifyCandidateOpenedHandleIsClosedExactlyOnce(t *testing.T) {
 
 type countedCandidateFile struct {
 	*os.File
-	closes            *int
-	stats, statErrAt  int
-	readErr, closeErr error
-	stream            []byte
-	offset            int
+	closes                       *int
+	stats, statErrAt, statInfoAt int
+	statInfo                     os.FileInfo
+	readErr, closeErr            error
+	stream                       []byte
+	offset                       int
 }
 
 func (f *countedCandidateFile) Read(p []byte) (int, error) {
@@ -989,6 +1043,9 @@ func (f *countedCandidateFile) Stat() (os.FileInfo, error) {
 	f.stats++
 	if f.stats == f.statErrAt {
 		return nil, errors.New("stat")
+	}
+	if f.stats == f.statInfoAt {
+		return f.statInfo, nil
 	}
 	return f.File.Stat()
 }

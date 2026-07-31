@@ -19,6 +19,8 @@ import (
 	"forgejo.g-grp.com/Max/teammanager-models/alpha"
 )
 
+const maxPublicKeyBytes = 4 << 10
+
 func main() {
 	if len(os.Args) < 2 {
 		die("usage: alpha-channel verify|verify-candidate|publish")
@@ -250,12 +252,16 @@ func readSignatureWith(name string, readBounded func(string, int64) ([]byte, err
 	return b, nil
 }
 func readPublic(p string) (ed25519.PublicKey, error) {
-	return readPublicWith(p, readKey)
+	return readPublicWith(p, readFileBounded)
 }
-func readPublicWith(p string, read func(string) ([]byte, error)) (ed25519.PublicKey, error) {
-	b, e := read(p)
+func readPublicWith(p string, readBounded func(string, int64) ([]byte, error)) (ed25519.PublicKey, error) {
+	b, e := readBounded(p, maxPublicKeyBytes)
 	if e != nil {
 		return nil, errors.New("unable to read candidate public key")
+	}
+	b, e = decodeKeyBytes(b)
+	if e != nil {
+		return nil, errors.New("public key must be raw base64/hex or Ed25519 PKIX PEM/DER")
 	}
 	if len(b) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(b), nil
@@ -310,7 +316,14 @@ func readFileBounded(name string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	b, err := io.ReadAll(io.LimitReader(f, limit+1))
+	b, err := readBounded(f, limit)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+func readBounded(r io.Reader, limit int64) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, err
 	}
