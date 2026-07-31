@@ -31,6 +31,32 @@ var hex40RE = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var shaRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var fileRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.exe$`)
 
+var (
+	ErrManifestTooLarge = errors.New("manifest exceeds 64 KiB")
+	ErrInvalidPublicKey = errors.New("invalid Ed25519 public key length")
+	ErrInvalidSignature = errors.New("invalid Ed25519 signature length")
+)
+
+type objectSchema map[string]objectSchema
+
+var topLevelKeys = objectKeys("schema", "channel", "key_id", "key_rotation", "generated_at", "expires_at", "release_sequence", "authenticode_policy", "race_engineer", "relay")
+var keyRotationKeys = objectKeys("status", "not_before", "not_after")
+var releaseKeys = objectKeys("product", "platform", "architecture", "version", "tag", "commit", "owner", "repository", "url", "filename", "size", "sha256")
+
+func objectKeys(keys ...string) objectSchema {
+	result := make(objectSchema, len(keys))
+	for _, key := range keys {
+		result[key] = nil
+	}
+	return result
+}
+
+func init() {
+	topLevelKeys["key_rotation"] = keyRotationKeys
+	topLevelKeys["race_engineer"] = releaseKeys
+	topLevelKeys["relay"] = releaseKeys
+}
+
 type Manifest struct {
 	Schema             int         `json:"schema"`
 	Channel            string      `json:"channel"`
@@ -76,12 +102,12 @@ func SignedPayload(manifest []byte) []byte { return append([]byte(domain), manif
 // ParseManifest enforces the exact byte, UTF-8, closed JSON, and field rules.
 func ParseManifest(b []byte, now time.Time) (Manifest, error) {
 	if len(b) > MaxManifestBytes {
-		return Manifest{}, errors.New("manifest exceeds 64 KiB")
+		return Manifest{}, ErrManifestTooLarge
 	}
 	if !utf8.Valid(b) {
 		return Manifest{}, errors.New("manifest is not valid UTF-8")
 	}
-	if err := rejectDuplicates(b); err != nil {
+	if err := rejectClosedJSON(b); err != nil {
 		return Manifest{}, err
 	}
 	dec := json.NewDecoder(bytes.NewReader(b))
@@ -134,6 +160,15 @@ func ValidateManifest(m Manifest, now time.Time) error {
 // VerifyTrustTransition verifies a signature and rejects replay and downgrade
 // against the caller-owned prior accepted sequence and installed versions.
 func VerifyTrustTransition(b, sig []byte, pub ed25519.PublicKey, o VerifyOptions) (Manifest, error) {
+	if len(b) > MaxManifestBytes {
+		return Manifest{}, ErrManifestTooLarge
+	}
+	if len(pub) != ed25519.PublicKeySize {
+		return Manifest{}, ErrInvalidPublicKey
+	}
+	if len(sig) != ed25519.SignatureSize {
+		return Manifest{}, ErrInvalidSignature
+	}
 	if !ed25519.Verify(pub, SignedPayload(b), sig) {
 		return Manifest{}, errors.New("invalid detached signature")
 	}
@@ -219,10 +254,10 @@ func validateRelease(r Release, product, repo string) error {
 	}
 	return nil
 }
-func rejectDuplicates(b []byte) error {
+func rejectClosedJSON(b []byte) error {
 	d := json.NewDecoder(bytes.NewReader(b))
-	var value func() error
-	value = func() error {
+	var value func(objectSchema) error
+	value = func(allowed objectSchema) error {
 		t, e := d.Token()
 		if e != nil {
 			return e
@@ -236,12 +271,19 @@ func rejectDuplicates(b []byte) error {
 					if e != nil {
 						return e
 					}
-					ks := k.(string)
+					ks, ok := k.(string)
+					if !ok {
+						return errors.New("JSON object key is not a string")
+					}
 					if seen[ks] {
 						return fmt.Errorf("duplicate JSON key %q", ks)
 					}
+					child, ok := allowed[ks]
+					if !ok {
+						return fmt.Errorf("unknown or non-canonical JSON key %q", ks)
+					}
 					seen[ks] = true
-					if e := value(); e != nil {
+					if e := value(child); e != nil {
 						return e
 					}
 				}
@@ -250,7 +292,7 @@ func rejectDuplicates(b []byte) error {
 			}
 			if x == '[' {
 				for d.More() {
-					if e := value(); e != nil {
+					if e := value(nil); e != nil {
 						return e
 					}
 				}
@@ -260,7 +302,7 @@ func rejectDuplicates(b []byte) error {
 		}
 		return nil
 	}
-	if err := value(); err != nil {
+	if err := value(topLevelKeys); err != nil {
 		return err
 	}
 	if d.More() {

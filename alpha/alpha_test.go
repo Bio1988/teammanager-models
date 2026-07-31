@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -105,5 +106,98 @@ func TestAllReleaseAndTimeGatesRemainClosed(t *testing.T) {
 		if _, err := alpha.CompareVersion(v, "0.1.0-alpha.1"); err == nil {
 			t.Fatalf("accepted invalid version %q", v)
 		}
+	}
+}
+
+func TestCaseFoldCollisionsAreRejectedBeforeStructDecoding(t *testing.T) {
+	now := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range caseCollisionVectors(t, now) {
+		t.Run(tc, func(t *testing.T) {
+			b := collisionVector(t, now, tc)
+			sig := ed25519.Sign(priv, alpha.SignedPayload(b))
+			if _, err := alpha.VerifyTrustTransition(b, sig, pub, alpha.VerifyOptions{Now: now}); err == nil {
+				t.Fatal("accepted signed case-fold collision")
+			}
+		})
+	}
+}
+
+func caseCollisionVectors(t *testing.T, now time.Time) []string {
+	t.Helper()
+	var root map[string]any
+	if err := json.Unmarshal(valid(now), &root); err != nil {
+		t.Fatal(err)
+	}
+	keys := make([]string, 0, len(root)+3+24)
+	for key := range root {
+		keys = append(keys, "root."+key)
+	}
+	for _, object := range []string{"key_rotation", "race_engineer", "relay"} {
+		child := root[object].(map[string]any)
+		for key := range child {
+			keys = append(keys, object+"."+key)
+		}
+	}
+	return keys
+}
+
+func collisionVector(t *testing.T, now time.Time, path string) []byte {
+	t.Helper()
+	var root map[string]any
+	if err := json.Unmarshal(valid(now), &root); err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(path, ".")
+	object := root
+	key := parts[len(parts)-1]
+	if parts[0] != "root" {
+		object = root[parts[0]].(map[string]any)
+	}
+	object[strings.ToUpper(key)] = object[key]
+	b, err := json.Marshal(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+func TestVerifyLengthGatesAreBoundedAndDoNotPanic(t *testing.T) {
+	now := time.Now().UTC()
+	b := valid(now)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig := ed25519.Sign(priv, alpha.SignedPayload(b))
+	cases := []struct {
+		name   string
+		b, sig []byte
+		pub    ed25519.PublicKey
+		want   error
+	}{
+		{"oversized manifest", make([]byte, alpha.MaxManifestBytes+1), sig, pub, alpha.ErrManifestTooLarge},
+		{"nil public key", b, sig, nil, alpha.ErrInvalidPublicKey},
+		{"short public key", b, sig, ed25519.PublicKey(make([]byte, ed25519.PublicKeySize-1)), alpha.ErrInvalidPublicKey},
+		{"long public key", b, sig, ed25519.PublicKey(make([]byte, ed25519.PublicKeySize+1)), alpha.ErrInvalidPublicKey},
+		{"nil signature", b, nil, pub, alpha.ErrInvalidSignature},
+		{"short signature", b, make([]byte, ed25519.SignatureSize-1), pub, alpha.ErrInvalidSignature},
+		{"long signature", b, make([]byte, ed25519.SignatureSize+1), pub, alpha.ErrInvalidSignature},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != nil {
+					t.Fatalf("panic: %v", got)
+				}
+			}()
+			_, err := alpha.VerifyTrustTransition(tc.b, tc.sig, tc.pub, alpha.VerifyOptions{Now: now})
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("got %v, want %v", err, tc.want)
+			}
+		})
 	}
 }

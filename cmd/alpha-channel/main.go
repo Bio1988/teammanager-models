@@ -50,7 +50,7 @@ func verifyCmd(args []string) {
 	pub, err := readPublic(*key)
 	must(err)
 	m, err := verifyManifest(b, s, pub, alpha.VerifyOptions{MinSequence: *min, RaceVersion: *rv, RelayVersion: *lv, Now: time.Now().UTC()})
-	must(err)
+	must(cliError(err))
 	fmt.Printf("verified alpha channel sequence %d: race_engineer %s, relay %s\n", m.ReleaseSequence, m.RaceEngineer.Version, m.Relay.Version)
 }
 func publishCmd(args []string) {
@@ -71,7 +71,7 @@ func publishCmd(args []string) {
 	priv, err := readPrivate(*key)
 	must(err)
 	_, err = alpha.ParseManifest(b, time.Now().UTC())
-	must(err)
+	must(cliError(err))
 	s := ed25519.Sign(priv, alpha.SignedPayload(b))
 	if *dry {
 		fmt.Println("dry run: manifest validates and detached signature was created in memory")
@@ -85,7 +85,13 @@ func publishCmd(args []string) {
 func verifyManifest(b, sig []byte, pub ed25519.PublicKey, o alpha.VerifyOptions) (alpha.Manifest, error) {
 	return alpha.VerifyTrustTransition(b, sig, pub, o)
 }
-func readManifest(name string) ([]byte, error) { return readFileBounded(name, alpha.MaxManifestBytes) }
+func readManifest(name string) ([]byte, error) {
+	b, err := readFileBounded(name, alpha.MaxManifestBytes)
+	if err != nil && strings.HasPrefix(err.Error(), "file exceeds ") {
+		return nil, alpha.ErrManifestTooLarge
+	}
+	return b, err
+}
 func readSignature(name string) ([]byte, error) {
 	b, err := readFileBounded(name, alpha.MaxSignatureBytes)
 	if err != nil {
@@ -204,5 +210,11 @@ func must(e error) {
 	if e != nil {
 		die(e.Error())
 	}
+}
+func cliError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return errors.New(strings.ReplaceAll(err.Error(), "Manifest.", "manifest."))
 }
 func die(s string) { fmt.Fprintln(os.Stderr, "alpha-channel:", s); os.Exit(1) }
