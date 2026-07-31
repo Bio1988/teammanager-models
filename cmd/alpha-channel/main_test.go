@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -228,4 +230,110 @@ func marshalObject(t *testing.T, value map[string]any) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+func candidateRelease(product, repo, filename string, contents []byte) alpha.Release {
+	r := testRelease(product, repo, filename)
+	r.Size = int64(len(contents))
+	sum := sha256.Sum256(contents)
+	r.SHA256 = hex.EncodeToString(sum[:])
+	return r
+}
+func TestVerifyCandidateRejectsUnsafeOrMismatchedFiles(t *testing.T) {
+	d := t.TempDir()
+	contents := []byte("candidate installer")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", contents)
+	path := filepath.Join(d, r.Filename)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCandidate(path, r); err != nil {
+		t.Fatal(err)
+	}
+	tampered := append([]byte{}, contents...)
+	tampered[0] ^= 1
+	if err := os.WriteFile(path, tampered, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCandidate(path, r); err == nil {
+		t.Fatal("accepted tampered candidate")
+	}
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCandidate(filepath.Join(d, "wrong.exe"), r); err == nil {
+		t.Fatal("accepted wrong basename")
+	}
+	if err := verifyCandidate(filepath.Join(d, r.Filename+".missing"), r); err == nil {
+		t.Fatal("accepted missing candidate")
+	}
+	if err := verifyCandidate(d, r); err == nil {
+		t.Fatal("accepted directory")
+	}
+	r.Size++
+	if err := verifyCandidate(path, r); err == nil {
+		t.Fatal("accepted wrong size")
+	}
+	r.Size--
+	r.SHA256 = strings.Repeat("0", 64)
+	if err := verifyCandidate(path, r); err == nil {
+		t.Fatal("accepted wrong hash")
+	}
+	if err := os.Symlink(path, filepath.Join(d, "RaceSetup-link.exe")); err == nil {
+		if err := verifyCandidate(filepath.Join(d, "RaceSetup-link.exe"), candidateRelease("race_engineer", "race-engineer-go", "RaceSetup-link.exe", contents)); err == nil {
+			t.Fatal("accepted symlink")
+		}
+	}
+	r.Size = 1 << 62
+	if err := verifyCandidate(path, r); err == nil {
+		t.Fatal("accepted huge signed size")
+	}
+}
+func TestVerifyCandidateCommandTrustsBeforeCandidateReads(t *testing.T) {
+	d := t.TempDir()
+	now := time.Now().UTC()
+	raceBytes, relayBytes := []byte("race"), []byte("relay")
+	r := candidateRelease("race_engineer", "race-engineer-go", "RaceSetup.exe", raceBytes)
+	l := candidateRelease("relay", "teammanager-relay", "RelaySetup.exe", relayBytes)
+	m := alpha.Manifest{Schema: 1, Channel: "alpha", KeyID: "alpha-1", KeyRotation: alpha.KeyRotation{Status: "active", NotBefore: now.Add(-time.Hour).Format(time.RFC3339), NotAfter: now.Add(time.Hour).Format(time.RFC3339)}, GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339), ReleaseSequence: 7, AuthenticodePolicy: "not-required", RaceEngineer: r, Relay: l}
+	manifest, _ := json.Marshal(m)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath, sigPath, keyPath := filepath.Join(d, "alpha.json"), filepath.Join(d, "alpha.json.sig"), filepath.Join(d, "alpha.pub")
+	if err := os.WriteFile(manifestPath, manifest, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(priv, alpha.SignedPayload(manifest)))), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, []byte(base64.StdEncoding.EncodeToString(pub)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	racePath, relayPath := filepath.Join(d, r.Filename), filepath.Join(d, l.Filename)
+	if err := os.WriteFile(racePath, raceBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(relayPath, relayBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"run", ".", "verify-candidate", "--manifest", manifestPath, "--signature", sigPath, "--public-key", keyPath, "--race-installer", racePath, "--relay-installer", relayPath, "--min-sequence", "6"}
+	out, err := exec.Command("go", args...).CombinedOutput()
+	if err != nil || !contains(string(out), "verified candidate race_engineer") {
+		t.Fatalf("candidate command failed: %v %s", err, out)
+	}
+	args = append(args, "--min-sequence", "7")
+	out, err = exec.Command("go", args...).CombinedOutput()
+	if err == nil || !contains(string(out), "release_sequence is not newer") {
+		t.Fatalf("candidate replay check failed: %v %s", err, out)
+	}
+	args = args[:len(args)-2]
+	if err := os.WriteFile(sigPath, []byte("not-a-signature"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out, err = exec.Command("go", args...).CombinedOutput()
+	if err == nil || !contains(string(out), "signature") || contains(string(out), "cannot be inspected") {
+		t.Fatalf("trust failure read candidate: %v %s", err, out)
+	}
 }

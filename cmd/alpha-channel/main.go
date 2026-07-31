@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -20,15 +21,17 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		die("usage: alpha-channel verify|publish")
+		die("usage: alpha-channel verify|verify-candidate|publish")
 	}
 	switch os.Args[1] {
 	case "verify":
 		verifyCmd(os.Args[2:])
+	case "verify-candidate":
+		verifyCandidateCmd(os.Args[2:])
 	case "publish":
 		publishCmd(os.Args[2:])
 	default:
-		die("usage: alpha-channel verify|publish")
+		die("usage: alpha-channel verify|verify-candidate|publish")
 	}
 }
 func verifyCmd(args []string) {
@@ -52,6 +55,95 @@ func verifyCmd(args []string) {
 	m, err := verifyManifest(b, s, pub, alpha.VerifyOptions{MinSequence: *min, RaceVersion: *rv, RelayVersion: *lv, Now: time.Now().UTC()})
 	must(cliError(err))
 	fmt.Printf("verified alpha channel sequence %d: race_engineer %s, relay %s\n", m.ReleaseSequence, m.RaceEngineer.Version, m.Relay.Version)
+}
+func verifyCandidateCmd(args []string) {
+	fs := flag.NewFlagSet("verify-candidate", flag.ExitOnError)
+	mf := fs.String("manifest", "", "manifest path")
+	sig := fs.String("signature", "", "detached signature path")
+	key := fs.String("public-key", "", "pinned application update public key")
+	raceInstaller := fs.String("race-installer", "", "local Race Engineer installer candidate")
+	relayInstaller := fs.String("relay-installer", "", "local Relay installer candidate")
+	min := fs.Uint64("min-sequence", 0, "last accepted sequence")
+	rv := fs.String("race-version", "", "installed race version")
+	lv := fs.String("relay-version", "", "installed relay version")
+	fs.Parse(args)
+	if *mf == "" || *sig == "" || *key == "" || *raceInstaller == "" || *relayInstaller == "" {
+		die("--manifest, --signature, --public-key, --race-installer, and --relay-installer are required")
+	}
+	b, err := readManifest(*mf)
+	must(err)
+	s, err := readSignature(*sig)
+	must(err)
+	pub, err := readPublic(*key)
+	must(err)
+	m, err := verifyManifest(b, s, pub, alpha.VerifyOptions{MinSequence: *min, RaceVersion: *rv, RelayVersion: *lv, Now: time.Now().UTC()})
+	must(cliError(err))
+	must(verifyCandidate(*raceInstaller, m.RaceEngineer))
+	must(verifyCandidate(*relayInstaller, m.Relay))
+	fmt.Printf("verified candidate race_engineer %s %s; relay %s %s\n", m.RaceEngineer.Version, m.RaceEngineer.Commit, m.Relay.Version, m.Relay.Commit)
+}
+
+func verifyCandidate(path string, r alpha.Release) error {
+	if filepath.Base(path) != r.Filename {
+		return fmt.Errorf("%s candidate basename does not match manifest", r.Product)
+	}
+	before, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be inspected", r.Product)
+	}
+	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
+		return fmt.Errorf("%s candidate is not a regular non-symlink file", r.Product)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be opened", r.Product)
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be stated", r.Product)
+	}
+	if !opened.Mode().IsRegular() || !os.SameFile(before, opened) {
+		return fmt.Errorf("%s candidate changed before verification", r.Product)
+	}
+	if opened.Size() != r.Size {
+		return fmt.Errorf("%s candidate size does not match manifest", r.Product)
+	}
+	h := sha256.New()
+	buf := make([]byte, 64<<10)
+	var total int64
+	for {
+		n, readErr := f.Read(buf)
+		if n > 0 {
+			total += int64(n)
+			if total > r.Size {
+				return fmt.Errorf("%s candidate grew during verification", r.Product)
+			}
+			if _, err := h.Write(buf[:n]); err != nil {
+				return err
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return fmt.Errorf("%s candidate cannot be read", r.Product)
+		}
+	}
+	if total != r.Size {
+		return fmt.Errorf("%s candidate was truncated during verification", r.Product)
+	}
+	after, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("%s candidate cannot be re-stated", r.Product)
+	}
+	if !after.Mode().IsRegular() || !os.SameFile(opened, after) || after.Size() != r.Size {
+		return fmt.Errorf("%s candidate changed during verification", r.Product)
+	}
+	if hex.EncodeToString(h.Sum(nil)) != r.SHA256 {
+		return fmt.Errorf("%s candidate SHA-256 does not match manifest", r.Product)
+	}
+	return nil
 }
 func publishCmd(args []string) {
 	fs := flag.NewFlagSet("publish", flag.ExitOnError)
