@@ -23,12 +23,17 @@ size, lowercase SHA-256, and the sole accepted direct Forgejo HTTPS asset URL:
 https://forgejo.g-grp.com/Max/<repository>/releases/download/<tag>/<filename>
 ```
 
-URLs with a different host/path, user info, query, fragment, port, or redirect
-endpoint are not valid manifest URLs. Consumers must pin the application update
+The tag is exactly `v` plus the signed version. URLs with a different
+host/path, user info, query, fragment, port, traversal, or escaped ambiguity
+are not valid manifest URLs. Consumers must pin the application update
 public key and use `verify`; they retain the last accepted sequence and product
 versions to reject replay and downgrade. Downloaders must disable redirects and
 verify size and SHA-256 after download; this repository intentionally does not
 ship a downloader or installer.
+
+`authenticode_policy` is a signed, closed manifest field. Alpha uses
+`not-required`; the only other valid value is `required`. This records the
+decision without making Authenticode an Alpha release blocker.
 
 ## Custody and rotation
 
@@ -47,7 +52,11 @@ go run ./cmd/alpha-channel publish --manifest candidate.json --private-key exter
 ```
 
 `publish` refuses to overwrite `alpha.json` or `alpha.json.sig`; its dry run
-still requires the external private key and writes nothing.
+still requires the external private key and writes nothing. Real output uses
+exclusive create-once file creation. If signature creation fails after the
+manifest was created, it removes that manifest; if cleanup itself fails it
+reports the partial state and every later publication fails closed rather than
+replacing it.
 
 ## Later activation sequence
 

@@ -4,13 +4,15 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
 func valid(now time.Time) []byte {
-	m := manifest{Schema: 1, Channel: "alpha", KeyID: "alpha-1", KeyRotation: keyRotation{"active", now.Add(-time.Hour).Format(time.RFC3339), now.Add(24 * time.Hour).Format(time.RFC3339)}, GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339), ReleaseSequence: 7, RaceEngineer: releaseFor("race_engineer", "race-engineer-go", "RaceSetup.exe"), Relay: releaseFor("relay", "teammanager-relay", "RelaySetup.exe")}
+	m := manifest{Schema: 1, Channel: "alpha", KeyID: "alpha-1", KeyRotation: keyRotation{"active", now.Add(-time.Hour).Format(time.RFC3339), now.Add(24 * time.Hour).Format(time.RFC3339)}, GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339), ReleaseSequence: 7, AuthenticodePolicy: "not-required", RaceEngineer: releaseFor("race_engineer", "race-engineer-go", "RaceSetup.exe"), Relay: releaseFor("relay", "teammanager-relay", "RelaySetup.exe")}
 	b, _ := json.Marshal(m)
 	return b
 }
@@ -70,7 +72,11 @@ func TestReleaseFieldVectors(t *testing.T) {
 		mut  func(*manifest)
 	}{{"product", func(m *manifest) { m.RaceEngineer.Product = "relay" }}, {"platform", func(m *manifest) { m.RaceEngineer.Platform = "linux" }}, {"arch", func(m *manifest) { m.RaceEngineer.Architecture = "arm64" }}, {"owner", func(m *manifest) { m.RaceEngineer.Owner = "Other" }}, {"repo", func(m *manifest) { m.RaceEngineer.Repository = "other" }}, {"url", func(m *manifest) {
 		m.RaceEngineer.URL = "https://forgejo.g-grp.com/Max/race-engineer-go/releases/download/v0.1.0-alpha.7/RaceSetup.exe?q=x"
-	}}, {"tag", func(m *manifest) { m.RaceEngineer.Tag = "bad" }}, {"commit", func(m *manifest) { m.RaceEngineer.Commit = "ABC" }}, {"version", func(m *manifest) { m.RaceEngineer.Version = "1.0.0" }}, {"size", func(m *manifest) { m.RaceEngineer.Size = 0 }}, {"hash", func(m *manifest) { m.RaceEngineer.SHA256 = "ABC" }}}
+	}}, {"fragment", func(m *manifest) { m.RaceEngineer.URL += "#x" }}, {"traversal", func(m *manifest) {
+		m.RaceEngineer.URL = "https://forgejo.g-grp.com/Max/race-engineer-go/releases/download/v0.1.0-alpha.7/../RaceSetup.exe"
+	}}, {"escaped", func(m *manifest) {
+		m.RaceEngineer.URL = "https://forgejo.g-grp.com/Max/race-engineer-go/releases/download/v0.1.0-alpha.7/%52aceSetup.exe"
+	}}, {"tag", func(m *manifest) { m.RaceEngineer.Tag = "bad" }}, {"commit", func(m *manifest) { m.RaceEngineer.Commit = "ABC" }}, {"version", func(m *manifest) { m.RaceEngineer.Version = "1.0.0" }}, {"size", func(m *manifest) { m.RaceEngineer.Size = 0 }}, {"hash", func(m *manifest) { m.RaceEngineer.SHA256 = "ABC" }}, {"authenticode", func(m *manifest) { m.AuthenticodePolicy = "optional" }}}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var m manifest
@@ -81,6 +87,55 @@ func TestReleaseFieldVectors(t *testing.T) {
 				t.Fatal("accepted invalid " + tc.name)
 			}
 		})
+	}
+}
+func TestVersionParsingFailsClosed(t *testing.T) {
+	for _, v := range []string{"", "0.1", "0.1.0", "0.1.0-alpha.0", "0.1.0-alpha.x", "0.18446744073709551616.0-alpha.1"} {
+		if _, err := parseVersion(v); err == nil {
+			t.Fatalf("accepted %q", v)
+		}
+	}
+	now := time.Now().UTC()
+	b := valid(now)
+	s, p := signed(t, b)
+	for _, v := range []string{"bad", "0.1.0-alpha.0", "0.18446744073709551616.0-alpha.1"} {
+		if _, err := verify(b, s, p, verifyOptions{Now: now, RaceVersion: v}); err == nil {
+			t.Fatalf("accepted installed %q", v)
+		}
+	}
+}
+func TestManifestReadBoundAndCreateOnce(t *testing.T) {
+	d := t.TempDir()
+	big := make([]byte, maxManifestBytes+1)
+	if err := os.WriteFile(filepath.Join(d, "large.json"), big, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readManifest(filepath.Join(d, "large.json")); err == nil {
+		t.Fatal("oversize manifest read")
+	}
+	if err := writePair(d, []byte("manifest"), []byte("signature")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePair(d, []byte("replacement"), []byte("replacement")); err == nil {
+		t.Fatal("overwrote pair")
+	}
+	if got, _ := os.ReadFile(filepath.Join(d, "alpha.json")); string(got) != "manifest" {
+		t.Fatal("manifest changed")
+	}
+}
+func TestPairFailureCleansItsManifest(t *testing.T) {
+	d := t.TempDir()
+	if err := os.WriteFile(filepath.Join(d, "alpha.json.sig"), []byte("existing"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePair(d, []byte("manifest"), []byte("signature")); err == nil {
+		t.Fatal("accepted existing signature")
+	}
+	if _, err := os.Stat(filepath.Join(d, "alpha.json")); !os.IsNotExist(err) {
+		t.Fatalf("partial manifest remains: %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(d, "alpha.json.sig")); string(got) != "existing" {
+		t.Fatal("existing signature changed")
 	}
 }
 func TestExpiryFutureReplayDowngradeAndRedirect(t *testing.T) {
