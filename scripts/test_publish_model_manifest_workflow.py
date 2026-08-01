@@ -21,7 +21,7 @@ class FakeApi:
     def __init__(self, branch=None, status=None):
         self.branch = branch or {"protected": True, "required_approvals": 1, "enable_status_check": True,
                                "status_check_contexts": ["verify"], "commit": {"id": SHA}}
-        self.commit_status = status or {"state": "success", "statuses": [{"context": "verify", "status": "success"}]}
+        self.commit_status = status or {"sha": SHA, "state": "success", "statuses": [{"context": "verify", "status": "success"}]}
         self.calls, self.tag, self.release = [], None, None
 
     def request(self, method, path, body=None, accept="application/json"):
@@ -69,6 +69,17 @@ class ReleaseProtocolTests(unittest.TestCase):
         self.assertIn("ref: ${{ forgejo.sha }}", workflow)
         self.assertNotIn("ref: ${{ inputs.expected_source_sha }}", workflow)
         self.assertIn('test "${GITHUB_REF:-}" = refs/heads/main', workflow)
+        self.assertNotIn("assert ", workflow)
+        sign_start = workflow.index("Sign and locally verify")
+        publish_start = workflow.index("Publish and public-verify")
+        signing_block = workflow[sign_start:publish_start]
+        publishing_block = workflow[publish_start:]
+        self.assertIn("unset FORGEJO_TOKEN GITEA_TOKEN GITHUB_TOKEN", signing_block)
+        self.assertIn("unset MODEL_MANIFEST_SIGNING_KEY_B64", signing_block)
+        self.assertLess(signing_block.index("unset MODEL_MANIFEST_SIGNING_KEY_B64"), signing_block.index("openssl pkeyutl -sign"))
+        self.assertLess(signing_block.index("rm -f \"$private_key\""), signing_block.index("verify_release_manifest.py"))
+        self.assertNotIn("FORGEJO_TOKEN: ${{ forgejo.token }}", signing_block)
+        self.assertNotIn("MODEL_MANIFEST_SIGNING_KEY_B64", publishing_block)
 
     def test_preflight_requires_protected_approved_successful_current_main(self):
         api = FakeApi()
@@ -84,6 +95,9 @@ class ReleaseProtocolTests(unittest.TestCase):
                 module.preflight(FakeApi(branch=branch), "Max/teammanager-models", SHA, SHA)
         with self.assertRaises(RuntimeError):
             module.preflight(api, "Max/teammanager-models", "A" * 40, SHA)
+        malformed = {"sha": SHA, "state": "success", "statuses": ["not-a-row"]}
+        with self.assertRaisesRegex(RuntimeError, "status check"):
+            module.preflight(FakeApi(status=malformed), "Max/teammanager-models", SHA, SHA)
 
     def test_reserve_rejects_replay_and_cleans_only_its_new_tag_if_draft_creation_fails(self):
         api = FakeApi()
@@ -168,6 +182,49 @@ class ReleaseProtocolTests(unittest.TestCase):
         finally:
             module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads = original
         self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": True} for call in api.calls))
+
+    def test_patch_response_loss_redrafts_when_publish_was_applied(self):
+        class LostPatch(FakeApi):
+            def json(self, method, path, body=None):
+                if method == "PATCH" and body == {"draft": False}:
+                    self.release["draft"] = False
+                    raise OSError("response lost")
+                return super().json(method, path, body)
+        api = LostPatch()
+        api.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": SHA}
+        original = module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads
+        try:
+            module.reserve = lambda *_: 9
+            module.upload = lambda *_: None
+            module.assets = lambda *_: {name: number for number, name in enumerate(module.ASSETS, 1)}
+            module.tag_sha = lambda *_: SHA
+            module.verify_public_downloads = lambda *_: None
+            with self.assertRaisesRegex(OSError, "response lost"):
+                module.publish(api, "Max/teammanager-models", "https://forgejo.example", SHA, Path("out"), Path("source"), Path("pub"))
+        finally:
+            module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads = original
+        self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": True} for call in api.calls))
+
+    def test_public_downloads_are_anonymous_exact_and_verified(self):
+        class Response:
+            def __init__(self, data): self.data = data
+            def __enter__(self): return self
+            def __exit__(self, *_): return False
+            def read(self): return self.data
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "output"; output.mkdir()
+            content = {name: (name + " bytes").encode() for name in module.ASSETS}
+            for name, data in content.items(): (output / name).write_bytes(data)
+            requests = []
+            def open_request(request):
+                requests.append(request)
+                return Response(content[request.full_url.rsplit("/", 1)[1]])
+            with mock.patch.object(module.urllib.request, "urlopen", open_request), mock.patch.object(module, "verify") as verify:
+                module.verify_public_downloads("Max/teammanager-models", {name: index for index, name in enumerate(module.ASSETS, 1)}, output, output / module.ASSETS[0], root / "public.pem", "https://forgejo.example")
+            self.assertEqual(len(requests), 3)
+            self.assertTrue(all(request.get_header("Authorization") is None for request in requests))
+            verify.assert_called_once()
 
     def test_command_fails_before_api_use_when_automatic_token_is_absent(self):
         with mock.patch.dict(os.environ, {"FORGEJO_TOKEN": ""}, clear=False), \

@@ -31,18 +31,23 @@ jobs:
           python3 - "$EXPECTED_SOURCE_SHA" "$branch" "$status" <<'PY'
           import json, re, sys
           expected, branch_path, status_path = sys.argv[1:]
-          assert re.fullmatch(r"[0-9a-f]{40}", expected)
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          require(re.fullmatch(r"[0-9a-f]{40}", expected) is not None, "expected_source_sha must be lowercase SHA-1")
           branch = json.load(open(branch_path, encoding="utf-8"))
           contexts = branch.get("status_check_contexts")
-          assert branch.get("protected") is True
-          assert isinstance(branch.get("required_approvals"), int) and branch["required_approvals"] >= 1
-          assert branch.get("enable_status_check") is True
-          assert isinstance(contexts, list) and contexts and all(isinstance(item, str) and item for item in contexts)
-          assert branch.get("commit", {}).get("id") == expected
+          require(isinstance(branch, dict) and branch.get("protected") is True, "main must be protected")
+          require(isinstance(branch.get("required_approvals"), int) and branch["required_approvals"] >= 1, "main must require approval")
+          require(branch.get("enable_status_check") is True, "main must require status checks")
+          require(isinstance(contexts, list) and contexts and all(isinstance(item, str) and item for item in contexts), "invalid required status contexts")
+          require(isinstance(branch.get("commit"), dict) and branch["commit"].get("id") == expected, "expected SHA is not current main")
           status = json.load(open(status_path, encoding="utf-8"))
-          assert status.get("sha") == expected and status.get("state") == "success"
-          latest = {row.get("context"): row.get("status") for row in status.get("statuses", []) if isinstance(row, dict)}
-          assert all(latest.get(context) == "success" for context in contexts)
+          require(isinstance(status, dict) and status.get("sha") == expected and status.get("state") == "success", "combined status is not successful for expected SHA")
+          rows = status.get("statuses")
+          require(isinstance(rows, list) and all(isinstance(row, dict) for row in rows), "invalid status context response")
+          latest = {row.get("context"): row.get("status") for row in rows}
+          require(all(latest.get(context) == "success" for context in contexts), "required status check is not successful")
           PY
       - name: Check out the preflighted trusted main SHA without credentials
         uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -50,22 +55,25 @@ jobs:
           ref: ${{ forgejo.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Sign, draft, verify, publish, and public-verify immutable assets
+      - name: Sign and locally verify immutable assets
         env:
           MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
           MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
-          FORGEJO_TOKEN: ${{ forgejo.token }}
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
         run: |
           set -eu
           umask 077
           workdir="$(mktemp -d)"
+          output="$RUNNER_TEMP/model-manifest-release"
+          rm -rf "$output"
+          mkdir "$output"
           cleanup() { rm -rf "$workdir"; }
           trap cleanup EXIT HUP INT TERM
 
+          unset FORGEJO_TOKEN GITEA_TOKEN GITHUB_TOKEN
+
           test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"
           test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
-          test -n "$FORGEJO_TOKEN"
           test "${GITHUB_REF:-}" = refs/heads/main
           commit="$(git rev-parse HEAD)"
           test "$commit" = "$EXPECTED_SOURCE_SHA"
@@ -73,9 +81,8 @@ jobs:
           private_key="$workdir/model-manifest-private.pem"
           public_key="$workdir/model-manifest-public.pem"
           derived_public_key="$workdir/derived-public.pem"
-          output="$workdir/output"
-          mkdir "$output"
           printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"
+          unset MODEL_MANIFEST_SIGNING_KEY_B64
           chmod 0600 "$private_key"
           printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"
           openssl pkey -in "$private_key" -pubout -out "$derived_public_key"
@@ -83,8 +90,22 @@ jobs:
 
           cp manifest.json "$output/teammanager-model-manifest-v3.json"
           openssl pkeyutl -sign -inkey "$private_key" -rawin -in "$output/teammanager-model-manifest-v3.json" -out "$output/teammanager-model-manifest-v3.json.sig"
+          rm -f "$private_key"
           test "$(wc -c < "$output/teammanager-model-manifest-v3.json.sig")" -eq 64
           printf '%s\n' "$(sha256sum "$output/teammanager-model-manifest-v3.json" | awk '{print $1}')" > "$output/teammanager-model-manifest-v3.json.sha256"
           test "$(wc -c < "$output/teammanager-model-manifest-v3.json.sha256")" -eq 65
           python3 scripts/verify_release_manifest.py --manifest "$output/teammanager-model-manifest-v3.json" --signature "$output/teammanager-model-manifest-v3.json.sig" --sha256 "$output/teammanager-model-manifest-v3.json.sha256" --public-key "$public_key"
+      - name: Publish and public-verify immutable assets
+        env:
+          FORGEJO_TOKEN: ${{ forgejo.token }}
+          MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        run: |
+          set -eu
+          workdir="$(mktemp -d)"; output="$RUNNER_TEMP/model-manifest-release"
+          cleanup() { rm -rf "$workdir" "$output"; }
+          trap cleanup EXIT HUP INT TERM
+          test -n "$FORGEJO_TOKEN"; test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"; test -d "$output"
+          public_key="$workdir/model-manifest-public.pem"
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"
           python3 scripts/release_protocol.py publish --api "$FORGEJO_API_URL" --server "$FORGEJO_SERVER_URL" --repository "$FORGEJO_REPOSITORY" --expected-sha "$EXPECTED_SOURCE_SHA" --output "$output" --source-manifest manifest.json --public-key "$public_key"

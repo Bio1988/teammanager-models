@@ -70,6 +70,13 @@ Failures after draft creation intentionally leave the draft and its tag for
 maintainer inspection, while temporary key material is removed by the shell
 cleanup trap.
 
+Before dispatch, owners must externally attest the signing-custody boundary:
+every principal able to introduce any repository ref or dispatch Actions is a
+signing-key custodian; untrusted users must be fork-only and unable to dispatch;
+the runner must be trusted; and `main` must enforce review plus the exact status
+contexts checked by the workflow. These source-level checks do not change
+Forgejo 16's side-ref secret-scoping model.
+
 ## Current consumer contract
 
 `manifest.json` retains the current Pocket default, optional English language/catalog

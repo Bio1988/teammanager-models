@@ -139,6 +139,9 @@ def publish(api: Api, repo: str, server: str, expected: str, output: Path, sourc
         api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": False})
         verify_public_downloads(repo, asset_ids, output, source, public_key, server)
         require(tag_sha(api, repo) == expected, "tag changed after public verification")
+        published = api.json("GET", f"/repos/{repo}/releases/{release_id}")
+        require(published.get("draft") is False and published.get("tag_name") == TAG and published.get("target_commitish") == expected, "published release changed after verification")
+        require(assets(api, repo, release_id, output) == asset_ids, "published release assets changed after verification")
     except Exception:
         try:
             current = api.json("GET", f"/repos/{repo}/releases/{release_id}")
