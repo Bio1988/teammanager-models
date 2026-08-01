@@ -35,6 +35,6 @@ the then-active manifest and consumers; no private key belongs in this repositor
 
 ## Current consumer contract
 
-`manifest.json` retains the current Pocket default, optional language/catalog
+`manifest.json` retains the current Pocket default, optional English language/catalog
 packs, and clone compatibility metadata because Race Engineer consumes them in
 its published release format. No separate voice/TTS planning catalog remains.
