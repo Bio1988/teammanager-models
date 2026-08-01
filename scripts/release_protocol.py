@@ -67,25 +67,25 @@ def status(api: Api, path: str) -> int:
 
 
 def tag_sha(api: Api, repo: str) -> str:
-    value = api.json("GET", f"/repos/{repo}/git/refs/tags/{TAG}")
+    value = api.json("GET", f"/repos/{repo}/tags/{TAG}")
     try:
-        return value["object"]["sha"]
+        return value["commit"]["id"]
     except (KeyError, TypeError):
         raise RuntimeError("invalid tag response") from None
 
 
 def reserve(api: Api, repo: str, expected: str) -> int:
     require(status(api, f"/repos/{repo}/releases/tags/{TAG}") == 404, "release tag already exists")
-    require(status(api, f"/repos/{repo}/git/refs/tags/{TAG}") == 404, "git tag already exists")
+    require(status(api, f"/repos/{repo}/tags/{TAG}") == 404, "git tag already exists")
     tag_created = False
     try:
-        api.json("POST", f"/repos/{repo}/git/refs", {"ref": f"refs/tags/{TAG}", "sha": expected})
+        api.json("POST", f"/repos/{repo}/tags", {"tag_name": TAG, "target": expected})
         tag_created = True
         require(tag_sha(api, repo) == expected, "reserved tag does not target expected_source_sha")
         release = api.json("POST", f"/repos/{repo}/releases", {"tag_name": TAG, "target_commitish": expected, "name": "TeamManager model manifest v3 Pocket R3.2", "draft": True})
     except Exception:
         if tag_created and tag_sha(api, repo) == expected:
-            api.request("DELETE", f"/repos/{repo}/git/refs/tags/{TAG}")
+            api.request("DELETE", f"/repos/{repo}/tags/{TAG}")
         raise
     try:
         release_id = release["id"]
@@ -96,32 +96,32 @@ def reserve(api: Api, repo: str, expected: str) -> int:
 
 
 def upload(api: Api, repo: str, release_id: int, output: Path) -> None:
-    # urllib's standard library has no safe compact multipart helper; curl never logs the token without -v.
     for name in ASSETS:
         path = output / name
         require(path.is_file(), f"missing release asset: {name}")
-        import subprocess
-        subprocess.run(["curl", "--fail", "--silent", "--show-error", "--request", "POST", "--header", f"Authorization: token {api.token}", "--form", f"attachment=@{path};filename={name}", f"{api.api}/repos/{repo}/releases/{release_id}/assets?name={urllib.parse.quote(name)}"], check=True)
+        boundary = "----teammanager-manifest-upload"
+        data = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"{name}\"\r\nContent-Type: application/octet-stream\r\n\r\n".encode() + path.read_bytes() + f"\r\n--{boundary}--\r\n".encode())
+        request = urllib.request.Request(f"{api.api}/repos/{repo}/releases/{release_id}/assets?name={urllib.parse.quote(name)}", data=data, method="POST", headers={"Authorization": f"token {api.token}", "Content-Type": f"multipart/form-data; boundary={boundary}"})
+        with urllib.request.urlopen(request):
+            pass
 
 
 def assets(api: Api, repo: str, release_id: int) -> dict[str, int]:
     rows = api.json("GET", f"/repos/{repo}/releases/{release_id}/assets")
     require(isinstance(rows, list), "invalid release assets response")
     result = {row.get("name"): row.get("id") for row in rows if isinstance(row, dict)}
-    require(set(result) == set(ASSETS) and all(isinstance(value, int) and value > 0 for value in result.values()), "release must contain exactly three unique named assets")
+    require(len(rows) == 3 and len(result) == 3 and set(result) == set(ASSETS) and all(isinstance(value, int) and value > 0 for value in result.values()), "release must contain exactly three unique named assets")
     return result
 
 
-def verify_downloads(api: Api, repo: str, release_id: int, asset_ids: dict[str, int], output: Path, source: Path, public_key: Path, server: str | None = None) -> None:
+def verify_downloads(api: Api, repo: str, release_id: int, asset_ids: dict[str, int], output: Path, source: Path, public_key: Path, server: str, authenticated: bool) -> None:
     with tempfile.TemporaryDirectory() as temp:
         downloaded = Path(temp)
         for name, asset_id in asset_ids.items():
-            if server is None:
-                data = api.request("GET", f"/repos/{repo}/releases/assets/{asset_id}", accept="application/octet-stream")
-            else:
-                request = urllib.request.Request(f"{server.rstrip('/')}/{repo}/releases/download/{TAG}/{name}")
-                with urllib.request.urlopen(request) as response:
-                    data = response.read()
+            headers = {"Authorization": f"token {api.token}"} if authenticated else {}
+            request = urllib.request.Request(f"{server.rstrip('/')}/{repo}/releases/download/{TAG}/{name}", headers=headers)
+            with urllib.request.urlopen(request) as response:
+                data = response.read()
             (downloaded / name).write_bytes(data)
             require((downloaded / name).read_bytes() == (output / name).read_bytes(), f"downloaded asset differs: {name}")
         require((downloaded / ASSETS[0]).read_bytes() == source.read_bytes(), "downloaded manifest differs from source")
@@ -133,14 +133,20 @@ def publish(api: Api, repo: str, server: str, expected: str, output: Path, sourc
     upload(api, repo, release_id, output)
     asset_ids = assets(api, repo, release_id)
     require(tag_sha(api, repo) == expected, "tag changed before draft verification")
-    verify_downloads(api, repo, release_id, asset_ids, output, source, public_key)
+    verify_downloads(api, repo, release_id, asset_ids, output, source, public_key, server, True)
     draft = api.json("GET", f"/repos/{repo}/releases/{release_id}")
     require(draft.get("draft") is True and draft.get("tag_name") == TAG and draft.get("target_commitish") == expected, "draft release changed before publish")
-    api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": False})
     try:
-        verify_downloads(api, repo, release_id, asset_ids, output, source, public_key, server)
+        api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": False})
+        verify_downloads(api, repo, release_id, asset_ids, output, source, public_key, server, False)
+        require(tag_sha(api, repo) == expected, "tag changed after public verification")
     except Exception:
-        api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": True})
+        try:
+            current = api.json("GET", f"/repos/{repo}/releases/{release_id}")
+            if current.get("draft") is False:
+                api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": True})
+        except Exception:
+            pass
         raise
 
 

@@ -41,8 +41,8 @@ the exact reviewed, successful `main` SHA. It checks the actual checkout, the
 branch API, and the commit-status API before handling a signing key. The final
 tag is reserved at that SHA, a draft release is uploaded and authenticated via
 the asset API, and it is published only after verification. A final anonymous
-release download is then byte-compared and verified; a failure immediately
-returns the release to draft.
+release download is then byte-compared and verified; a failure triggers a
+best-effort return of the release to draft.
 
 The workflow consumes the existing base64 signing-key and public-key secrets.
 It uses Forgejo's ephemeral, same-repository automatic `FORGEJO_TOKEN`. Forgejo
@@ -50,7 +50,9 @@ It uses Forgejo's ephemeral, same-repository automatic `FORGEJO_TOKEN`. Forgejo
 token: it has broad write capability within this repository's units. This
 workflow contains that platform limitation with manual-only dispatch, protected
 main, SHA/status checks, no persisted checkout credentials, immutable action
-pinning, and no API writes except the reserved tag and its release. If that is
+pinning, and no API writes except the reserved tag and its release. Branch
+protection cannot prove that direct pushes are disabled or that no privileged
+user can bypass it; that remains an external owner audit. If that is
 not acceptable, publication must instead wait for a dedicated minimally scoped
 release credential or an Authorized Integration policy.
 

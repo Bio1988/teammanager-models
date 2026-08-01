@@ -28,10 +28,10 @@ class FakeApi:
         if method == "GET" and path.endswith(f"releases/tags/{module.TAG}"):
             if self.release is None:
                 raise urllib.error.HTTPError(path, 404, "missing", {}, None)
-        if method == "GET" and path.endswith(f"git/refs/tags/{module.TAG}"):
+        if method == "GET" and path.endswith(f"tags/{module.TAG}"):
             if self.tag is None:
                 raise urllib.error.HTTPError(path, 404, "missing", {}, None)
-        if method == "DELETE" and path.endswith(f"git/refs/tags/{module.TAG}"):
+        if method == "DELETE" and path.endswith(f"tags/{module.TAG}"):
             self.tag = None
         return b"{}"
 
@@ -41,10 +41,10 @@ class FakeApi:
             return self.branch
         if path.endswith(f"/commits/{SHA}/status"):
             return self.commit_status
-        if path.endswith(f"git/refs/tags/{module.TAG}"):
-            return {"object": {"sha": self.tag}}
-        if method == "POST" and path.endswith("/git/refs"):
-            self.tag = body["sha"]
+        if path.endswith(f"tags/{module.TAG}"):
+            return {"commit": {"id": self.tag}}
+        if method == "POST" and path.endswith("/tags"):
+            self.tag = body["target"]
             return {}
         if method == "POST" and path.endswith("/releases"):
             self.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": body["target_commitish"]}
@@ -58,6 +58,17 @@ class FakeApi:
 
 
 class ReleaseProtocolTests(unittest.TestCase):
+    def test_untrusted_dispatch_cannot_run_checkout_code_or_receive_signing_env_before_preflight(self):
+        workflow = (Path(__file__).resolve().parent.parent / ".forgejo/workflows/publish-model-manifest.yml").read_text(encoding="utf-8")
+        preflight = workflow.index("Preflight reviewed protected main")
+        checkout = workflow.index("Check out the preflighted trusted main")
+        signing = workflow.index("MODEL_MANIFEST_SIGNING_KEY_B64")
+        self.assertLess(preflight, checkout)
+        self.assertLess(checkout, signing)
+        self.assertIn("ref: ${{ forgejo.sha }}", workflow)
+        self.assertNotIn("ref: ${{ inputs.expected_source_sha }}", workflow)
+        self.assertIn('test "${GITHUB_REF:-}" = refs/heads/main', workflow)
+
     def test_preflight_requires_protected_approved_successful_current_main(self):
         api = FakeApi()
         module.preflight(api, "Max/teammanager-models", SHA, SHA)
@@ -91,12 +102,12 @@ class ReleaseProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "draft failed"):
             module.reserve(failing, "Max/teammanager-models", SHA)
         self.assertIsNone(failing.tag)
-        self.assertIn(("DELETE", f"/repos/Max/teammanager-models/git/refs/tags/{module.TAG}", None, "application/json"), failing.calls)
+        self.assertIn(("DELETE", f"/repos/Max/teammanager-models/tags/{module.TAG}", None, "application/json"), failing.calls)
 
         class WrongTag(FakeApi):
             def json(self, method, path, body=None):
                 value = super().json(method, path, body)
-                if method == "POST" and path.endswith("/git/refs"):
+                if method == "POST" and path.endswith("/tags"):
                     self.tag = "b" * 40
                 return value
 
@@ -113,9 +124,9 @@ class ReleaseProtocolTests(unittest.TestCase):
             module.upload = lambda *_: calls.append("upload")
             module.assets = lambda *_: {name: number for number, name in enumerate(module.ASSETS, 1)}
             module.tag_sha = lambda *_: SHA
-            def downloads(_api, _repo, _id, _assets, _out, _source, _key, server=None):
-                calls.append("public" if server else "authenticated")
-                if server:
+            def downloads(_api, _repo, _id, _assets, _out, _source, _key, server, authenticated):
+                calls.append("authenticated" if authenticated else "public")
+                if not authenticated:
                     raise RuntimeError("public download failed")
             module.verify_downloads = downloads
             with self.assertRaisesRegex(RuntimeError, "public download failed"):

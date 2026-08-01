@@ -16,21 +16,40 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the reviewed main commit without credentials
-        uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: ${{ inputs.expected_source_sha }}
-          fetch-depth: 1
-          persist-credentials: false
       - name: Preflight reviewed protected main before handling keys
         env:
-          FORGEJO_TOKEN: ${{ forgejo.token }}
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+          TRUSTED_SHA: ${{ forgejo.sha }}
         run: |
           set -eu
           test "${GITHUB_REF:-}" = refs/heads/main
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
-          python3 scripts/release_protocol.py preflight --api "$FORGEJO_API_URL" --repository "$FORGEJO_REPOSITORY" --expected-sha "$EXPECTED_SOURCE_SHA" --checkout-sha "$(git rev-parse HEAD)"
+          test "${GITHUB_SHA:-}" = "$EXPECTED_SOURCE_SHA"
+          test "$TRUSTED_SHA" = "$EXPECTED_SOURCE_SHA"
+          branch="$(mktemp)"; status="$(mktemp)"; trap 'rm -f "$branch" "$status"' EXIT HUP INT TERM
+          curl --fail --silent --show-error "$FORGEJO_API_URL/repos/$FORGEJO_REPOSITORY/branches/main" > "$branch"
+          curl --fail --silent --show-error "$FORGEJO_API_URL/repos/$FORGEJO_REPOSITORY/commits/$EXPECTED_SOURCE_SHA/status" > "$status"
+          python3 - "$EXPECTED_SOURCE_SHA" "$branch" "$status" <<'PY'
+          import json, re, sys
+          expected, branch_path, status_path = sys.argv[1:]
+          assert re.fullmatch(r"[0-9a-f]{40}", expected)
+          branch = json.load(open(branch_path, encoding="utf-8"))
+          contexts = branch.get("status_check_contexts")
+          assert branch.get("protected") is True
+          assert isinstance(branch.get("required_approvals"), int) and branch["required_approvals"] >= 1
+          assert branch.get("enable_status_check") is True
+          assert isinstance(contexts, list) and contexts and all(isinstance(item, str) and item for item in contexts)
+          assert branch.get("commit", {}).get("id") == expected
+          status = json.load(open(status_path, encoding="utf-8"))
+          assert status.get("sha") == expected and status.get("state") == "success"
+          latest = {row.get("context"): row.get("status") for row in status.get("statuses", []) if isinstance(row, dict)}
+          assert all(latest.get(context) == "success" for context in contexts)
+          PY
+      - name: Check out the preflighted trusted main SHA without credentials
+        uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ forgejo.sha }}
+          fetch-depth: 1
+          persist-credentials: false
       - name: Sign, draft, verify, publish, and public-verify immutable assets
         env:
           MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
@@ -50,7 +69,6 @@ jobs:
           test "${GITHUB_REF:-}" = refs/heads/main
           commit="$(git rev-parse HEAD)"
           test "$commit" = "$EXPECTED_SOURCE_SHA"
-          python3 scripts/release_protocol.py preflight --api "$FORGEJO_API_URL" --repository "$FORGEJO_REPOSITORY" --expected-sha "$EXPECTED_SOURCE_SHA" --checkout-sha "$commit"
 
           private_key="$workdir/model-manifest-private.pem"
           public_key="$workdir/model-manifest-public.pem"
