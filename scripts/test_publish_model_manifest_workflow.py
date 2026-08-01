@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import sys
+import tempfile
 import unittest
 import urllib.error
 from unittest import mock
@@ -114,27 +115,58 @@ class ReleaseProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "reserved tag"):
             module.reserve(WrongTag(), "Max/teammanager-models", SHA)
 
-    def test_publish_authenticates_draft_download_then_redrafts_on_public_failure(self):
+    def test_draft_metadata_rejects_duplicate_assets_and_size_mismatch(self):
+        class AssetApi:
+            def __init__(self, rows): self.rows = rows
+            def json(self, *_): return self.rows
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            for name in module.ASSETS:
+                (output / name).write_bytes(b"x")
+            duplicate = [{"name": module.ASSETS[0], "id": 1, "size": 1}] * 3
+            with self.assertRaisesRegex(RuntimeError, "exactly three"):
+                module.assets(AssetApi(duplicate), "Max/teammanager-models", 9, output)
+            rows = [{"name": name, "id": index, "size": 2} for index, name in enumerate(module.ASSETS, 1)]
+            with self.assertRaisesRegex(RuntimeError, "size"):
+                module.assets(AssetApi(rows), "Max/teammanager-models", 9, output)
+
+    def test_publish_response_loss_or_public_failure_best_effort_redrafts(self):
         api = FakeApi()
         api.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": SHA}
-        original = module.reserve, module.upload, module.assets, module.tag_sha, module.verify_downloads
+        original = module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads
         calls = []
         try:
             module.reserve = lambda *_: 9
             module.upload = lambda *_: calls.append("upload")
             module.assets = lambda *_: {name: number for number, name in enumerate(module.ASSETS, 1)}
             module.tag_sha = lambda *_: SHA
-            def downloads(_api, _repo, _id, _assets, _out, _source, _key, server, authenticated):
-                calls.append("authenticated" if authenticated else "public")
-                if not authenticated:
-                    raise RuntimeError("public download failed")
-            module.verify_downloads = downloads
+            def downloads(*_):
+                calls.append("public")
+                raise RuntimeError("public download failed")
+            module.verify_public_downloads = downloads
             with self.assertRaisesRegex(RuntimeError, "public download failed"):
                 module.publish(api, "Max/teammanager-models", "https://forgejo.example", SHA, Path("out"), Path("source"), Path("pub"))
         finally:
-            module.reserve, module.upload, module.assets, module.tag_sha, module.verify_downloads = original
-        self.assertEqual(calls, ["upload", "authenticated", "public"])
+            module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads = original
+        self.assertEqual(calls, ["upload", "public"])
         self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": False} for call in api.calls))
+        self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": True} for call in api.calls))
+
+    def test_final_tag_mutation_redrafts_after_public_verification(self):
+        api = FakeApi()
+        api.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": SHA}
+        original = module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads
+        try:
+            module.reserve = lambda *_: 9
+            module.upload = lambda *_: None
+            module.assets = lambda *_: {name: number for number, name in enumerate(module.ASSETS, 1)}
+            values = iter([SHA, "b" * 40])
+            module.tag_sha = lambda *_: next(values)
+            module.verify_public_downloads = lambda *_: None
+            with self.assertRaisesRegex(RuntimeError, "tag changed after"):
+                module.publish(api, "Max/teammanager-models", "https://forgejo.example", SHA, Path("out"), Path("source"), Path("pub"))
+        finally:
+            module.reserve, module.upload, module.assets, module.tag_sha, module.verify_public_downloads = original
         self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": True} for call in api.calls))
 
     def test_command_fails_before_api_use_when_automatic_token_is_absent(self):

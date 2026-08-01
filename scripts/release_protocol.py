@@ -106,20 +106,20 @@ def upload(api: Api, repo: str, release_id: int, output: Path) -> None:
             pass
 
 
-def assets(api: Api, repo: str, release_id: int) -> dict[str, int]:
+def assets(api: Api, repo: str, release_id: int, output: Path) -> dict[str, int]:
     rows = api.json("GET", f"/repos/{repo}/releases/{release_id}/assets")
     require(isinstance(rows, list), "invalid release assets response")
     result = {row.get("name"): row.get("id") for row in rows if isinstance(row, dict)}
     require(len(rows) == 3 and len(result) == 3 and set(result) == set(ASSETS) and all(isinstance(value, int) and value > 0 for value in result.values()), "release must contain exactly three unique named assets")
+    require(all(row.get("size") == (output / row["name"]).stat().st_size for row in rows), "release asset size differs from local output")
     return result
 
 
-def verify_downloads(api: Api, repo: str, release_id: int, asset_ids: dict[str, int], output: Path, source: Path, public_key: Path, server: str, authenticated: bool) -> None:
+def verify_public_downloads(repo: str, asset_ids: dict[str, int], output: Path, source: Path, public_key: Path, server: str) -> None:
     with tempfile.TemporaryDirectory() as temp:
         downloaded = Path(temp)
         for name, asset_id in asset_ids.items():
-            headers = {"Authorization": f"token {api.token}"} if authenticated else {}
-            request = urllib.request.Request(f"{server.rstrip('/')}/{repo}/releases/download/{TAG}/{name}", headers=headers)
+            request = urllib.request.Request(f"{server.rstrip('/')}/{repo}/releases/download/{TAG}/{name}")
             with urllib.request.urlopen(request) as response:
                 data = response.read()
             (downloaded / name).write_bytes(data)
@@ -131,14 +131,13 @@ def verify_downloads(api: Api, repo: str, release_id: int, asset_ids: dict[str, 
 def publish(api: Api, repo: str, server: str, expected: str, output: Path, source: Path, public_key: Path) -> None:
     release_id = reserve(api, repo, expected)
     upload(api, repo, release_id, output)
-    asset_ids = assets(api, repo, release_id)
+    asset_ids = assets(api, repo, release_id, output)
     require(tag_sha(api, repo) == expected, "tag changed before draft verification")
-    verify_downloads(api, repo, release_id, asset_ids, output, source, public_key, server, True)
     draft = api.json("GET", f"/repos/{repo}/releases/{release_id}")
     require(draft.get("draft") is True and draft.get("tag_name") == TAG and draft.get("target_commitish") == expected, "draft release changed before publish")
     try:
         api.json("PATCH", f"/repos/{repo}/releases/{release_id}", {"draft": False})
-        verify_downloads(api, repo, release_id, asset_ids, output, source, public_key, server, False)
+        verify_public_downloads(repo, asset_ids, output, source, public_key, server)
         require(tag_sha(api, repo) == expected, "tag changed after public verification")
     except Exception:
         try:

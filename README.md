@@ -39,10 +39,11 @@ After this workflow is reviewed and merged to Forgejo `main`, an authorized
 maintainer may manually dispatch `publish-model-manifest` from `main`, supplying
 the exact reviewed, successful `main` SHA. It checks the actual checkout, the
 branch API, and the commit-status API before handling a signing key. The final
-tag is reserved at that SHA, a draft release is uploaded and authenticated via
-the asset API, and it is published only after verification. A final anonymous
-release download is then byte-compared and verified; a failure triggers a
-best-effort return of the release to draft.
+tag is reserved at that SHA, a draft release is uploaded, and its release API
+metadata is checked for the exact three names, IDs, and byte sizes. Forgejo's
+automatic task token cannot read draft binaries, so full byte/signature/hash
+verification occurs immediately after publish through fresh anonymous downloads.
+A failure triggers a best-effort return of the release to draft.
 
 The workflow consumes the existing base64 signing-key and public-key secrets.
 It uses Forgejo's ephemeral, same-repository automatic `FORGEJO_TOKEN`. Forgejo
@@ -55,6 +56,11 @@ protection cannot prove that direct pushes are disabled or that no privileged
 user can bypass it; that remains an external owner audit. If that is
 not acceptable, publication must instead wait for a dedicated minimally scoped
 release credential or an Authorized Integration policy.
+
+Strict server-byte verification before publication requires a maintainer PAT or
+an Authorized Integration with that capability. The automatic-token path has a
+brief, fail-closed public-verification window: it re-drafts on failure but cannot
+guarantee that a public observer did not see the failed publication.
 
 External prerequisite: `main` must be protected with at least one required PR
 approval and one required status-check context. The current repository reports
