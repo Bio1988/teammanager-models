@@ -1,0 +1,88 @@
+name: publish-model-manifest
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a dispatch of reviewed main
+        run: |
+          set -eu
+          test "$FORGEJO_WORKFLOW_REF" = "$FORGEJO_REPOSITORY/.forgejo/workflows/publish-model-manifest.yml@refs/heads/main"
+      - name: Check out the dispatched commit without credentials
+        uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ forgejo.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Sign, verify, draft, public-verify, and publish the immutable release
+        env:
+          MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
+          MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
+          FORGEJO_TOKEN: ${{ forgejo.token }}
+        run: |
+          set -eu
+          umask 077
+          workdir="$(mktemp -d)"
+          cleanup() { rm -rf "$workdir"; }
+          trap cleanup EXIT HUP INT TERM
+
+          test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"
+          test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
+          test -n "$FORGEJO_TOKEN"
+          commit="$(git rev-parse HEAD)"
+          test "$commit" = "$FORGEJO_SHA"
+          main_commit="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$main_commit"
+          test "$commit" = "$main_commit"
+
+          private_key="$workdir/model-manifest-private.pem"
+          public_key="$workdir/model-manifest-public.pem"
+          derived_public_key="$workdir/derived-public.pem"
+          output="$workdir/output"
+          redownload="$workdir/redownload"
+          mkdir "$output" "$redownload"
+          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"
+          chmod 0600 "$private_key"
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"
+          openssl pkey -in "$private_key" -pubout -out "$derived_public_key"
+          cmp "$derived_public_key" "$public_key"
+
+          tag="teammanager-model-manifest-v3-pocket-r3.2"
+          manifest="$output/teammanager-model-manifest-v3.json"
+          signature="$output/teammanager-model-manifest-v3.json.sig"
+          sidecar="$output/teammanager-model-manifest-v3.json.sha256"
+          cp manifest.json "$manifest"
+          openssl pkeyutl -sign -inkey "$private_key" -rawin -in "$manifest" -out "$signature"
+          openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin -in "$manifest" -sigfile "$signature" > /dev/null
+          test "$(wc -c < "$signature")" -eq 64
+          printf '%s\n' "$(sha256sum "$manifest" | awk '{print $1}')" > "$sidecar"
+          test "$(wc -c < "$sidecar")" -eq 65
+          python3 scripts/verify_release_manifest.py --manifest "$manifest" --signature "$signature" --sha256 "$sidecar" --public-key "$public_key"
+
+          api="$FORGEJO_API_URL/repos/$FORGEJO_REPOSITORY"
+          release_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Authorization: token $FORGEJO_TOKEN" "$api/releases/tags/$tag")"
+          tag_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Authorization: token $FORGEJO_TOKEN" "$api/git/refs/tags/$tag")"
+          test "$release_status" = 404
+          test "$tag_status" = 404
+          curl --fail --silent --show-error --request POST --header "Authorization: token $FORGEJO_TOKEN" --header 'Content-Type: application/json' --data "{\"tag_name\":\"$tag\",\"target_commitish\":\"$commit\",\"name\":\"TeamManager model manifest v3 Pocket R3.2\",\"draft\":true}" "$api/releases" > "$workdir/release.json"
+          release_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["id"])' "$workdir/release.json")"
+          test -n "$release_id"
+          for name in teammanager-model-manifest-v3.json teammanager-model-manifest-v3.json.sig teammanager-model-manifest-v3.json.sha256; do
+            curl --fail --silent --show-error --request POST --header "Authorization: token $FORGEJO_TOKEN" --form "attachment=@$output/$name;filename=$name" "$api/releases/$release_id/assets?name=$name" > /dev/null
+          done
+          curl --fail --silent --show-error --header "Authorization: token $FORGEJO_TOKEN" "$api/releases/$release_id/assets" > "$workdir/assets.json"
+          python3 -c 'import json,sys; expected={"teammanager-model-manifest-v3.json","teammanager-model-manifest-v3.json.sig","teammanager-model-manifest-v3.json.sha256"}; actual={asset["name"] for asset in json.load(open(sys.argv[1], encoding="utf-8"))}; raise SystemExit("draft release assets differ" if actual != expected else 0)' "$workdir/assets.json"
+
+          for name in teammanager-model-manifest-v3.json teammanager-model-manifest-v3.json.sig teammanager-model-manifest-v3.json.sha256; do
+            curl --fail --silent --show-error --location "$FORGEJO_SERVER_URL/$FORGEJO_REPOSITORY/releases/download/$tag/$name" --output "$redownload/$name"
+            cmp "$output/$name" "$redownload/$name"
+          done
+          cmp manifest.json "$redownload/teammanager-model-manifest-v3.json"
+          python3 scripts/verify_release_manifest.py --manifest "$redownload/teammanager-model-manifest-v3.json" --signature "$redownload/teammanager-model-manifest-v3.json.sig" --sha256 "$redownload/teammanager-model-manifest-v3.json.sha256" --public-key "$public_key"
+          curl --fail --silent --show-error --request PATCH --header "Authorization: token $FORGEJO_TOKEN" --header 'Content-Type: application/json' --data '{"draft":false}' "$api/releases/$release_id" > /dev/null

@@ -33,6 +33,21 @@ its inputs and immutable release tag. Existing release assets remain unchanged.
 Any future asset release needs a small current publication path reviewed against
 the then-active manifest and consumers; no private key belongs in this repository.
 
+## Manifest publication
+
+After this workflow is reviewed and merged to Forgejo `main`, an authorized
+maintainer may manually dispatch `publish-model-manifest` from that exact main
+branch. It rejects any non-main or no-longer-current commit, signs the exact
+checked-out `manifest.json`, creates the draft-only immutable
+`teammanager-model-manifest-v3-pocket-r3.2` release, and publishes it only
+after an unauthenticated release download byte-compares and verifies.
+
+The workflow consumes the existing base64 signing-key and public-key secrets.
+It uses Forgejo's ephemeral, repository-scoped automatic `FORGEJO_TOKEN` for
+the same-repository release API; no long-lived release-token secret is needed.
+Failures after draft creation intentionally leave that draft for maintainer
+inspection, while temporary key material is removed by the shell cleanup trap.
+
 ## Current consumer contract
 
 `manifest.json` retains the current Pocket default, optional English language/catalog
