@@ -19,6 +19,24 @@ class ManifestCatalogTests(unittest.TestCase):
         self.assertFalse((ROOT / "manifest.json.sig").exists())
         self.assertFalse((ROOT / "manifest.json.sha256").exists())
 
+    def test_alpha_catalog_advertises_and_defaults_english_only(self):
+        bundles = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["assets"]["pocket_bundles"]
+        default_windows = bundles["default_windows"]
+
+        self.assertEqual(default_windows["default_language"], "english")
+        self.assertTrue(default_windows["english_model"]["default"])
+        self.assertEqual(default_windows["english_model"]["layout"]["language"], "english")
+        self.assertEqual(
+            [entry["language"] for entry in default_windows["state_compatibility_model"]["clone_languages"]],
+            ["english"],
+        )
+        self.assertEqual([pack["languages"] for pack in bundles["language_packs"]], [["english"]])
+
+        advertised_archives = [archive for pack in bundles["language_packs"] for archive in pack["archives"]]
+        downloadable_archives = advertised_archives + bundles["optional"]
+        self.assertTrue(downloadable_archives)
+        self.assertTrue(all(archive["layout"]["language"] == "english" for archive in downloadable_archives))
+
 
 if __name__ == "__main__":
     unittest.main()
