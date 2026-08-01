@@ -36,17 +36,31 @@ the then-active manifest and consumers; no private key belongs in this repositor
 ## Manifest publication
 
 After this workflow is reviewed and merged to Forgejo `main`, an authorized
-maintainer may manually dispatch `publish-model-manifest` from that exact main
-branch. It rejects any non-main or no-longer-current commit, signs the exact
-checked-out `manifest.json`, creates the draft-only immutable
-`teammanager-model-manifest-v3-pocket-r3.2` release, and publishes it only
-after an unauthenticated release download byte-compares and verifies.
+maintainer may manually dispatch `publish-model-manifest` from `main`, supplying
+the exact reviewed, successful `main` SHA. It checks the actual checkout, the
+branch API, and the commit-status API before handling a signing key. The final
+tag is reserved at that SHA, a draft release is uploaded and authenticated via
+the asset API, and it is published only after verification. A final anonymous
+release download is then byte-compared and verified; a failure immediately
+returns the release to draft.
 
 The workflow consumes the existing base64 signing-key and public-key secrets.
-It uses Forgejo's ephemeral, repository-scoped automatic `FORGEJO_TOKEN` for
-the same-repository release API; no long-lived release-token secret is needed.
-Failures after draft creation intentionally leave that draft for maintainer
-inspection, while temporary key material is removed by the shell cleanup trap.
+It uses Forgejo's ephemeral, same-repository automatic `FORGEJO_TOKEN`. Forgejo
+16 does not enforce GitHub-style per-workflow `permissions` narrowing for this
+token: it has broad write capability within this repository's units. This
+workflow contains that platform limitation with manual-only dispatch, protected
+main, SHA/status checks, no persisted checkout credentials, immutable action
+pinning, and no API writes except the reserved tag and its release. If that is
+not acceptable, publication must instead wait for a dedicated minimally scoped
+release credential or an Authorized Integration policy.
+
+External prerequisite: `main` must be protected with at least one required PR
+approval and one required status-check context. The current repository reports
+`protected: false`, `required_approvals: 0`, and `enable_status_check: false`,
+so the workflow will fail closed until an owner configures that protection.
+Failures after draft creation intentionally leave the draft and its tag for
+maintainer inspection, while temporary key material is removed by the shell
+cleanup trap.
 
 ## Current consumer contract
 

@@ -1,35 +1,136 @@
+import importlib.util
+import os
+import sys
 import unittest
+import urllib.error
+from unittest import mock
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
-WORKFLOW = ROOT / ".forgejo" / "workflows" / "publish-model-manifest.yml"
+MODULE_PATH = Path(__file__).with_name("release_protocol.py")
+SPEC = importlib.util.spec_from_file_location("release_protocol", MODULE_PATH)
+assert SPEC and SPEC.loader
+module = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(module)
+
+SHA = "a" * 40
 
 
-class PublishModelManifestWorkflowTests(unittest.TestCase):
-    def test_workflow_is_manual_pinned_and_fail_closed(self):
-        workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("workflow_dispatch:", workflow)
-        self.assertNotIn("push:", workflow)
-        self.assertNotIn("pull_request:", workflow)
-        self.assertIn("persist-credentials: false", workflow)
-        self.assertIn("@11d5960a326750d5838078e36cf38b85af677262", workflow)
-        self.assertIn("${{ forgejo.token }}", workflow)
-        self.assertNotIn("secrets.FORGEJO_TOKEN", workflow)
-        self.assertIn("MODEL_MANIFEST_SIGNING_KEY_B64", workflow)
-        self.assertIn("MODEL_MANIFEST_PUBLIC_KEY_B64", workflow)
-        self.assertIn("teammanager-model-manifest-v3-pocket-r3.2", workflow)
-        self.assertIn("test \"$release_status\" = 404", workflow)
-        self.assertIn("test \"$tag_status\" = 404", workflow)
-        self.assertIn('\\"draft\\":true', workflow)
-        self.assertIn("\"draft\":false", workflow)
-        self.assertIn("trap cleanup EXIT HUP INT TERM", workflow)
-        self.assertIn("chmod 0600 \"$private_key\"", workflow)
-        self.assertIn("test \"$(wc -c < \"$signature\")\" -eq 64", workflow)
-        self.assertIn("test \"$(wc -c < \"$sidecar\")\" -eq 65", workflow)
-        self.assertNotIn("set -x", workflow)
-        self.assertNotIn("git push", workflow)
-        self.assertNotIn("actions/upload-artifact", workflow)
+class FakeApi:
+    def __init__(self, branch=None, status=None):
+        self.branch = branch or {"protected": True, "required_approvals": 1, "enable_status_check": True,
+                               "status_check_contexts": ["verify"], "commit": {"id": SHA}}
+        self.commit_status = status or {"state": "success", "statuses": [{"context": "verify", "status": "success"}]}
+        self.calls, self.tag, self.release = [], None, None
+
+    def request(self, method, path, body=None, accept="application/json"):
+        self.calls.append((method, path, body, accept))
+        if method == "GET" and path.endswith(f"releases/tags/{module.TAG}"):
+            if self.release is None:
+                raise urllib.error.HTTPError(path, 404, "missing", {}, None)
+        if method == "GET" and path.endswith(f"git/refs/tags/{module.TAG}"):
+            if self.tag is None:
+                raise urllib.error.HTTPError(path, 404, "missing", {}, None)
+        if method == "DELETE" and path.endswith(f"git/refs/tags/{module.TAG}"):
+            self.tag = None
+        return b"{}"
+
+    def json(self, method, path, body=None):
+        self.calls.append((method, path, body, "json"))
+        if path.endswith("/branches/main"):
+            return self.branch
+        if path.endswith(f"/commits/{SHA}/status"):
+            return self.commit_status
+        if path.endswith(f"git/refs/tags/{module.TAG}"):
+            return {"object": {"sha": self.tag}}
+        if method == "POST" and path.endswith("/git/refs"):
+            self.tag = body["sha"]
+            return {}
+        if method == "POST" and path.endswith("/releases"):
+            self.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": body["target_commitish"]}
+            return self.release
+        if method == "GET" and path.endswith("/releases/9"):
+            return self.release
+        if method == "PATCH" and path.endswith("/releases/9"):
+            self.release["draft"] = body["draft"]
+            return self.release
+        raise AssertionError((method, path, body))
+
+
+class ReleaseProtocolTests(unittest.TestCase):
+    def test_preflight_requires_protected_approved_successful_current_main(self):
+        api = FakeApi()
+        module.preflight(api, "Max/teammanager-models", SHA, SHA)
+        self.assertEqual([call[1] for call in api.calls], [
+            "/repos/Max/teammanager-models/branches/main",
+            f"/repos/Max/teammanager-models/commits/{SHA}/status",
+        ])
+        for key, value in (("protected", False), ("required_approvals", 0), ("enable_status_check", False)):
+            branch = dict(api.branch)
+            branch[key] = value
+            with self.assertRaises(RuntimeError):
+                module.preflight(FakeApi(branch=branch), "Max/teammanager-models", SHA, SHA)
+        with self.assertRaises(RuntimeError):
+            module.preflight(api, "Max/teammanager-models", "A" * 40, SHA)
+
+    def test_reserve_rejects_replay_and_cleans_only_its_new_tag_if_draft_creation_fails(self):
+        api = FakeApi()
+        release_id = module.reserve(api, "Max/teammanager-models", SHA)
+        self.assertEqual(release_id, 9)
+        self.assertEqual(api.tag, SHA)
+        with self.assertRaises(RuntimeError):
+            module.reserve(api, "Max/teammanager-models", SHA)
+
+        class DraftFailure(FakeApi):
+            def json(self, method, path, body=None):
+                if method == "POST" and path.endswith("/releases"):
+                    raise RuntimeError("draft failed")
+                return super().json(method, path, body)
+
+        failing = DraftFailure()
+        with self.assertRaisesRegex(RuntimeError, "draft failed"):
+            module.reserve(failing, "Max/teammanager-models", SHA)
+        self.assertIsNone(failing.tag)
+        self.assertIn(("DELETE", f"/repos/Max/teammanager-models/git/refs/tags/{module.TAG}", None, "application/json"), failing.calls)
+
+        class WrongTag(FakeApi):
+            def json(self, method, path, body=None):
+                value = super().json(method, path, body)
+                if method == "POST" and path.endswith("/git/refs"):
+                    self.tag = "b" * 40
+                return value
+
+        with self.assertRaisesRegex(RuntimeError, "reserved tag"):
+            module.reserve(WrongTag(), "Max/teammanager-models", SHA)
+
+    def test_publish_authenticates_draft_download_then_redrafts_on_public_failure(self):
+        api = FakeApi()
+        api.release = {"id": 9, "draft": True, "tag_name": module.TAG, "target_commitish": SHA}
+        original = module.reserve, module.upload, module.assets, module.tag_sha, module.verify_downloads
+        calls = []
+        try:
+            module.reserve = lambda *_: 9
+            module.upload = lambda *_: calls.append("upload")
+            module.assets = lambda *_: {name: number for number, name in enumerate(module.ASSETS, 1)}
+            module.tag_sha = lambda *_: SHA
+            def downloads(_api, _repo, _id, _assets, _out, _source, _key, server=None):
+                calls.append("public" if server else "authenticated")
+                if server:
+                    raise RuntimeError("public download failed")
+            module.verify_downloads = downloads
+            with self.assertRaisesRegex(RuntimeError, "public download failed"):
+                module.publish(api, "Max/teammanager-models", "https://forgejo.example", SHA, Path("out"), Path("source"), Path("pub"))
+        finally:
+            module.reserve, module.upload, module.assets, module.tag_sha, module.verify_downloads = original
+        self.assertEqual(calls, ["upload", "authenticated", "public"])
+        self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": False} for call in api.calls))
+        self.assertTrue(any(call[0] == "PATCH" and call[2] == {"draft": True} for call in api.calls))
+
+    def test_command_fails_before_api_use_when_automatic_token_is_absent(self):
+        with mock.patch.dict(os.environ, {"FORGEJO_TOKEN": ""}, clear=False), \
+             mock.patch.object(sys, "argv", ["release_protocol.py", "preflight", "--api", "https://forgejo.example/api/v1", "--repository", "Max/teammanager-models", "--expected-sha", SHA, "--checkout-sha", SHA]):
+            with self.assertRaisesRegex(RuntimeError, "FORGEJO_TOKEN"):
+                module.main()
 
 
 if __name__ == "__main__":
