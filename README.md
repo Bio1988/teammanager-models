@@ -36,46 +36,24 @@ the then-active manifest and consumers; no private key belongs in this repositor
 ## Manifest publication
 
 After this workflow is reviewed and merged to Forgejo `main`, an authorized
-maintainer may manually dispatch `publish-model-manifest` from `main`, supplying
-the exact reviewed, successful `main` SHA. It checks the actual checkout, the
-branch API, and the commit-status API before handling a signing key. The final
-tag is reserved at that SHA, a draft release is uploaded, and its release API
-metadata is checked for the exact three names, IDs, and byte sizes. Forgejo's
-automatic task token cannot read draft binaries, so full byte/signature/hash
-verification occurs immediately after publish through fresh anonymous downloads.
-A failure triggers a best-effort return of the release to draft.
+maintainer may manually dispatch `sign-model-manifest-candidate` from `main`,
+supplying the exact reviewed, successful `main` SHA. Before it receives either
+repository secret, it checks the dispatch ref, actual checkout, branch API, and
+commit-status API. `main` must be protected with at least one required PR
+approval and one required status-check context.
 
-The workflow consumes the existing base64 signing-key and public-key secrets.
-It uses Forgejo's ephemeral, same-repository automatic `FORGEJO_TOKEN`. Forgejo
-16 does not enforce GitHub-style per-workflow `permissions` narrowing for this
-token: it has broad write capability within this repository's units. This
-workflow contains that platform limitation with manual-only dispatch, protected
-main, SHA/status checks, no persisted checkout credentials, immutable action
-pinning, and no API writes except the reserved tag and its release. Branch
-protection cannot prove that direct pushes are disabled or that no privileged
-user can bypass it; that remains an external owner audit. If that is
-not acceptable, publication must instead wait for a dedicated minimally scoped
-release credential or an Authorized Integration policy.
+The workflow uses the existing base64 signing-key and public-key secrets only in
+the signing step. It creates and locally verifies the three R3.2 contract files:
+the exact manifest, its detached Ed25519 signature, and its SHA-256 sidecar. It
+then retains these files and `candidate-evidence.json` as an Actions artifact.
+The evidence names the immutable source SHA and explicitly records
+`publication.status` as `not-attempted`.
 
-Strict server-byte verification before publication requires a maintainer PAT or
-an Authorized Integration with that capability. The automatic-token path has a
-brief, fail-closed public-verification window: it re-drafts on failure but cannot
-guarantee that a public observer did not see the failed publication.
-
-External prerequisite: `main` must be protected with at least one required PR
-approval and one required status-check context. The current repository reports
-`protected: false`, `required_approvals: 0`, and `enable_status_check: false`,
-so the workflow will fail closed until an owner configures that protection.
-Failures after draft creation intentionally leave the draft and its tag for
-maintainer inspection, while temporary key material is removed by the shell
-cleanup trap.
-
-Before dispatch, owners must externally attest the signing-custody boundary:
-every principal able to introduce any repository ref or dispatch Actions is a
-signing-key custodian; untrusted users must be fork-only and unable to dispatch;
-the runner must be trusted; and `main` must enforce review plus the exact status
-contexts checked by the workflow. These source-level checks do not change
-Forgejo 16's side-ref secret-scoping model.
+This is deliberately not a publisher: it has no Forgejo token, tag, release,
+upload, or repository-write step. A maintainer must separately establish the
+signing-custody boundary (trusted runner; dispatch/ref access limited to signing
+custodians; protected `main` with review and exact status contexts) and approve
+a publication mechanism before any candidate can be represented as a release.
 
 ## Current consumer contract
 

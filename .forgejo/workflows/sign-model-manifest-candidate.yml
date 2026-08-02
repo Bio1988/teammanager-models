@@ -1,19 +1,19 @@
-name: publish-model-manifest
+name: sign-model-manifest-candidate
 
 on:
   workflow_dispatch:
     inputs:
       expected_source_sha:
-        description: Reviewed, successful main commit SHA to publish
+        description: Reviewed, successful main commit SHA to sign
         required: true
         type: string
 
 concurrency:
-  group: model-manifest-v3-pocket-r3.2-publication
+  group: model-manifest-v3-pocket-r3.2-candidate
   cancel-in-progress: false
 
 jobs:
-  publish:
+  sign:
     runs-on: ubuntu-latest
     steps:
       - name: Preflight reviewed protected main before handling keys
@@ -55,7 +55,7 @@ jobs:
           ref: ${{ forgejo.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Sign and locally verify immutable assets
+      - name: Sign and locally verify immutable candidate assets
         env:
           MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
           MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
@@ -63,49 +63,35 @@ jobs:
         run: |
           set -eu
           umask 077
-          workdir="$(mktemp -d)"
-          output="$RUNNER_TEMP/model-manifest-release"
-          rm -rf "$output"
-          mkdir "$output"
+          workdir="$(mktemp -d)"; output="$RUNNER_TEMP/model-manifest-candidate"
+          rm -rf "$output"; mkdir "$output"
           cleanup() { rm -rf "$workdir"; }
           trap cleanup EXIT HUP INT TERM
-
           unset FORGEJO_TOKEN GITEA_TOKEN GITHUB_TOKEN
-
-          test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"
-          test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
-          test "${GITHUB_REF:-}" = refs/heads/main
-          commit="$(git rev-parse HEAD)"
-          test "$commit" = "$EXPECTED_SOURCE_SHA"
-
-          private_key="$workdir/model-manifest-private.pem"
-          public_key="$workdir/model-manifest-public.pem"
-          derived_public_key="$workdir/derived-public.pem"
-          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"
-          unset MODEL_MANIFEST_SIGNING_KEY_B64
+          test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"; test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          private_key="$workdir/private.pem"; public_key="$workdir/public.pem"; derived_public_key="$workdir/derived-public.pem"
+          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"; unset MODEL_MANIFEST_SIGNING_KEY_B64
           chmod 0600 "$private_key"
-          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"
-          openssl pkey -in "$private_key" -pubout -out "$derived_public_key"
-          cmp "$derived_public_key" "$public_key"
-
+          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"; unset MODEL_MANIFEST_PUBLIC_KEY_B64
+          openssl pkey -in "$private_key" -pubout -out "$derived_public_key"; cmp "$derived_public_key" "$public_key"
           cp manifest.json "$output/teammanager-model-manifest-v3.json"
           openssl pkeyutl -sign -inkey "$private_key" -rawin -in "$output/teammanager-model-manifest-v3.json" -out "$output/teammanager-model-manifest-v3.json.sig"
           rm -f "$private_key"
           test "$(wc -c < "$output/teammanager-model-manifest-v3.json.sig")" -eq 64
-          printf '%s\n' "$(sha256sum "$output/teammanager-model-manifest-v3.json" | awk '{print $1}')" > "$output/teammanager-model-manifest-v3.json.sha256"
-          test "$(wc -c < "$output/teammanager-model-manifest-v3.json.sha256")" -eq 65
+          sha256sum "$output/teammanager-model-manifest-v3.json" | awk '{print $1}' > "$output/teammanager-model-manifest-v3.json.sha256"
           python3 scripts/verify_release_manifest.py --manifest "$output/teammanager-model-manifest-v3.json" --signature "$output/teammanager-model-manifest-v3.json.sig" --sha256 "$output/teammanager-model-manifest-v3.json.sha256" --public-key "$public_key"
-      - name: Publish and public-verify immutable assets
-        env:
-          FORGEJO_TOKEN: ${{ forgejo.token }}
-          MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
-          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
-        run: |
-          set -eu
-          workdir="$(mktemp -d)"; output="$RUNNER_TEMP/model-manifest-release"
-          cleanup() { rm -rf "$workdir" "$output"; }
-          trap cleanup EXIT HUP INT TERM
-          test -n "$FORGEJO_TOKEN"; test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"; test -d "$output"
-          public_key="$workdir/model-manifest-public.pem"
-          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"
-          python3 scripts/release_protocol.py publish --api "$FORGEJO_API_URL" --server "$FORGEJO_SERVER_URL" --repository "$FORGEJO_REPOSITORY" --expected-sha "$EXPECTED_SOURCE_SHA" --output "$output" --source-manifest manifest.json --public-key "$public_key"
+          python3 - "$output" "$EXPECTED_SOURCE_SHA" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          output, source_sha = Path(sys.argv[1]), sys.argv[2]
+          names = ("teammanager-model-manifest-v3.json", "teammanager-model-manifest-v3.json.sig", "teammanager-model-manifest-v3.json.sha256")
+          assets = [{"name": name, "sha256": hashlib.sha256((output / name).read_bytes()).hexdigest(), "size_bytes": (output / name).stat().st_size} for name in names]
+          (output / "candidate-evidence.json").write_text(json.dumps({"contract": "teammanager-model-manifest-v3-pocket-r3.2", "source_sha": source_sha, "assets": assets, "signature_verified": True, "publication": {"status": "not-attempted", "reason": "This workflow has no tag, release, or repository-write step; external signing-custody authorization is required before publication."}}, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Retain signed candidate evidence
+        uses: https://data.forgejo.org/actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: model-manifest-v3-pocket-r3.2-candidate-${{ inputs.expected_source_sha }}
+          path: ${{ runner.temp }}/model-manifest-candidate
+          if-no-files-found: error
