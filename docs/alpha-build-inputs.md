@@ -31,6 +31,8 @@ copies the separate Forgejo asset into its attribution material:
   `b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d`.
 
 No other release asset is a first-Alpha dependency. In particular, historical
-Pocket language packs, non-Alba voices, Whisper manifest/authority files, and
-larger Whisper models must not be selected, fetched, or interpreted by the
-Alpha runtime.
+Pocket language packs, non-Alba voices, Whisper manifest or authority files,
+and any Whisper model other than the explicitly selected optional
+`whisper-small-q5_1` must not be selected, fetched, or interpreted by the
+Alpha runtime. The optional Small input may be downloaded only after explicit
+user action; it is never fetched or selected automatically.

@@ -6,8 +6,10 @@ private Alpha. Forgejo is canonical; GitHub, where present, is only a mirror.
 Race Engineer does **not** fetch this repository's `manifest.json`, signature,
 checksum sidecars, release metadata, or a catalog at runtime. Required Alpha
 components are verified while building Race Engineer and packaged into the one
-complete Windows installer. Only the explicitly selected optional Whisper
-`small-q5_1` model may be downloaded after installation.
+complete Windows installer. This repository is not a runtime model registry.
+Only the explicitly selected optional Whisper `small-q5_1` model may be
+downloaded after installation; it is never downloaded or selected
+automatically.
 
 The exact Alpha inputs, integrity values, licences, and provenance are in
 [docs/alpha-build-inputs.md](docs/alpha-build-inputs.md). Race Engineer records
@@ -24,3 +26,8 @@ and attribution material remain available unchanged.
 
 This repository intentionally has no model publication, signing-candidate,
 candidate-evidence, application-update-channel, or runtime-manifest workflow.
+
+The retired signed public application-update-channel design is retained as
+[historical documentation](docs/archive/alpha-channel.md). Private Alpha
+updates instead use TeamManager Server's authenticated release endpoints to
+deliver the next complete installer.
