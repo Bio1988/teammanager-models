@@ -46,8 +46,10 @@ The workflow uses the existing base64 signing-key and public-key secrets only in
 the signing step. It creates and locally verifies the three R3.2 contract files:
 the exact manifest, its detached Ed25519 signature, and its SHA-256 sidecar. It
 then retains these files and `candidate-evidence.json` as an Actions artifact.
-The evidence names the immutable source SHA and explicitly records
-`publication.status` as `not-attempted`.
+The evidence binds the canonical repository/ref, immutable source SHA, and
+Forgejo run ID/number/attempt/canonical run URL; it explicitly records
+`publication.status` as `not-attempted`. Candidate artifacts have a seven-day
+retention period and include that run/SHA identity in their names.
 
 This is deliberately not a publisher: it has no Forgejo token, tag, release,
 upload, or repository-write step. A maintainer must separately establish the

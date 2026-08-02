@@ -14,7 +14,11 @@ class SigningWorkflowTests(unittest.TestCase):
         self.assertLess(preflight, checkout)
         self.assertLess(checkout, signing)
         self.assertLess(signing, evidence)
-        self.assertIn('test "${GITHUB_REF:-}" = refs/heads/main', workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn('CANONICAL_REPOSITORY: Max/teammanager-models', workflow)
+        self.assertIn('CANONICAL_REF: refs/heads/main', workflow)
+        self.assertIn('test "${FORGEJO_REPOSITORY:-}" = "$CANONICAL_REPOSITORY"', workflow)
+        self.assertIn('test "${FORGEJO_REF:-}" = "$CANONICAL_REF"', workflow)
         self.assertIn("ref: ${{ forgejo.sha }}", workflow)
         self.assertNotIn("ref: ${{ inputs.expected_source_sha }}", workflow)
         self.assertIn("branch.get(\"protected\") is True", workflow)
@@ -25,10 +29,20 @@ class SigningWorkflowTests(unittest.TestCase):
         self.assertLess(preflight, workflow.index("MODEL_MANIFEST_SIGNING_KEY_B64"))
         self.assertIn("unset FORGEJO_TOKEN GITEA_TOKEN GITHUB_TOKEN", workflow)
         self.assertIn("unset MODEL_MANIFEST_SIGNING_KEY_B64", workflow)
-        self.assertIn("signature_verified", workflow)
-        self.assertIn('"status": "not-attempted"', workflow)
+        self.assertIn("scripts/candidate_evidence.py", workflow)
+        self.assertIn("actions/runs/${{ forgejo.run_number }}", workflow)
+        self.assertIn("candidate-run-${{ forgejo.run_number }}-attempt-${{ forgejo.run_attempt }}-sha-${{ inputs.expected_source_sha }}", workflow)
+        self.assertIn("retention-days: 7", workflow)
         for prohibited in ("forgejo.token", "/releases", "/tags", "curl --request POST", "curl -X POST"):
             self.assertNotIn(prohibited, workflow)
+
+    def test_evidence_provenance_cannot_be_omitted_or_retargeted(self):
+        workflow = (Path(__file__).resolve().parent.parent / ".forgejo/workflows/sign-model-manifest-candidate.yml").read_text(encoding="utf-8")
+        evidence = workflow
+        required = ("Max/teammanager-models", "refs/heads/main", "RUN_ID", "RUN_NUMBER", "RUN_ATTEMPT", "RUN_URL")
+        for value in required:
+            self.assertIn(value, evidence)
+        self.assertNotIn('"publication": {"status": "published"', evidence)
 
 
 if __name__ == "__main__":
