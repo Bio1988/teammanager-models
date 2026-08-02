@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPOSITORY = "Max/teammanager-models"
 REF = "refs/heads/main"
+ORIGIN = "https://forgejo.g-grp.com"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 ASSETS = ("teammanager-model-manifest-v3.json", "teammanager-model-manifest-v3.json.sig", "teammanager-model-manifest-v3.json.sha256")
 
@@ -21,7 +22,8 @@ def require(condition: bool, message: str) -> None:
 
 
 def run_url(repository: str, number: str, server_url: str) -> str:
-    return f"{server_url.rstrip('/')}/{repository}/actions/runs/{number}"
+    require(server_url == ORIGIN, "candidate Forgejo origin is not canonical")
+    return f"{ORIGIN}/{repository}/actions/runs/{number}"
 
 
 def evidence(output: Path, source_sha: str, repository: str, ref: str, run_id: str, run_number: str, run_attempt: str, server_url: str) -> dict[str, object]:

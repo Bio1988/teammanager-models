@@ -25,11 +25,14 @@ jobs:
           TRUSTED_SHA: ${{ forgejo.sha }}
           CANONICAL_REPOSITORY: Max/teammanager-models
           CANONICAL_REF: refs/heads/main
+          CANONICAL_ORIGIN: https://forgejo.g-grp.com
         run: |
           set -eu
           test "${FORGEJO_REPOSITORY:-}" = "$CANONICAL_REPOSITORY"
           test "${FORGEJO_REF:-}" = "$CANONICAL_REF"
           test "${FORGEJO_SHA:-}" = "$EXPECTED_SOURCE_SHA"
+          test "${FORGEJO_SERVER_URL:-}" = "$CANONICAL_ORIGIN"
+          test "${FORGEJO_API_URL:-}" = "$CANONICAL_ORIGIN/api/v1"
           test "$TRUSTED_SHA" = "$EXPECTED_SOURCE_SHA"
           branch="$(mktemp)"; status="$(mktemp)"; trap 'rm -f "$branch" "$status"' EXIT HUP INT TERM
           curl --fail --silent --show-error "$FORGEJO_API_URL/repos/$FORGEJO_REPOSITORY/branches/main" > "$branch"
@@ -68,10 +71,11 @@ jobs:
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
           CANONICAL_REPOSITORY: Max/teammanager-models
           CANONICAL_REF: refs/heads/main
+          CANONICAL_ORIGIN: https://forgejo.g-grp.com
           RUN_ID: ${{ forgejo.run_id }}
           RUN_NUMBER: ${{ forgejo.run_number }}
           RUN_ATTEMPT: ${{ forgejo.run_attempt }}
-          RUN_URL: ${{ forgejo.server_url }}/${{ forgejo.repository }}/actions/runs/${{ forgejo.run_number }}
+          RUN_URL: https://forgejo.g-grp.com/Max/teammanager-models/actions/runs/${{ forgejo.run_number }}
         run: |
           set -eu
           umask 077
@@ -83,8 +87,10 @@ jobs:
           test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"; test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
           test "${FORGEJO_REPOSITORY:-}" = "$CANONICAL_REPOSITORY"
           test "${FORGEJO_REF:-}" = "$CANONICAL_REF"
+          test "${FORGEJO_SERVER_URL:-}" = "$CANONICAL_ORIGIN"
+          test "${FORGEJO_API_URL:-}" = "$CANONICAL_ORIGIN/api/v1"
           test -n "$RUN_ID"; test -n "$RUN_NUMBER"; test -n "$RUN_ATTEMPT"
-          test "$RUN_URL" = "${FORGEJO_SERVER_URL}/${CANONICAL_REPOSITORY}/actions/runs/${RUN_NUMBER}"
+          test "$RUN_URL" = "${CANONICAL_ORIGIN}/${CANONICAL_REPOSITORY}/actions/runs/${RUN_NUMBER}"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
           private_key="$workdir/private.pem"; public_key="$workdir/public.pem"; derived_public_key="$workdir/derived-public.pem"
           printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"; unset MODEL_MANIFEST_SIGNING_KEY_B64
@@ -97,7 +103,7 @@ jobs:
           test "$(wc -c < "$output/teammanager-model-manifest-v3.json.sig")" -eq 64
           sha256sum "$output/teammanager-model-manifest-v3.json" | awk '{print $1}' > "$output/teammanager-model-manifest-v3.json.sha256"
           python3 scripts/verify_release_manifest.py --manifest "$output/teammanager-model-manifest-v3.json" --signature "$output/teammanager-model-manifest-v3.json.sig" --sha256 "$output/teammanager-model-manifest-v3.json.sha256" --public-key "$public_key"
-          python3 scripts/candidate_evidence.py --output "$output" --source-sha "$EXPECTED_SOURCE_SHA" --repository "$CANONICAL_REPOSITORY" --ref "$CANONICAL_REF" --run-id "$RUN_ID" --run-number "$RUN_NUMBER" --run-attempt "$RUN_ATTEMPT" --server-url "$FORGEJO_SERVER_URL"
+          python3 scripts/candidate_evidence.py --output "$output" --source-sha "$EXPECTED_SOURCE_SHA" --repository "$CANONICAL_REPOSITORY" --ref "$CANONICAL_REF" --run-id "$RUN_ID" --run-number "$RUN_NUMBER" --run-attempt "$RUN_ATTEMPT" --server-url "$CANONICAL_ORIGIN"
       - name: Retain signed candidate evidence
         uses: https://data.forgejo.org/actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:

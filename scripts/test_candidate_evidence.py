@@ -19,7 +19,7 @@ class CandidateEvidenceTests(unittest.TestCase):
     def test_binds_canonical_source_and_exact_run_url(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp); self.output(output)
-            value = module.evidence(output, "a" * 40, module.REPOSITORY, module.REF, "42", "7", "1", "https://forgejo.g-grp.com/")
+            value = module.evidence(output, "a" * 40, module.REPOSITORY, module.REF, "42", "7", "1", module.ORIGIN)
             self.assertEqual(value["run"]["url"], "https://forgejo.g-grp.com/Max/teammanager-models/actions/runs/7")
             self.assertEqual([asset["name"] for asset in value["assets"]], list(module.ASSETS))
 
@@ -31,6 +31,15 @@ class CandidateEvidenceTests(unittest.TestCase):
                 with self.subTest(case=case):
                     with self.assertRaises(ValueError):
                         module.evidence(output, *case, "https://forgejo.g-grp.com")
+
+    def test_rejects_any_noncanonical_origin_form(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp); self.output(output)
+            origins = ("http://forgejo.g-grp.com", "https://forgejo.g-grp.com/", "https://forgejo.g-grp.com:443", "https://forgejo.g-grp.com/path", "https://user@forgejo.g-grp.com", "https://forgejo.g-grp.com.evil", "not a url", "")
+            for origin in origins:
+                with self.subTest(origin=origin):
+                    with self.assertRaisesRegex(ValueError, "origin"):
+                        module.evidence(output, "a" * 40, module.REPOSITORY, module.REF, "1", "2", "1", origin)
 
 
 if __name__ == "__main__":
