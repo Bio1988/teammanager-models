@@ -105,7 +105,7 @@ jobs:
           python3 scripts/verify_release_manifest.py --manifest "$output/teammanager-model-manifest-v3.json" --signature "$output/teammanager-model-manifest-v3.json.sig" --sha256 "$output/teammanager-model-manifest-v3.json.sha256" --public-key "$public_key"
           python3 scripts/candidate_evidence.py --output "$output" --source-sha "$EXPECTED_SOURCE_SHA" --repository "$CANONICAL_REPOSITORY" --ref "$CANONICAL_REF" --run-id "$RUN_ID" --run-number "$RUN_NUMBER" --run-attempt "$RUN_ATTEMPT" --server-url "$CANONICAL_ORIGIN"
       - name: Retain signed candidate evidence
-        uses: https://data.forgejo.org/actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        uses: https://code.forgejo.org/forgejo/upload-artifact@16871d9e8cfcf27ff31822cac382bbb5450f1e1e
         with:
           name: model-manifest-v3-pocket-r3.2-candidate-run-${{ forgejo.run_number }}-attempt-${{ forgejo.run_attempt }}-sha-${{ inputs.expected_source_sha }}
           path: ${{ runner.temp }}/model-manifest-candidate

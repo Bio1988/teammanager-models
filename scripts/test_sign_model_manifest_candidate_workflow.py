@@ -37,6 +37,8 @@ class SigningWorkflowTests(unittest.TestCase):
         self.assertIn('RUN_URL: https://forgejo.g-grp.com/Max/teammanager-models/actions/runs/${{ forgejo.run_number }}', workflow)
         self.assertIn("candidate-run-${{ forgejo.run_number }}-attempt-${{ forgejo.run_attempt }}-sha-${{ inputs.expected_source_sha }}", workflow)
         self.assertIn("retention-days: 7", workflow)
+        self.assertIn("uses: https://code.forgejo.org/forgejo/upload-artifact@16871d9e8cfcf27ff31822cac382bbb5450f1e1e", workflow)
+        self.assertNotIn("uses: https://data.forgejo.org/actions/upload-artifact@", workflow)
         for prohibited in ("forgejo.token", "/releases", "/tags", "curl --request POST", "curl -X POST"):
             self.assertNotIn(prohibited, workflow)
 
