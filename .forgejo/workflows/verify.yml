@@ -52,8 +52,10 @@ jobs:
               "These immutable Forgejo release assets are the only model/runtime inputs for",
               "the first private TeamManager Alpha.",
               "No other release asset is a first-Alpha dependency.",
-              "larger Whisper models must not be selected, fetched, or interpreted by the",
-              "Alpha runtime.",
+              "and any Whisper model other than the explicitly selected optional\n"
+              "`whisper-small-q5_1` must not be selected, fetched, or interpreted by the\n"
+              "Alpha runtime. The optional Small input may be downloaded only after explicit\n"
+              "user action; it is never fetched or selected automatically.",
           )
           document = "\n".join(lines)
           assert all(text in document for text in required_docs)
