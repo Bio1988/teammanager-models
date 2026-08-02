@@ -143,13 +143,17 @@ def validate_english_only_catalog(manifest: Path) -> None:
     validate_archive(optional[0], "optional[0]", "model", optional=True)
 
 
-def verify(manifest: Path, signature: Path, sha256_sidecar: Path, public_key: Path) -> None:
+def verify_detached_ed25519(document: Path, signature: Path, public_key: Path) -> None:
     if signature.stat().st_size != 64:
         raise ValueError("Ed25519 detached signature must be exactly 64 bytes")
+    subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", str(public_key), "-rawin", "-in", str(document), "-sigfile", str(signature)], check=True, stdout=subprocess.DEVNULL)
+
+
+def verify(manifest: Path, signature: Path, sha256_sidecar: Path, public_key: Path) -> None:
     expected_sidecar = hashlib.sha256(manifest.read_bytes()).hexdigest().encode("ascii") + b"\n"
     if sha256_sidecar.read_bytes() != expected_sidecar:
         raise ValueError("SHA-256 sidecar must be lowercase hexadecimal plus one newline")
-    subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", str(public_key), "-rawin", "-in", str(manifest), "-sigfile", str(signature)], check=True, stdout=subprocess.DEVNULL)
+    verify_detached_ed25519(manifest, signature, public_key)
     validate_english_only_catalog(manifest)
 
 
