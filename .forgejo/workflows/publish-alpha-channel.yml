@@ -98,9 +98,18 @@ jobs:
           ref: ${{ forgejo.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Verify dedicated custody runner and immutable release assets
+      - name: Fail closed on a custody runner misassignment
+        # Forgejo's restricted alpha-channel-custody label and runner registration are
+        # the custody boundary. This non-secret name comparison is only an additional
+        # fail-closed guard; it does not attest that a runner is trustworthy.
         env:
-          ALPHA_CHANNEL_CUSTODY_RUNNER_ID: ${{ secrets.ALPHA_CHANNEL_CUSTODY_RUNNER_ID }}
+          ALPHA_CHANNEL_CUSTODY_RUNNER_ID: ${{ vars.ALPHA_CHANNEL_CUSTODY_RUNNER_ID }}
+        run: |
+          set -eu
+          test -n "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
+          test "$RUNNER_NAME" = "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
+      - name: Verify immutable release assets
+        env:
           ALPHA_CHANNEL_PUBLISH_TOKEN: ${{ secrets.ALPHA_CHANNEL_PUBLISH_TOKEN }}
           RACE_RELEASE_TAG: ${{ inputs.race_release_tag }}
           RACE_ASSET_NAME: ${{ inputs.race_asset_name }}
@@ -112,8 +121,6 @@ jobs:
           RELAY_SHA256: ${{ inputs.relay_sha256 }}
         run: |
           set -eu
-          test -n "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
-          test "$RUNNER_NAME" = "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
           test -n "$ALPHA_CHANNEL_PUBLISH_TOKEN"
           workdir="$(mktemp -d)"; trap 'rm -rf "$workdir"' EXIT HUP INT TERM
           export ALPHA_CHANNEL_PUBLISH_TOKEN
