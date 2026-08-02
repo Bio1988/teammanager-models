@@ -3,42 +3,21 @@ name: publish-alpha-channel
 on:
   workflow_dispatch:
     inputs:
-      expected_source_sha:
-        description: Current reviewed, successful protected main SHA
-        required: true
-        type: string
-      race_release_tag:
-        description: Immutable Forgejo Race Engineer release tag
-        required: true
-        type: string
-      race_asset_name:
-        description: Exact immutable Race Engineer release asset file name
-        required: true
-        type: string
-      race_size_bytes:
-        description: Exact Race Engineer release asset size in bytes
-        required: true
-        type: string
-      race_sha256:
-        description: Exact lowercase SHA-256 of the Race Engineer release asset
-        required: true
-        type: string
-      relay_release_tag:
-        description: Immutable Forgejo Relay release tag
-        required: true
-        type: string
-      relay_asset_name:
-        description: Exact immutable Relay release asset file name
-        required: true
-        type: string
-      relay_size_bytes:
-        description: Exact Relay release asset size in bytes
-        required: true
-        type: string
-      relay_sha256:
-        description: Exact lowercase SHA-256 of the Relay release asset
-        required: true
-        type: string
+      expected_source_sha: {description: Current reviewed, successful protected main SHA, required: true, type: string}
+      release_sequence: {description: Monotonically increasing Alpha channel sequence, required: true, type: string}
+      expires_at: {description: Alpha channel expiry as UTC RFC3339, required: true, type: string}
+      key_not_before: {description: alpha-1 validity start as UTC RFC3339, required: true, type: string}
+      key_not_after: {description: alpha-1 validity end as UTC RFC3339, required: true, type: string}
+      race_version: {description: Race Engineer version, strict 0.x.y-alpha.N, required: true, type: string}
+      race_commit: {description: Exact Race Engineer release commit SHA, required: true, type: string}
+      race_asset_name: {description: Exact immutable Race Engineer Windows amd64 .exe asset name, required: true, type: string}
+      race_size_bytes: {description: Exact Race Engineer asset size in bytes, required: true, type: string}
+      race_sha256: {description: Exact lowercase Race Engineer asset SHA-256, required: true, type: string}
+      relay_version: {description: Relay version, strict 0.x.y-alpha.N, required: true, type: string}
+      relay_commit: {description: Exact Relay release commit SHA, required: true, type: string}
+      relay_asset_name: {description: Exact immutable Relay Windows amd64 .exe asset name, required: true, type: string}
+      relay_size_bytes: {description: Exact Relay asset size in bytes, required: true, type: string}
+      relay_sha256: {description: Exact lowercase Relay asset SHA-256, required: true, type: string}
 
 concurrency:
   group: teammanager-alpha-channel
@@ -49,7 +28,7 @@ permissions:
 
 jobs:
   publish:
-    # This label must be assigned only to the separately administered signing-custody runner.
+    # This label must be assigned only to the separately administered app-update custody runner.
     runs-on: alpha-channel-custody
     steps:
       - name: Preflight protected main before handling secrets or release metadata
@@ -73,24 +52,16 @@ jobs:
           python3 - "$EXPECTED_SOURCE_SHA" "$branch" "$status" <<'PY'
           import json, re, sys
           expected, branch_path, status_path = sys.argv[1:]
-          branch = json.load(open(branch_path, encoding="utf-8"))
-          status = json.load(open(status_path, encoding="utf-8"))
+          branch, status = json.load(open(branch_path)), json.load(open(status_path))
           contexts = branch.get("status_check_contexts")
-          if re.fullmatch(r"[0-9a-f]{40}", expected) is None:
-              raise SystemExit("expected_source_sha must be lowercase SHA-1")
-          if branch.get("protected") is not True:
-              raise SystemExit("main must be protected")
-          if not isinstance(branch.get("required_approvals"), int) or branch["required_approvals"] < 1:
-              raise SystemExit("main must require approval")
-          if branch.get("enable_status_check") is not True or not isinstance(contexts, list) or not contexts:
-              raise SystemExit("main must require named status contexts")
-          if not isinstance(branch.get("commit"), dict) or branch["commit"].get("id") != expected:
-              raise SystemExit("expected SHA is not current main")
-          if status.get("sha") != expected or status.get("state") != "success":
-              raise SystemExit("expected SHA does not have a successful combined status")
+          if re.fullmatch(r"[0-9a-f]{40}", expected) is None: raise SystemExit("expected_source_sha must be lowercase SHA-1")
+          if branch.get("protected") is not True: raise SystemExit("main must be protected")
+          if not isinstance(branch.get("required_approvals"), int) or branch["required_approvals"] < 1: raise SystemExit("main must require approval")
+          if branch.get("enable_status_check") is not True or not isinstance(contexts, list) or not contexts: raise SystemExit("main must require named status contexts")
+          if not isinstance(branch.get("commit"), dict) or branch["commit"].get("id") != expected: raise SystemExit("expected SHA is not current main")
+          if status.get("sha") != expected or status.get("state") != "success": raise SystemExit("expected SHA does not have a successful combined status")
           latest = {row.get("context"): row.get("status") for row in status.get("statuses", []) if isinstance(row, dict)}
-          if not all(latest.get(context) == "success" for context in contexts):
-              raise SystemExit("a required status context is not successful")
+          if not all(latest.get(context) == "success" for context in contexts): raise SystemExit("a required status context is not successful")
           PY
       - name: Check out the exact reviewed main SHA without credentials
         uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -108,108 +79,120 @@ jobs:
           set -eu
           test -n "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
           test "$RUNNER_NAME" = "$ALPHA_CHANNEL_CUSTODY_RUNNER_ID"
-      - name: Verify immutable release assets
+      - name: Verify immutable release metadata and bytes
         env:
           ALPHA_CHANNEL_PUBLISH_TOKEN: ${{ secrets.ALPHA_CHANNEL_PUBLISH_TOKEN }}
-          RACE_RELEASE_TAG: ${{ inputs.race_release_tag }}
+          RACE_VERSION: ${{ inputs.race_version }}
+          RACE_COMMIT: ${{ inputs.race_commit }}
           RACE_ASSET_NAME: ${{ inputs.race_asset_name }}
           RACE_SIZE_BYTES: ${{ inputs.race_size_bytes }}
           RACE_SHA256: ${{ inputs.race_sha256 }}
-          RELAY_RELEASE_TAG: ${{ inputs.relay_release_tag }}
+          RELAY_VERSION: ${{ inputs.relay_version }}
+          RELAY_COMMIT: ${{ inputs.relay_commit }}
           RELAY_ASSET_NAME: ${{ inputs.relay_asset_name }}
           RELAY_SIZE_BYTES: ${{ inputs.relay_size_bytes }}
           RELAY_SHA256: ${{ inputs.relay_sha256 }}
         run: |
           set -eu
           test -n "$ALPHA_CHANNEL_PUBLISH_TOKEN"
-          workdir="$(mktemp -d)"; trap 'rm -rf "$workdir"' EXIT HUP INT TERM
+          output="$RUNNER_TEMP/alpha-channel-assets"; rm -rf "$output"; mkdir -p "$output"
           export ALPHA_CHANNEL_PUBLISH_TOKEN
-          python3 - "$workdir" <<'PY'
-          import hashlib, json, os, pathlib, re, sys, urllib.parse, urllib.request
-          root = pathlib.Path(sys.argv[1])
-          token = os.environ["ALPHA_CHANNEL_PUBLISH_TOKEN"]
-          rows = (
-              ("race-engineer-go", os.environ["RACE_RELEASE_TAG"], os.environ["RACE_ASSET_NAME"], os.environ["RACE_SIZE_BYTES"], os.environ["RACE_SHA256"]),
-              ("teammanager-relay", os.environ["RELAY_RELEASE_TAG"], os.environ["RELAY_ASSET_NAME"], os.environ["RELAY_SIZE_BYTES"], os.environ["RELAY_SHA256"]),
-          )
-          sha = re.compile(r"[0-9a-f]{64}\Z")
-          for repo, tag, name, size_text, expected_sha in rows:
-              if not tag or not name or "/" in name or not sha.fullmatch(expected_sha):
-                  raise SystemExit("invalid immutable release identity input")
-              try:
-                  expected_size = int(size_text)
-              except ValueError as error:
-                  raise SystemExit("asset size must be an integer") from error
-              if expected_size <= 0:
-                  raise SystemExit("asset size must be positive")
-              api = f"https://forgejo.g-grp.com/api/v1/repos/Max/{repo}/releases/tags/{urllib.parse.quote(tag, safe='')}"
+          python3 - "$output" <<'PY'
+          import hashlib, json, os, pathlib, re, sys, urllib.request
+          out = pathlib.Path(sys.argv[1]); token = os.environ["ALPHA_CHANNEL_PUBLISH_TOKEN"]
+          rows = (("race-engineer-go", "RACE", "race.exe"), ("teammanager-relay", "RELAY", "relay.exe"))
+          sha, commit = re.compile(r"[0-9a-f]{64}\Z"), re.compile(r"[0-9a-f]{40}\Z")
+          version = re.compile(r"0\.[0-9]+\.[0-9]+-alpha\.[1-9][0-9]*\Z")
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise SystemExit("release download redirected")
+          opener = urllib.request.build_opener(NoRedirect)
+          for repo, prefix, output_name in rows:
+              v, c, name, size, digest = (os.environ[f"{prefix}_{key}"] for key in ("VERSION", "COMMIT", "ASSET_NAME", "SIZE_BYTES", "SHA256"))
+              if not version.fullmatch(v) or not commit.fullmatch(c) or not name.endswith(".exe") or "/" in name or not sha.fullmatch(digest): raise SystemExit("invalid exact release input")
+              try: size = int(size)
+              except ValueError as error: raise SystemExit("asset size must be an integer") from error
+              if size <= 0: raise SystemExit("asset size must be positive")
+              tag = "v" + v
+              api = f"https://forgejo.g-grp.com/api/v1/repos/Max/{repo}/releases/tags/{tag}"
               request = urllib.request.Request(api, headers={"Authorization": f"token {token}"})
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  release = json.load(response)
-              if release.get("tag_name") != tag or release.get("draft") or release.get("prerelease"):
-                  raise SystemExit("release must be a published non-prerelease exact tag")
-              assets = release.get("assets")
-              asset = next((item for item in assets if isinstance(item, dict) and item.get("name") == name), None) if isinstance(assets, list) else None
-              if asset is None or asset.get("size") != expected_size:
-                  raise SystemExit("release asset name or size differs from declared immutable input")
+              with opener.open(request, timeout=30) as response: release = json.load(response)
+              if release.get("tag_name") != tag or release.get("draft") or release.get("prerelease") or release.get("target_commitish") != c: raise SystemExit("release is not the declared immutable published commit")
+              asset = next((item for item in release.get("assets", []) if isinstance(item, dict) and item.get("name") == name), None)
               url = f"https://forgejo.g-grp.com/Max/{repo}/releases/download/{tag}/{name}"
-              if asset.get("browser_download_url") != url:
-                  raise SystemExit("release asset URL is not the canonical immutable Forgejo URL")
+              if asset is None or asset.get("size") != size or asset.get("browser_download_url") != url: raise SystemExit("release asset metadata differs from declared immutable input")
               request = urllib.request.Request(url, headers={"Authorization": f"token {token}"})
-              with urllib.request.urlopen(request, timeout=300) as response:
-                  data = response.read()
-              if len(data) != expected_size or hashlib.sha256(data).hexdigest() != expected_sha:
-                  raise SystemExit("downloaded immutable release asset does not match declared bytes")
+              with opener.open(request, timeout=300) as response: data = response.read()
+              if len(data) != size or hashlib.sha256(data).hexdigest() != digest: raise SystemExit("downloaded release asset differs from declared immutable bytes")
+              (out / name).write_bytes(data)
           PY
           unset ALPHA_CHANNEL_PUBLISH_TOKEN
-      - name: Build sign and verify the fixed Alpha channel
+      - name: Build sign and verify with the existing Alpha application contract
         env:
-          MODEL_MANIFEST_SIGNING_KEY_B64: ${{ secrets.MODEL_MANIFEST_SIGNING_KEY_B64 }}
-          MODEL_MANIFEST_PUBLIC_KEY_B64: ${{ secrets.MODEL_MANIFEST_PUBLIC_KEY_B64 }}
-          RACE_RELEASE_TAG: ${{ inputs.race_release_tag }}
+          ALPHA_CHANNEL_SIGNING_KEY_B64: ${{ secrets.ALPHA_CHANNEL_SIGNING_KEY_B64 }}
+          ALPHA_CHANNEL_PUBLIC_KEY_B64: ${{ secrets.ALPHA_CHANNEL_PUBLIC_KEY_B64 }}
+          RELEASE_SEQUENCE: ${{ inputs.release_sequence }}
+          EXPIRES_AT: ${{ inputs.expires_at }}
+          KEY_NOT_BEFORE: ${{ inputs.key_not_before }}
+          KEY_NOT_AFTER: ${{ inputs.key_not_after }}
+          RACE_VERSION: ${{ inputs.race_version }}
+          RACE_COMMIT: ${{ inputs.race_commit }}
           RACE_ASSET_NAME: ${{ inputs.race_asset_name }}
           RACE_SIZE_BYTES: ${{ inputs.race_size_bytes }}
           RACE_SHA256: ${{ inputs.race_sha256 }}
-          RELAY_RELEASE_TAG: ${{ inputs.relay_release_tag }}
+          RELAY_VERSION: ${{ inputs.relay_version }}
+          RELAY_COMMIT: ${{ inputs.relay_commit }}
           RELAY_ASSET_NAME: ${{ inputs.relay_asset_name }}
           RELAY_SIZE_BYTES: ${{ inputs.relay_size_bytes }}
           RELAY_SHA256: ${{ inputs.relay_sha256 }}
         run: |
           set -eu
-          test -n "$MODEL_MANIFEST_SIGNING_KEY_B64"; test -n "$MODEL_MANIFEST_PUBLIC_KEY_B64"
-          workdir="$(mktemp -d)"; output="$RUNNER_TEMP/alpha-channel"; trap 'rm -rf "$workdir"' EXIT HUP INT TERM
+          test -n "$ALPHA_CHANNEL_SIGNING_KEY_B64"; test -n "$ALPHA_CHANNEL_PUBLIC_KEY_B64"
+          work="$(mktemp -d)"; output="$RUNNER_TEMP/alpha-channel"; trap 'rm -rf "$work"' EXIT HUP INT TERM
           rm -rf "$output"; mkdir -p "$output"
-          private_key="$workdir/private.pem"; public_key="$workdir/public.pem"; derived="$workdir/derived-public.pem"
-          printf '%s' "$MODEL_MANIFEST_SIGNING_KEY_B64" | base64 --decode > "$private_key"; unset MODEL_MANIFEST_SIGNING_KEY_B64
-          chmod 0600 "$private_key"
-          printf '%s' "$MODEL_MANIFEST_PUBLIC_KEY_B64" | base64 --decode > "$public_key"; unset MODEL_MANIFEST_PUBLIC_KEY_B64
-          openssl pkey -in "$private_key" -pubout -out "$derived"; cmp "$derived" "$public_key"
-          python3 scripts/alpha_channel.py build --output "$output/alpha.json" --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --race-engineer-go-release-tag "$RACE_RELEASE_TAG" --race-engineer-go-asset-name "$RACE_ASSET_NAME" --race-engineer-go-size-bytes "$RACE_SIZE_BYTES" --race-engineer-go-sha256 "$RACE_SHA256" \
-            --teammanager-relay-release-tag "$RELAY_RELEASE_TAG" --teammanager-relay-asset-name "$RELAY_ASSET_NAME" --teammanager-relay-size-bytes "$RELAY_SIZE_BYTES" --teammanager-relay-sha256 "$RELAY_SHA256"
-          openssl pkeyutl -sign -inkey "$private_key" -rawin -in "$output/alpha.json" -out "$output/alpha.json.sig"
-          rm -f "$private_key"
-          python3 scripts/alpha_channel.py verify --channel "$output/alpha.json" --signature "$output/alpha.json.sig" --public-key "$public_key"
+          private="$work/alpha-1.private"; public="$work/alpha-1.public"; manifest="$work/alpha.json"
+          printf '%s' "$ALPHA_CHANNEL_SIGNING_KEY_B64" | base64 --decode > "$private"; unset ALPHA_CHANNEL_SIGNING_KEY_B64
+          printf '%s' "$ALPHA_CHANNEL_PUBLIC_KEY_B64" | base64 --decode > "$public"; unset ALPHA_CHANNEL_PUBLIC_KEY_B64
+          chmod 0600 "$private"
+          export manifest
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          def release(product, repo, prefix):
+              version = os.environ[prefix + "_VERSION"]
+              tag = "v" + version
+              filename = os.environ[prefix + "_ASSET_NAME"]
+              return {"product": product, "platform": "windows", "architecture": "amd64", "version": version, "tag": tag, "commit": os.environ[prefix + "_COMMIT"], "owner": "Max", "repository": repo, "url": f"https://forgejo.g-grp.com/Max/{repo}/releases/download/{tag}/{filename}", "filename": filename, "size": int(os.environ[prefix + "_SIZE_BYTES"]), "sha256": os.environ[prefix + "_SHA256"]}
+          value = {"schema": 1, "channel": "alpha", "key_id": "alpha-1", "key_rotation": {"status": "active", "not_before": os.environ["KEY_NOT_BEFORE"], "not_after": os.environ["KEY_NOT_AFTER"]}, "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"), "expires_at": os.environ["EXPIRES_AT"], "release_sequence": int(os.environ["RELEASE_SEQUENCE"]), "authenticode_policy": "not-required", "race_engineer": release("race_engineer", "race-engineer-go", "RACE"), "relay": release("relay", "teammanager-relay", "RELAY")}
+          with open(os.environ["manifest"], "w", encoding="utf-8") as f: json.dump(value, f, separators=(",", ":")); f.write("\n")
+          PY
+          go run ./cmd/alpha-channel publish --manifest "$manifest" --private-key "$private" --output-dir "$output"
+          rm -f "$private"
+          go run ./cmd/alpha-channel verify --manifest "$output/alpha.json" --signature "$output/alpha.json.sig" --public-key "$public" --min-sequence 0
+          go run ./cmd/alpha-channel verify-candidate --manifest "$output/alpha.json" --signature "$output/alpha.json.sig" --public-key "$public" --race-installer "$RUNNER_TEMP/alpha-channel-assets/$RACE_ASSET_NAME" --relay-installer "$RUNNER_TEMP/alpha-channel-assets/$RELAY_ASSET_NAME" --min-sequence 0
       - name: Atomically update only the fixed Alpha channel
         env:
           ALPHA_CHANNEL_PUBLISH_TOKEN: ${{ secrets.ALPHA_CHANNEL_PUBLISH_TOKEN }}
+          ALPHA_CHANNEL_PUBLIC_KEY_B64: ${{ secrets.ALPHA_CHANNEL_PUBLIC_KEY_B64 }}
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+          RELEASE_SEQUENCE: ${{ inputs.release_sequence }}
         run: |
           set -eu
-          test -n "$ALPHA_CHANNEL_PUBLISH_TOKEN"
-          publish="$(mktemp -d)"; trap 'rm -rf "$publish"' EXIT HUP INT TERM
-          git -c http.extraHeader="Authorization: token $ALPHA_CHANNEL_PUBLISH_TOKEN" clone --no-checkout https://forgejo.g-grp.com/Max/teammanager-models.git "$publish"
-          cd "$publish"
-          git -c http.extraHeader="Authorization: token $ALPHA_CHANNEL_PUBLISH_TOKEN" fetch --depth=1 origin main
-          git checkout --detach FETCH_HEAD
+          test -n "$ALPHA_CHANNEL_PUBLISH_TOKEN"; test -n "$ALPHA_CHANNEL_PUBLIC_KEY_B64"
+          work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT HUP INT TERM
+          public="$work/alpha-1.public"; printf '%s' "$ALPHA_CHANNEL_PUBLIC_KEY_B64" | base64 --decode > "$public"; unset ALPHA_CHANNEL_PUBLIC_KEY_B64
+          git -c http.extraHeader="Authorization: token $ALPHA_CHANNEL_PUBLISH_TOKEN" clone --no-checkout https://forgejo.g-grp.com/Max/teammanager-models.git "$work/repo"
+          cd "$work/repo"; git -c http.extraHeader="Authorization: token $ALPHA_CHANNEL_PUBLISH_TOKEN" fetch --depth=1 origin main; git checkout --detach FETCH_HEAD
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
-          mkdir -p channels
-          cp "$RUNNER_TEMP/alpha-channel/alpha.json" channels/alpha.json
-          cp "$RUNNER_TEMP/alpha-channel/alpha.json.sig" channels/alpha.json.sig
+          if test -e channels/alpha.json -o -e channels/alpha.json.sig; then
+            test -f channels/alpha.json -a -f channels/alpha.json.sig
+            old="$(go run ./cmd/alpha-channel verify --manifest channels/alpha.json --signature channels/alpha.json.sig --public-key "$public" --min-sequence 0 | sed -n 's/^verified alpha channel sequence \([0-9][0-9]*\):.*/\1/p')"
+            test -n "$old"; test "$RELEASE_SEQUENCE" -gt "$old"
+          fi
+          mkdir -p channels; cp "$RUNNER_TEMP/alpha-channel/alpha.json" channels/alpha.json; cp "$RUNNER_TEMP/alpha-channel/alpha.json.sig" channels/alpha.json.sig
           git add -- channels/alpha.json channels/alpha.json.sig
           test "$(git diff --cached --name-only | wc -l)" -eq 2
-          git diff --cached --name-only | grep -Fx 'channels/alpha.json'
-          git diff --cached --name-only | grep -Fx 'channels/alpha.json.sig'
+          git diff --cached --name-only | grep -Fx 'channels/alpha.json'; git diff --cached --name-only | grep -Fx 'channels/alpha.json.sig'
           git -c user.name='TeamManager Alpha Channel Custody' -c user.email='alpha-channel-custody@forgejo.g-grp.com' commit -m 'release(models): update Alpha channel'
           git -c http.extraHeader="Authorization: token $ALPHA_CHANNEL_PUBLISH_TOKEN" push origin HEAD:refs/heads/main
           unset ALPHA_CHANNEL_PUBLISH_TOKEN
