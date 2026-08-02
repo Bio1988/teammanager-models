@@ -1,0 +1,60 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate immutable Alpha build-input records
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path(".")
+          json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+
+          readme = (root / "README.md").read_text(encoding="utf-8")
+          required_readme = (
+              "`teammanager-models` is immutable build-input storage",
+              "`build/alpha-models.lock.json`",
+              "`model-pack.json` is the local runtime descriptor",
+              "does **not** fetch this repository's `manifest.json`",
+          )
+          assert all(text in readme for text in required_readme)
+
+          lines = (root / "docs" / "alpha-build-inputs.md").read_text(encoding="utf-8").splitlines()
+          rows = [line.split("|") for line in lines if line.startswith("| Required |") or line.startswith("| Optional |")]
+          required = [row[2].strip().strip("`") for row in rows if row[1].strip() == "Required"]
+          optional = [row[2].strip().strip("`") for row in rows if row[1].strip() == "Optional"]
+          assert required == [
+              "pocket-runtime",
+              "pocket-english",
+              "pocket-alba",
+              "whisper-runtime",
+              "whisper-base-q5_1",
+          ]
+          assert optional == ["whisper-small-q5_1"]
+          assert len(rows) == 6
+
+          required_docs = (
+              "These immutable Forgejo release assets are the only model/runtime inputs for",
+              "the first private TeamManager Alpha.",
+              "No other release asset is a first-Alpha dependency.",
+              "larger Whisper models must not be selected, fetched, or interpreted by the",
+              "Alpha runtime.",
+          )
+          document = "\n".join(lines)
+          assert all(text in document for text in required_docs)
+          PY
