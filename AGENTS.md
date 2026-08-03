@@ -61,7 +61,16 @@ Bug fixes, internal refactors, ordinary CRUD/UI/query work, dependency updates, 
 Every PR states production files, packages, dependencies, and database tables added/deleted; the old path removed; and why any net architecture increase is necessary.
 ## Models-specific rules
 
-- Keep one versioned asset manifest.
-- SHA-256 remains allowed for downloaded artifact integrity.
-- Use at most one manifest-signing mechanism.
-- Do not create a separate authority format per model or runtime type.
+- This repository stores immutable Forgejo release assets, licences, attribution,
+  and provenance; it is not a runtime model registry.
+- `manifest.json` is historical provenance only. Do not evolve it or make it a
+  runtime authority.
+- Race Engineer pins required Alpha inputs in its closed
+  `build/alpha-models.lock.json` and packages them into the complete Windows
+  installer.
+- Only `whisper-small-q5_1` may be downloaded after installation, solely after
+  explicit user action and never automatically.
+- Do not add runtime catalogs, remote default-model manifests, signing-candidate
+  workflows, or candidate-evidence protocols.
+- Preserve immutable published release assets and their associated integrity and
+  provenance records.
