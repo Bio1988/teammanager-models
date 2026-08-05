@@ -7,8 +7,8 @@ private Alpha. Forgejo is canonical; GitHub, where present, is only a mirror.
 
 Start suite-level product, roadmap, ownership, feature-status, and release-map
 questions in [teammanager-program](https://forgejo.g-grp.com/Max/teammanager-program).
-It is the TeamManager Suite entry point; this repository intentionally does not
-copy its cross-repository tables or roadmap. The asset and build-input truth
+It is the central TeamManager Suite entry point; this repository intentionally
+does not copy its cross-repository tables or roadmap. The asset and build-input truth
 remain this repository's Forgejo `main`, immutable release assets, and current
 local build-input documentation. OpenSpec is reserved for breaking contracts,
 authentication/authorization, simulator-control safety, high-risk migrations,
