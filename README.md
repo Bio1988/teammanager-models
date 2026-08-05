@@ -3,15 +3,16 @@
 `teammanager-models` is immutable build-input storage for TeamManager's
 private Alpha. Forgejo is canonical; GitHub, where present, is only a mirror.
 
-## Suite authority
+## Suite entry point and local authority
 
-Suite-wide product direction, repository ownership, and the cross-repository
-roadmap are maintained in
-[teammanager-program](https://forgejo.g-grp.com/Max/teammanager-program).
-The asset and build-input truth remain this repository's Forgejo `main`,
-immutable release assets, and current local build-input documentation. OpenSpec
-is reserved for breaking contracts, authentication/authorization,
-simulator-control safety, high-risk migrations, and privacy/retention changes.
+Start suite-level product, roadmap, ownership, feature-status, and release-map
+questions in [teammanager-program](https://forgejo.g-grp.com/Max/teammanager-program).
+It is the TeamManager Suite entry point; this repository intentionally does not
+copy its cross-repository tables or roadmap. The asset and build-input truth
+remain this repository's Forgejo `main`, immutable release assets, and current
+local build-input documentation. OpenSpec is reserved for breaking contracts,
+authentication/authorization, simulator-control safety, high-risk migrations,
+and privacy/retention changes.
 
 Race Engineer does **not** fetch this repository's `manifest.json`, signature,
 checksum sidecars, release metadata, or a catalog at runtime. Required Alpha
