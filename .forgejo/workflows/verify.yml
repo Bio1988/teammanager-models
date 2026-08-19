@@ -41,17 +41,18 @@ jobs:
           assert required == [
               "pocket-runtime",
               "pocket-english",
-              "pocket-alba",
               "whisper-runtime",
               "whisper-base-q5_1",
           ]
           assert optional == ["whisper-small-q5_1"]
-          assert len(rows) == 6
+          assert len(rows) == 5
 
           required_docs = (
-              "These immutable Forgejo release assets are the only model/runtime inputs for",
-              "the first private TeamManager Alpha.",
-              "No other release asset is a first-Alpha dependency.",
+              "These immutable Forgejo release assets are the Models-owned base inputs for",
+              "The three current\n"
+              "stock voices and the experimental Natural Radio records are deliberately\n"
+              "outside this base table; their exact current status is in\n"
+              "[alpha-voice-contract.md](alpha-voice-contract.md).",
               "and any Whisper model other than the explicitly selected optional\n"
               "`whisper-small-q5_1` must not be selected, fetched, or interpreted by the\n"
               "Alpha runtime. The optional Small input may be downloaded only after explicit\n"
@@ -60,3 +61,5 @@ jobs:
           document = "\n".join(lines)
           assert all(text in document for text in required_docs)
           PY
+      - name: Validate the reviewed Alpha English voice contract
+        run: python3 scripts/verify_alpha_voice_contract.py
