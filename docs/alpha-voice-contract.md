@@ -51,6 +51,10 @@ are therefore candidate evidence only: they are not an active installer input,
 runtime download, model picker, or Alpha release dependency. They do not alter
 the deterministic safety path.
 
+This is a reviewed cross-repository observation, not a Models CI assertion:
+the local verifier checks this document's closed wording and does not fetch or
+validate the Race Engineer repository.
+
 The retained records show Windows VM execution and Gold Eval as pending, and
 this repository does not retain a complete licence/attribution record for the
 assembled runtime/model. They are therefore **not Alpha eligible** and cannot
@@ -59,9 +63,16 @@ licensing, and Windows execution.
 
 | Race Engineer ID | Immutable Forgejo asset | Bytes | SHA-256 | Status |
 | --- | --- | ---: | --- | --- |
-| `natural-radio-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/natural-radio-qwen3-0.6b-dev.1/natural-radio-runtime.zip` | 18990303 | `810d5c228c2de848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a` | Experimental; release blocked |
+| `natural-radio-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/natural-radio-qwen3-0.6b-dev.1/natural-radio-runtime.zip` | 18990303 | `810d5c228c2de848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a` (independently recomputed) | Experimental; release blocked |
 | `natural-radio-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/natural-radio-qwen3-0.6b-dev.1/race-engineer-qwen3-0.6b-q4_k_m.gguf` | 396705632 | `3a627f406fff3e6e1c5fe2d6104f28ef760a6599b4cab31c4bc1c03ae2bf95ff` | Experimental; release blocked |
 
 The historical Pocket R3 `pocket-alba` entry remains immutable provenance for
 its already published asset. It is not the stock-voice authority and must not
 be selected as a silent fallback for Charles, Michael, or Eve.
+
+The published `natural-radio-runtime.zip.sha256` sidecar and release body carry
+a malformed 63-character value (`810d5c228cde848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a`).
+The 64-character table value above was independently recomputed from the
+18,990,303-byte immutable asset. This discrepancy is retained as a D1
+provenance blocker: do not overwrite, normalize, or otherwise mutate the
+published release to make the records appear to agree.

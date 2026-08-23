@@ -27,6 +27,10 @@ def main() -> None:
     # The Models repository is historical provenance. It must not claim that
     # Natural Speech is in the current Race Engineer installer lock.
     require(document, "does **not** list Natural Radio assets")
+    # A published sidecar is malformed; retain the discrepancy rather than
+    # representing independently recomputed bytes as published metadata.
+    require(document, "malformed 63-character value")
+    require(document, "independently recomputed")
 
     revision = "323332d33f997de8394f24a193e1a76df720e01a"
     voices = (
