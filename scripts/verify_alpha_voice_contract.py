@@ -24,6 +24,9 @@ def main() -> None:
     require(document, "**not release-ready**")
     require(document, "Do not alter the historical `manifest.json` to represent these voices.")
     require(document, "**not Alpha eligible**")
+    # The Models repository is historical provenance. It must not claim that
+    # Natural Speech is in the current Race Engineer installer lock.
+    require(document, "does **not** list Natural Radio assets")
 
     revision = "323332d33f997de8394f24a193e1a76df720e01a"
     voices = (

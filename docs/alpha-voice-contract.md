@@ -43,15 +43,19 @@ CC-BY-4.0 licence text/attribution, and installer target. The Race Engineer
 lock and its installed notices must then be updated in the same reviewed
 release. Do not alter the historical `manifest.json` to represent these voices.
 
-## Natural Radio inputs — experimental and not Alpha eligible
+## Natural Speech candidate evidence — historical and not Alpha eligible
 
-The current Race Engineer lock also lists these optional installer-owned local
-inputs. They are immutable Forgejo assets, are never runtime downloads or a
-model picker, and do not alter the deterministic safety path. The attached
-release records Windows VM execution and Gold Eval as pending; no complete
-licence/attribution record is retained in this repository for the assembled
-runtime/model. They are therefore **not Alpha eligible** and cannot turn a
-release green until both evidence gaps are resolved.
+Current Race Engineer `main` does **not** list Natural Radio assets in its
+closed `build/alpha-models.lock.json`. The historical release records below
+are therefore candidate evidence only: they are not an active installer input,
+runtime download, model picker, or Alpha release dependency. They do not alter
+the deterministic safety path.
+
+The retained records show Windows VM execution and Gold Eval as pending, and
+this repository does not retain a complete licence/attribution record for the
+assembled runtime/model. They are therefore **not Alpha eligible** and cannot
+turn a release green until D1 independently verifies the artefact, provenance,
+licensing, and Windows execution.
 
 | Race Engineer ID | Immutable Forgejo asset | Bytes | SHA-256 | Status |
 | --- | --- | ---: | --- | --- |
