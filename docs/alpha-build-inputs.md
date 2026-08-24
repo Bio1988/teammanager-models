@@ -40,3 +40,29 @@ user action; it is never fetched or selected automatically.
 Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do
 not make Natural Radio a current installer input or runtime authority.
+
+## Natural Radio release record
+
+`natural-radio-qwen3-0.6b-dev.1` is an immutable development release. It is
+not an Alpha installer input until Race Engineer pins an approved release in
+its closed build-input lock.
+
+The release's Q4_K_M GGUF is
+`race-engineer-qwen3-0.6b-q4_k_m.gguf` (396,705,632 bytes, SHA-256
+`3a627f406fff3e6e1c5fe2d6104f28ef760a6599b4cab31c4bc1c03ae2bf95ff`).
+The corresponding Windows runtime archive is
+`natural-radio-runtime.zip` (18,990,303 bytes, SHA-256
+`810d5c228cde848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a`),
+containing `llama-server.exe` (SHA-256
+`c932a2ac50dbdc5768399723e2e6e6295f7abcdf5243220729022c38ae2c415a`).
+
+The release owner attests that this GGUF is the completed trained Natural
+Radio model. That attestation is not a replacement for the listed artifact
+fingerprints. The model is based on Qwen3 0.6B and is distributed under the
+Apache License 2.0; see `LICENSES/Qwen3-Apache-2.0.txt`. The local Windows
+llama.cpp components are distributed under the MIT License; see
+`LICENSES/llama.cpp-MIT.txt`. The runtime archive also contains the signed
+LLVM OpenMP binary `libomp140.x86_64.dll`; its applicable redistribution terms
+and third-party notice must accompany any later immutable installer-owned
+Natural Radio runtime asset. Any later immutable Natural Radio release must
+retain all applicable notices with its installer-owned assets.

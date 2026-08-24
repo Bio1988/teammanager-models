@@ -2,8 +2,10 @@ name: verify
 
 on:
   pull_request:
+  # The protected-main gate requires this same verification context for a PR
+  # branch. Restricting pushes to main makes that required context impossible
+  # to satisfy before a merge.
   push:
-    branches: [main]
 
 permissions:
   contents: read
