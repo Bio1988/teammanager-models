@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "evaluation": "natural-radio-d1-model-runtime-gold",
+  "ran_at": "2026-08-24",
+  "inputs": {
+    "model": {
+      "filename": "race-engineer-qwen3-0.6b-q4_k_m.gguf",
+      "size_bytes": 396705632,
+      "sha256": "3a627f406fff3e6e1c5fe2d6104f28ef760a6599b4cab31c4bc1c03ae2bf95ff"
+    },
+    "runtime": {
+      "filename": "natural-radio-runtime.zip",
+      "size_bytes": 18990303,
+      "sha256": "810d5c228cde848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a",
+      "server_sha256": "c932a2ac50dbdc5768399723e2e6e6295f7abcdf5243220729022c38ae2c415a"
+    }
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+    "logical_processors": 16,
+    "physical_memory_bytes": 51480473600,
+    "server": {
+      "host": "127.0.0.1",
+      "parallel_slots": 1,
+      "context_tokens": 4096,
+      "jinja": true,
+      "web_ui": false,
+      "model_load_ms": 907.47,
+      "working_set_bytes_after_requests": 1189720064,
+      "private_memory_bytes_after_requests": 863014912
+    },
+    "request": {
+      "temperature": 0,
+      "max_tokens": 80
+    }
+  },
+  "system_instruction": "You are an English race-radio renderer. Return exactly one short radio sentence. This is a closed factual transform: include every named person, number, unit, state, and reason from the input. Never add, infer, advise, or command. If a fact says unavailable or stale, preserve both words.",
+  "acceptance": {
+    "finish_reason": "stop",
+    "maximum_words": 24,
+    "required_terms_case_insensitive": true
+  },
+  "cases": [
+    {"id": "gap", "fact": "Adam Barker is 0.3 seconds behind and closing.", "required_terms": ["Adam", "Barker", "0.3", "behind", "closing"], "response": "Adam Barker is 0.3 seconds behind and closing.", "total_ms": 316.09, "passed": true},
+    {"id": "opponent_position", "fact": "Adam Barker is P7.", "required_terms": ["Adam", "Barker", "P7"], "response": "Adam Barker is P7.", "total_ms": 204.52, "passed": true},
+    {"id": "fuel_remaining", "fact": "Fuel remaining is 18.5 litres.", "required_terms": ["18.5", "litres"], "response": "18.5 litres.", "total_ms": 210.45, "passed": true},
+    {"id": "fuel_to_end", "fact": "Fuel to end is 22.0 litres.", "required_terms": ["22.0", "litres"], "response": "22.0 litres.", "total_ms": 207.19, "passed": true},
+    {"id": "fuel_shortfall", "fact": "Fuel shortfall is 3.5 litres.", "required_terms": ["3.5", "litres"], "response": "3.5 litres.", "total_ms": 201.03, "passed": true},
+    {"id": "pit_window", "fact": "The planned pit window opens in 4 laps.", "required_terms": ["4", "laps", "pit", "window"], "response": "The planned pit window opens in 4 laps.", "total_ms": 276.41, "passed": true},
+    {"id": "time_laps", "fact": "There are 42 minutes and 18 laps remaining.", "required_terms": ["42", "minutes", "18", "laps"], "response": "There are 42 minutes and 18 laps remaining.", "total_ms": 325.94, "passed": true},
+    {"id": "weather", "fact": "Rain is expected in 12 minutes.", "required_terms": ["rain", "12", "minutes"], "response": "Rain is expected in 12 minutes.", "total_ms": 260.66, "passed": true},
+    {"id": "accepted_plan", "fact": "The next stint driver is Adam Barker.", "required_terms": ["next", "stint", "Adam", "Barker"], "response": "The next stint driver is Adam Barker.", "total_ms": 233.28, "passed": true},
+    {"id": "unavailable", "fact": "Fuel to end is unavailable because the current consumption sample is stale.", "required_terms": ["unavailable", "stale"], "response": "Fuel to end is unavailable because the current consumption sample is stale.", "total_ms": 330.82, "passed": true},
+    {"id": "safety_boundary", "fact": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "required_terms": ["not", "eligible", "deterministic"], "response": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "total_ms": 385.16, "passed": true}
+  ],
+  "passed": true,
+  "limits": [
+    "This checks the immutable model/runtime pair only.",
+    "D2 owns closed JSON validation, factual preservation across composite SpeechFrames, timeout fallback, and control exclusion.",
+    "This physical-target Windows run is not a Windows VM execution result."
+  ]
+}

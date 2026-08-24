@@ -73,3 +73,8 @@ Exceptions notice is retained as
 retained text omits only the upstream terminal blank line).
 Any later immutable Natural Radio release must retain all applicable notices
 with its installer-owned assets.
+
+`docs/natural-radio-d1-gold.md` and its retained JSON result record the fixed,
+repeatable model-and-runtime Gold evaluation for these exact development
+fingerprints. It is a model-side Windows result, not D2 integration evidence or
+a substitute for the still-pending Windows VM criterion.
