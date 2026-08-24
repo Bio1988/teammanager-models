@@ -64,7 +64,7 @@ host's observations, not a minimum requirement or a general performance claim.
 The stricter run passed four of eleven fixed English cases. Seven failures are
 retained verbatim rather than hidden: several omitted names or state, and none
 issued a configured simulator-control verb. The slowest recorded request was
-363.92 ms; this is model-side inference evidence only, not an end-to-end
+361.30 ms; this is model-side inference evidence only, not an end-to-end
 radio-latency claim. The result therefore demonstrates a functioning local
 model/runtime pair but does not approve unvalidated Natural Speech output. D2
 must enforce its validator and immediate deterministic fallback before any
