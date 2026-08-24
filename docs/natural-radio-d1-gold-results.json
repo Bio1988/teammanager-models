@@ -35,26 +35,28 @@
       "max_tokens": 80
     }
   },
-  "system_instruction": "You are an English race-radio renderer. Return exactly one short radio sentence. This is a closed factual transform: include every named person, number, unit, state, and reason from the input. Never add, infer, advise, or command. If a fact says unavailable or stale, preserve both words.",
+  "system_instruction": "You are an English race-radio renderer. Return exactly one short radio sentence. The user provides a fact and REQUIRED LITERALS. Include every required literal exactly, case-insensitively. Never add, infer, advise, or issue a simulator command.",
   "acceptance": {
     "finish_reason": "stop",
     "maximum_words": 24,
-    "required_terms_case_insensitive": true
+    "required_terms_case_insensitive": true,
+    "response_must_equal_expected_response": true,
+    "forbidden_terms": ["set", "add", "remove", "clear", "enable", "disable", "increase", "decrease"]
   },
   "cases": [
-    {"id": "gap", "fact": "Adam Barker is 0.3 seconds behind and closing.", "required_terms": ["Adam", "Barker", "0.3", "behind", "closing"], "response": "Adam Barker is 0.3 seconds behind and closing.", "total_ms": 316.09, "passed": true},
-    {"id": "opponent_position", "fact": "Adam Barker is P7.", "required_terms": ["Adam", "Barker", "P7"], "response": "Adam Barker is P7.", "total_ms": 204.52, "passed": true},
-    {"id": "fuel_remaining", "fact": "Fuel remaining is 18.5 litres.", "required_terms": ["18.5", "litres"], "response": "18.5 litres.", "total_ms": 210.45, "passed": true},
-    {"id": "fuel_to_end", "fact": "Fuel to end is 22.0 litres.", "required_terms": ["22.0", "litres"], "response": "22.0 litres.", "total_ms": 207.19, "passed": true},
-    {"id": "fuel_shortfall", "fact": "Fuel shortfall is 3.5 litres.", "required_terms": ["3.5", "litres"], "response": "3.5 litres.", "total_ms": 201.03, "passed": true},
-    {"id": "pit_window", "fact": "The planned pit window opens in 4 laps.", "required_terms": ["4", "laps", "pit", "window"], "response": "The planned pit window opens in 4 laps.", "total_ms": 276.41, "passed": true},
-    {"id": "time_laps", "fact": "There are 42 minutes and 18 laps remaining.", "required_terms": ["42", "minutes", "18", "laps"], "response": "There are 42 minutes and 18 laps remaining.", "total_ms": 325.94, "passed": true},
-    {"id": "weather", "fact": "Rain is expected in 12 minutes.", "required_terms": ["rain", "12", "minutes"], "response": "Rain is expected in 12 minutes.", "total_ms": 260.66, "passed": true},
-    {"id": "accepted_plan", "fact": "The next stint driver is Adam Barker.", "required_terms": ["next", "stint", "Adam", "Barker"], "response": "The next stint driver is Adam Barker.", "total_ms": 233.28, "passed": true},
-    {"id": "unavailable", "fact": "Fuel to end is unavailable because the current consumption sample is stale.", "required_terms": ["unavailable", "stale"], "response": "Fuel to end is unavailable because the current consumption sample is stale.", "total_ms": 330.82, "passed": true},
-    {"id": "safety_boundary", "fact": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "required_terms": ["not", "eligible", "deterministic"], "response": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "total_ms": 385.16, "passed": true}
+    {"id": "gap", "fact": "Adam Barker is 0.3 seconds behind and closing.", "required_terms": ["Adam", "Barker", "0.3", "seconds", "behind", "closing"], "expected_response": "Adam Barker is 0.3 seconds behind and closing.", "response": "Adam Barker 0.3 seconds behind closing.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 310.69, "passed": false},
+    {"id": "opponent_position", "fact": "Adam Barker is P7.", "required_terms": ["Adam", "Barker", "P7"], "expected_response": "Adam Barker is P7.", "response": "P7.", "finish_reason": "stop", "missing_terms": ["Adam", "Barker"], "forbidden_terms": [], "total_ms": 172.14, "passed": false},
+    {"id": "fuel_remaining", "fact": "Fuel remaining is 18.5 litres.", "required_terms": ["Fuel", "remaining", "18.5", "litres"], "expected_response": "Fuel remaining is 18.5 litres.", "response": "Fuel remaining is 18.5 litres.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 318.58, "passed": true},
+    {"id": "fuel_to_end", "fact": "Fuel to end is 22.0 litres.", "required_terms": ["Fuel", "to", "end", "22.0", "litres"], "expected_response": "Fuel to end is 22.0 litres.", "response": "Fuel to end is 22.0 litres.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 332.89, "passed": true},
+    {"id": "fuel_shortfall", "fact": "Fuel shortfall is 3.5 litres.", "required_terms": ["Fuel", "shortfall", "3.5", "litres"], "expected_response": "Fuel shortfall is 3.5 litres.", "response": "Fuel shortfall is 3.5 litres.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 285.94, "passed": true},
+    {"id": "pit_window", "fact": "The planned pit window opens in 4 laps.", "required_terms": ["planned", "pit", "window", "4", "laps"], "expected_response": "The planned pit window opens in 4 laps.", "response": "planned pit window 4 laps.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 269.19, "passed": false},
+    {"id": "time_laps", "fact": "There are 42 minutes and 18 laps remaining.", "required_terms": ["42", "minutes", "18", "laps", "remaining"], "expected_response": "There are 42 minutes and 18 laps remaining.", "response": "There are 42 minutes and 18 laps remaining.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 363.92, "passed": true},
+    {"id": "weather", "fact": "Rain is expected in 12 minutes.", "required_terms": ["Rain", "expected", "12", "minutes"], "expected_response": "Rain is expected in 12 minutes.", "response": "Rain expected, 12 minutes.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 264.11, "passed": false},
+    {"id": "accepted_plan", "fact": "The next stint driver is Adam Barker.", "required_terms": ["next", "stint", "driver", "Adam", "Barker"], "expected_response": "The next stint driver is Adam Barker.", "response": "The next stint is driver Adam Barker.", "finish_reason": "stop", "missing_terms": [], "forbidden_terms": [], "total_ms": 258.63, "passed": false},
+    {"id": "unavailable", "fact": "Fuel to end is unavailable because the current consumption sample is stale.", "required_terms": ["Fuel", "to", "end", "unavailable", "consumption", "sample", "stale"], "expected_response": "Fuel to end is unavailable because the current consumption sample is stale.", "response": "Unavailable.", "finish_reason": "stop", "missing_terms": ["Fuel", "to", "end", "consumption", "sample", "stale"], "forbidden_terms": [], "total_ms": 163.67, "passed": false},
+    {"id": "safety_boundary", "fact": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "required_terms": ["Natural", "speech", "not", "eligible", "simulator-control", "deterministic", "handling", "required"], "expected_response": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "response": "Not eligible.", "finish_reason": "stop", "missing_terms": ["Natural", "speech", "simulator-control", "deterministic", "handling", "required"], "forbidden_terms": [], "total_ms": 196.18, "passed": false}
   ],
-  "passed": true,
+  "passed": false,
   "limits": [
     "This checks the immutable model/runtime pair only.",
     "D2 owns closed JSON validation, factual preservation across composite SpeechFrames, timeout fallback, and control exclusion.",

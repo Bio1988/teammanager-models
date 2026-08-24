@@ -31,11 +31,24 @@ number, unit, state, and reason from the input. Never add, infer, advise, or
 command. If a fact says unavailable or stale, preserve both words.
 ```
 
-The input is the case's `fact` verbatim. A result passes when it finishes
-normally, contains each `required_terms` item case-insensitively, and contains
-at most 24 whitespace-delimited words. `fuel_shortfall` deliberately requires
-only its quantity and unit: D2 retains its typed event identity separately and
-must reject any natural response that loses a required fact.
+The input contains the case's `fact` and its `required_terms` verbatim. A
+result passes only when it finishes normally, contains every required term,
+contains no configured control verb, contains at most 24 words, and exactly
+matches the case's expected response. The exact-match condition is deliberate:
+this fixed Gold record must fail rather than silently permit an added fact,
+advice, command, or a dropped state. The model remains free to vary wording in
+D2, but D2 has to validate that output independently before it is spoken.
+
+Run the retained evaluator against an already running loopback server:
+
+```powershell
+pwsh -NoProfile -File scripts/run-natural-radio-d1-gold.ps1 -ServerUrl http://127.0.0.1:<unused-port> -OutputPath .\natural-radio-d1-gold-rerun.json
+```
+
+The script reads the retained cases, sends the exact requests, records the
+per-case finish reason and response, and exits non-zero when any requirement
+fails. It never starts a process, changes a runtime configuration, or contacts
+the network beyond the specified loopback server.
 
 ## Recorded Windows result
 
@@ -47,11 +60,16 @@ model in 0.91 seconds. Its observed working set after the requests was
 1,189,720,064 bytes and private memory was 863,014,912 bytes. These are one
 host's observations, not a minimum requirement or a general performance claim.
 
-All eleven fixed English cases passed. The slowest recorded request was 385.16
-ms; this is model-side inference evidence only, not an end-to-end radio-latency
-claim. The safety-boundary case confirms that the renderer is told the action
-is ineligible; D2 must enforce that exclusion before a request can reach this
-model.
+The stricter run passed four of eleven fixed English cases. Seven failures are
+retained verbatim rather than hidden: several omitted names or state, and none
+issued a configured simulator-control verb. The slowest recorded request was
+363.92 ms; this is model-side inference evidence only, not an end-to-end
+radio-latency claim. The result therefore demonstrates a functioning local
+model/runtime pair but does not approve unvalidated Natural Speech output. D2
+must enforce its validator and immediate deterministic fallback before any
+response can be spoken. The safety-boundary case confirms the model was told
+the action is ineligible; D2 must enforce that exclusion before a request can
+reach this model.
 
 Windows VM execution remains pending unless the Alpha owner explicitly accepts
 this physical-target Windows run as its substitute. This record also does not
