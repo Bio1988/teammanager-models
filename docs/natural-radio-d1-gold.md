@@ -72,10 +72,11 @@ response can be spoken. The safety-boundary case confirms the model was told
 the action is ineligible; D2 must enforce that exclusion before a request can
 reach this model.
 
-Windows VM execution remains pending unless the Alpha owner explicitly accepts
-this physical-target Windows run as its substitute. This record also does not
-turn the development release into an installer input: Race Engineer must pin
-the approved immutable inputs in its closed build lock before D2 can use them.
+For the private Alpha, the owner explicitly accepts this physical-target
+Windows run as the Windows execution criterion; no additional VM run is
+required. This record also does not turn the development release into an
+installer input: Race Engineer must pin the approved immutable inputs in its
+closed build lock before D2 can use them.
 
 Verify the committed result without starting a model:
 
