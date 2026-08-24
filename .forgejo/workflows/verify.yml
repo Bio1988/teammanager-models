@@ -10,7 +10,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # The active local Forgejo runner advertises ai-box. The generic
+    # ubuntu-latest label selects an unavailable default container image and
+    # fails before the verifier can run.
+    runs-on: ai-box
     steps:
       - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
