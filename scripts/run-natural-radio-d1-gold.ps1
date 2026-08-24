@@ -1,11 +1,15 @@
 param(
     [string]$ServerUrl = 'http://127.0.0.1:18878',
-    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\natural-radio-d1-gold-results.json'),
+    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\natural-radio-d1-gold-cases.json'),
     [string]$OutputPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $record = Get-Content -LiteralPath $CaseFile -Raw | ConvertFrom-Json
+$uri = [Uri]$ServerUrl
+if ($uri.Scheme -ne 'http' -or $uri.Host -ne '127.0.0.1') {
+    throw 'ServerUrl must be an http://127.0.0.1 loopback URL.'
+}
 $instruction = [string]$record.system_instruction
 $forbidden = @($record.acceptance.forbidden_terms)
 $maximumWords = [int]$record.acceptance.maximum_words
@@ -49,9 +53,13 @@ $results = foreach ($case in $record.cases) {
 $output = [PSCustomObject]@{
     schema = 1
     evaluation = $record.evaluation
+    ran_at = [DateTime]::UtcNow.ToString('o')
+    case_file_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $CaseFile).Hash.ToLowerInvariant()
     inputs = $record.inputs
     environment = $record.environment
+    system_instruction = $instruction
     acceptance = $record.acceptance
+    limits = $record.limits
     cases = $results
     passed = @($results | Where-Object { -not $_.passed }).Count -eq 0
 }

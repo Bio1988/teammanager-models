@@ -24,7 +24,9 @@ jobs:
       - name: Validate immutable Alpha build-input records
         run: |
           python3 - <<'PY'
+          import hashlib
           import json
+          import re
           from pathlib import Path
 
           root = Path(".")
@@ -64,4 +66,40 @@ jobs:
           )
           document = "\n".join(lines)
           assert all(text in document for text in required_docs)
+
+          case_path = root / "docs" / "natural-radio-d1-gold-cases.json"
+          result_path = root / "docs" / "natural-radio-d1-gold-results.json"
+          cases = json.loads(case_path.read_text(encoding="utf-8"))
+          result = json.loads(result_path.read_text(encoding="utf-8"))
+          assert result["case_file_sha256"] == hashlib.sha256(case_path.read_bytes()).hexdigest()
+          assert result["system_instruction"] == cases["system_instruction"]
+          assert result["acceptance"] == cases["acceptance"]
+          assert result["limits"] == cases["limits"]
+          assert len(result["cases"]) == len(cases["cases"])
+
+          forbidden = cases["acceptance"]["forbidden_terms"]
+          maximum_words = cases["acceptance"]["maximum_words"]
+          passed = []
+          for spec, observed in zip(cases["cases"], result["cases"], strict=True):
+              assert observed["id"] == spec["id"]
+              assert observed["fact"] == spec["fact"]
+              assert observed["required_terms"] == spec["required_terms"]
+              assert observed["expected_response"] == spec["expected_response"]
+              text = observed["response"].strip()
+              missing = [term for term in spec["required_terms"] if term.lower() not in text.lower()]
+              found_forbidden = [term for term in forbidden if re.search(rf"(?i)(?<![A-Za-z]){re.escape(term)}(?![A-Za-z])", text)]
+              words = len(text.split())
+              accepted = (
+                  observed["finish_reason"] == "stop"
+                  and words <= maximum_words
+                  and not missing
+                  and not found_forbidden
+                  and text == spec["expected_response"]
+              )
+              assert observed["words"] == words
+              assert observed["missing_terms"] == missing
+              assert observed["forbidden_terms"] == found_forbidden
+              assert observed["passed"] is accepted
+              passed.append(accepted)
+          assert result["passed"] is all(passed)
           PY

@@ -20,15 +20,16 @@ Run the server on an unused loopback port only:
 Release/llama-server.exe -m race-engineer-qwen3-0.6b-q4_k_m.gguf --host 127.0.0.1 --port <unused-port> --parallel 1 -c 4096 --jinja --no-webui
 ```
 
-For every case in the retained result, submit one `/v1/chat/completions`
-request with temperature `0`, `max_tokens` `80`, one slot, and this system
-instruction:
+For every case in the retained
+[`natural-radio-d1-gold-cases.json`](natural-radio-d1-gold-cases.json), submit
+one `/v1/chat/completions` request with temperature `0`, `max_tokens` `80`, one
+slot, and this system instruction:
 
 ```text
 You are an English race-radio renderer. Return exactly one short radio
-sentence. This is a closed factual transform: include every named person,
-number, unit, state, and reason from the input. Never add, infer, advise, or
-command. If a fact says unavailable or stale, preserve both words.
+sentence. The user provides a fact and REQUIRED LITERALS. Include every
+required literal exactly, case-insensitively. Never add, infer, advise, or
+issue a simulator command.
 ```
 
 The input contains the case's `fact` and its `required_terms` verbatim. A
@@ -45,7 +46,7 @@ Run the retained evaluator against an already running loopback server:
 pwsh -NoProfile -File scripts/run-natural-radio-d1-gold.ps1 -ServerUrl http://127.0.0.1:<unused-port> -OutputPath .\natural-radio-d1-gold-rerun.json
 ```
 
-The script reads the retained cases, sends the exact requests, records the
+The script reads the retained cases, rejects any non-loopback `ServerUrl`, sends the exact requests, records the
 per-case finish reason and response, and exits non-zero when any requirement
 fails. It never starts a process, changes a runtime configuration, or contacts
 the network beyond the specified loopback server.
@@ -75,3 +76,9 @@ Windows VM execution remains pending unless the Alpha owner explicitly accepts
 this physical-target Windows run as its substitute. This record also does not
 turn the development release into an installer input: Race Engineer must pin
 the approved immutable inputs in its closed build lock before D2 can use them.
+
+Verify the committed result without starting a model:
+
+```powershell
+pwsh -NoProfile -File scripts/test-natural-radio-d1-gold-record.ps1
+```

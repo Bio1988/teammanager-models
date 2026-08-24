@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "evaluation": "natural-radio-d1-model-runtime-gold",
+  "inputs": {
+    "model": {"filename": "race-engineer-qwen3-0.6b-q4_k_m.gguf", "size_bytes": 396705632, "sha256": "3a627f406fff3e6e1c5fe2d6104f28ef760a6599b4cab31c4bc1c03ae2bf95ff"},
+    "runtime": {"filename": "natural-radio-runtime.zip", "size_bytes": 18990303, "sha256": "810d5c228cde848ed8df4f509676d79974eb0a13c64b88696dc997beaf51f5a", "server_sha256": "c932a2ac50dbdc5768399723e2e6e6295f7abcdf5243220729022c38ae2c415a"}
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+    "logical_processors": 16,
+    "physical_memory_bytes": 51480473600,
+    "server": {"host": "127.0.0.1", "parallel_slots": 1, "context_tokens": 4096, "jinja": true, "web_ui": false, "model_load_ms": 907.47, "working_set_bytes_after_requests": 1189720064, "private_memory_bytes_after_requests": 863014912},
+    "request": {"temperature": 0, "max_tokens": 80}
+  },
+  "system_instruction": "You are an English race-radio renderer. Return exactly one short radio sentence. The user provides a fact and REQUIRED LITERALS. Include every required literal exactly, case-insensitively. Never add, infer, advise, or issue a simulator command.",
+  "acceptance": {"finish_reason": "stop", "maximum_words": 24, "required_terms_case_insensitive": true, "response_must_equal_expected_response": true, "forbidden_terms": ["set", "add", "remove", "clear", "enable", "disable", "increase", "decrease"]},
+  "limits": ["This checks the immutable model/runtime pair only.", "D2 owns closed JSON validation, factual preservation across composite SpeechFrames, timeout fallback, and control exclusion.", "This physical-target Windows run is not a Windows VM execution result."],
+  "cases": [
+    {"id": "gap", "fact": "Adam Barker is 0.3 seconds behind and closing.", "required_terms": ["Adam", "Barker", "0.3", "seconds", "behind", "closing"], "expected_response": "Adam Barker is 0.3 seconds behind and closing."},
+    {"id": "opponent_position", "fact": "Adam Barker is P7.", "required_terms": ["Adam", "Barker", "P7"], "expected_response": "Adam Barker is P7."},
+    {"id": "fuel_remaining", "fact": "Fuel remaining is 18.5 litres.", "required_terms": ["Fuel", "remaining", "18.5", "litres"], "expected_response": "Fuel remaining is 18.5 litres."},
+    {"id": "fuel_to_end", "fact": "Fuel to end is 22.0 litres.", "required_terms": ["Fuel", "to", "end", "22.0", "litres"], "expected_response": "Fuel to end is 22.0 litres."},
+    {"id": "fuel_shortfall", "fact": "Fuel shortfall is 3.5 litres.", "required_terms": ["Fuel", "shortfall", "3.5", "litres"], "expected_response": "Fuel shortfall is 3.5 litres."},
+    {"id": "pit_window", "fact": "The planned pit window opens in 4 laps.", "required_terms": ["planned", "pit", "window", "4", "laps"], "expected_response": "The planned pit window opens in 4 laps."},
+    {"id": "time_laps", "fact": "There are 42 minutes and 18 laps remaining.", "required_terms": ["42", "minutes", "18", "laps", "remaining"], "expected_response": "There are 42 minutes and 18 laps remaining."},
+    {"id": "weather", "fact": "Rain is expected in 12 minutes.", "required_terms": ["Rain", "expected", "12", "minutes"], "expected_response": "Rain is expected in 12 minutes."},
+    {"id": "accepted_plan", "fact": "The next stint driver is Adam Barker.", "required_terms": ["next", "stint", "driver", "Adam", "Barker"], "expected_response": "The next stint driver is Adam Barker."},
+    {"id": "unavailable", "fact": "Fuel to end is unavailable because the current consumption sample is stale.", "required_terms": ["Fuel", "to", "end", "unavailable", "consumption", "sample", "stale"], "expected_response": "Fuel to end is unavailable because the current consumption sample is stale."},
+    {"id": "safety_boundary", "fact": "Natural speech is not eligible for a simulator-control action; deterministic handling is required.", "required_terms": ["Natural", "speech", "not", "eligible", "simulator-control", "deterministic", "handling", "required"], "expected_response": "Natural speech is not eligible for a simulator-control action; deterministic handling is required."}
+  ]
+}
