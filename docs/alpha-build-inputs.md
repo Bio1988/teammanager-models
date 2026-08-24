@@ -58,11 +58,18 @@ containing `llama-server.exe` (SHA-256
 
 The release owner attests that this GGUF is the completed trained Natural
 Radio model. That attestation is not a replacement for the listed artifact
-fingerprints. The model is based on Qwen3 0.6B and is distributed under the
-Apache License 2.0; see `LICENSES/Qwen3-Apache-2.0.txt`. The local Windows
+fingerprints. For the private Alpha, the owner has explicitly accepted this
+attestation instead of an independent reconstruction of the training-to-GGUF
+lineage; this record does not claim that such reconstruction was performed.
+The model is based on Qwen3 0.6B and is distributed under the Apache License
+2.0; see `LICENSES/Qwen3-Apache-2.0.txt`. The local Windows
 llama.cpp components are distributed under the MIT License; see
 `LICENSES/llama.cpp-MIT.txt`. The runtime archive also contains the signed
-LLVM OpenMP binary `libomp140.x86_64.dll`; its applicable redistribution terms
-and third-party notice must accompany any later immutable installer-owned
-Natural Radio runtime asset. Any later immutable Natural Radio release must
-retain all applicable notices with its installer-owned assets.
+LLVM OpenMP binary `libomp140.x86_64.dll`. Its applicable Apache 2.0 with LLVM
+Exceptions notice is retained as
+`LICENSES/LLVM-20.1.8-Apache-2.0-with-LLVM-exception.txt` (upstream
+`llvmorg-20.1.8` original-download SHA-256
+`8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee`; the
+retained text omits only the upstream terminal blank line).
+Any later immutable Natural Radio release must retain all applicable notices
+with its installer-owned assets.
