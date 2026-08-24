@@ -36,3 +36,7 @@ and any Whisper model other than the explicitly selected optional
 `whisper-small-q5_1` must not be selected, fetched, or interpreted by the
 Alpha runtime. The optional Small input may be downloaded only after explicit
 user action; it is never fetched or selected automatically.
+
+Current Race Engineer `main` does not list Natural Radio assets in its closed
+`build/alpha-models.lock.json`. Historical Models release records therefore do
+not make Natural Radio a current installer input or runtime authority.
