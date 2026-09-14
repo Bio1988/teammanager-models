@@ -68,8 +68,11 @@ Every PR states production files, packages, dependencies, and database tables ad
 - Race Engineer pins required Alpha inputs in its closed
   `build/alpha-models.lock.json` and packages them into the complete Windows
   installer.
-- Only `whisper-small-q5_1` may be downloaded after installation, solely after
-  explicit user action and never automatically.
+- Only these four explicitly selected Speech to Text models may be downloaded
+  after installation, solely after explicit user action and never
+  automatically: `whisper-small-q5_1`,
+  `moonshine-tiny-streaming-en`, `moonshine-small-streaming-en`, and
+  `moonshine-medium-streaming-en`. The list is closed and English-only.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and

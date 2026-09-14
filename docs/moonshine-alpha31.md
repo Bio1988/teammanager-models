@@ -28,20 +28,22 @@ packages:
 | `moonshine-helper.exe` | TeamManager helper built from the pinned static SDK |
 | `onnxruntime.dll` | `lib/onnxruntime.dll` from the pinned SDK archive |
 | `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` | MSVC x64 redistributable runtime required by ONNX Runtime and the helper |
-| `moonshine-LICENSE`, `onnxruntime-LICENSE` | Retained MIT notices |
+| `moonshine-MIT.txt`, `onnxruntime-MIT.txt` | Retained MIT notices |
 
-Planned immutable release record (to be completed when the Windows build runs
-and the archive is published):
+Measured immutable release record (publication pending clean-machine
+verification):
 
 | Field | Value |
 | --- | --- |
 | Input ID | `moonshine-runtime` |
 | Filename | `teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` |
 | Release tag | `moonshine-v0.1.5` |
+| Intended immutable URL (not published) | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` |
 | Target | `moonshine/runtime` |
-| Size and SHA-256 | **Pending the Windows helper build; record before pinning the installer lock.** |
+| Size and SHA-256 | 11,455,945 bytes; `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335` |
+| Archive layout | Flat root with the six runtime contract files and `moonshine-MIT.txt`, `onnxruntime-MIT.txt`; no nested directory and no model weights. |
 | Upstream revision | `234f60faa0eb388b01cdf7e60aca232af37aefda` |
-| License | MIT (Moonshine), MIT (ONNX Runtime), Microsoft redistributable terms (VC runtime) |
+| License | Component licenses: Moonshine MIT; ONNX Runtime MIT; Microsoft [Visual C++ redistributable terms](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution) for the bundled VC runtime; TeamManager helper code is proprietary under Race Engineer's TeamManager LICENSE. The ZIP has no single umbrella license. |
 
 Build command (Developer PowerShell for VS 2022, Windows x64):
 
@@ -50,6 +52,15 @@ Build command (Developer PowerShell for VS 2022, Windows x64):
   -SdkArchive <moonshine-voice-windows-x86_64.tar.gz> `
   -OutDir <staging>/moonshine/runtime
 ```
+
+The measured Windows x64 build used Visual Studio Build Tools 17.14.40,
+MSVC 19.44.35228.0, Windows SDK 10.0.26100.0, and CMake's Visual Studio 17
+2022 generator. It completed with exit code 0. The extracted runtime archive
+answered `health`, loaded each of the Tiny, Small, and Medium English model
+directories, completed `stream_begin`/audio/update/finish/`stream_close`, and
+answered `shutdown`; each helper process exited with code 0. The smoke input
+was a synthetic 16-kHz mono PCM16 English phrase, so this record makes no
+clean-machine, microphone, or iRacing performance claim.
 
 ## Optional model downloads
 
@@ -115,6 +126,12 @@ release assets.
 
 ## License material
 
+- The runtime ZIP is a mixed-license component bundle; it is not represented
+  as a single MIT-licensed work. The Moonshine SDK/library is covered by the
+  Moonshine MIT notice, ONNX Runtime by its MIT notice, and the VC runtime DLLs
+  by Microsoft's redistributable terms. The TeamManager helper code remains
+  proprietary under Race Engineer's TeamManager LICENSE; these third-party
+  notices do not reclassify it.
 - Moonshine and the three English streaming models are MIT licensed. See
   `LICENSES/moonshine-MIT.txt` (the v0.1.5 repository license) and the
   upstream model cards.

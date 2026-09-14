@@ -67,6 +67,20 @@ jobs:
           document = "\n".join(lines)
           assert all(text in document for text in required_docs)
 
+          moonshine_section = document.split("## Alpha 31 Moonshine increment", 1)[1]
+          for asset_id in (
+              "moonshine-runtime",
+              "moonshine-tiny-streaming-en",
+              "moonshine-small-streaming-en",
+              "moonshine-medium-streaming-en",
+          ):
+              assert f"`{asset_id}`" in moonshine_section
+          assert "11455945" in moonshine_section
+          assert "718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335" in moonshine_section
+          assert "Visual C++ redistributable terms" in moonshine_section
+          assert "The ZIP has no single umbrella license" in moonshine_section
+          assert "these notices do not reclassify TeamManager helper code" in moonshine_section
+
           case_path = root / "docs" / "natural-radio-d1-gold-cases.json"
           result_path = root / "docs" / "natural-radio-d1-gold-results.json"
           cases = json.loads(case_path.read_text(encoding="utf-8"))
