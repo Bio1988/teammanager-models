@@ -30,15 +30,16 @@ packages:
 | `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` | MSVC x64 redistributable runtime required by ONNX Runtime and the helper |
 | `moonshine-MIT.txt`, `onnxruntime-MIT.txt` | Retained MIT notices |
 
-Measured immutable release record (publication pending clean-machine
-verification):
+Published immutable release record (clean Windows verification without Visual
+Studio pending):
 
 | Field | Value |
 | --- | --- |
 | Input ID | `moonshine-runtime` |
 | Filename | `teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` |
 | Release tag | `moonshine-v0.1.5` |
-| Intended immutable URL (not published) | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` |
+| Canonical immutable URL | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` |
+| Publication status | Published in `moonshine-v0.1.5`; canonical URL and full public readback verified. Clean Windows verification without Visual Studio remains pending. |
 | Target | `moonshine/runtime` |
 | Size and SHA-256 | 11,455,945 bytes; `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335` |
 | Archive layout | Flat root with the six runtime contract files and `moonshine-MIT.txt`, `onnxruntime-MIT.txt`; no nested directory and no model weights. |
@@ -53,7 +54,10 @@ Build command (Developer PowerShell for VS 2022, Windows x64):
   -OutDir <staging>/moonshine/runtime
 ```
 
-The measured Windows x64 build used Visual Studio Build Tools 17.14.40,
+The product owner authorized publication after the measured local build and
+synthetic smoke evidence. The canonical release URL was then read back in full
+and matched the recorded 11,455,945 bytes and SHA-256. The measured Windows x64
+build used Visual Studio Build Tools 17.14.40,
 MSVC 19.44.35228.0, Windows SDK 10.0.26100.0, and CMake's Visual Studio 17
 2022 generator. It completed with exit code 0. The extracted runtime archive
 answered `health`, loaded each of the Tiny, Small, and Medium English model
