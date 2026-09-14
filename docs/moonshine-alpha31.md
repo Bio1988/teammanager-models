@@ -123,4 +123,8 @@ release assets.
 - The VC runtime DLLs are Microsoft redistributables. They are copied from the
   installed Visual Studio redistributable directory by the helper build
   script; no separate license file is published by that directory.
-- The runtime and model packages must ship the MIT notices as attribution.
+- The runtime package ships the MIT notices beside the helper binaries. The
+  model archives intentionally contain exactly the eight model files and no
+  notice files, so the exact-file verifier stays closed; the notices shipped
+  with Race Engineer (`LICENSES/` in this repository and in race-engineer-go)
+  provide the attribution for the downloaded models.
