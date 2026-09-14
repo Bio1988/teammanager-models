@@ -37,6 +37,35 @@ and any Whisper model other than the explicitly selected optional
 Alpha runtime. The optional Small input may be downloaded only after explicit
 user action; it is never fetched or selected automatically.
 
+## Alpha 31 Moonshine increment
+
+The table above is the historical first-Alpha record and remains unchanged.
+Race Engineer's current `build/alpha-models.lock.json` is the authority for
+the Alpha 31 installer inputs. This section records the planned Alpha 31
+Moonshine lock additions. The three optional model assets are published; the
+runtime asset and its corresponding required lock entry remain pending
+publication and integration. This section does not replace or reinterpret the
+historical table.
+
+The upstream pin is [moonshine-ai/moonshine v0.1.5](https://github.com/moonshine-ai/moonshine/releases/tag/v0.1.5),
+annotated tag `bf6ae1590d0928fd704772d0e80d6fef39424be8`, resolving to commit
+`234f60faa0eb388b01cdf7e60aca232af37aefda`.
+
+| Alpha 31 class | ID | URL | Publication status | Size (bytes) | SHA-256 | Licence and upstream provenance |
+| --- | --- | --- | --- | ---: | --- | --- |
+| Alpha 31 required | `moonshine-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` | Not published; pending clean-machine verification, release publication, and Race Engineer lock integration. | 11455945 | `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335` | Component licenses: Moonshine MIT and ONNX Runtime MIT; Microsoft [Visual C++ redistributable terms](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution) for the bundled VC runtime. The ZIP has no single umbrella license. TeamManager helper code remains proprietary under Race Engineer's TeamManager LICENSE; these notices do not reclassify TeamManager helper code. TeamManager Windows x64 helper runtime built from the pinned Moonshine revision. |
+| Alpha 31 optional | `moonshine-tiny-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-tiny-streaming-en-quantized_26_08_21-r1.zip` | Published immutable Forgejo release asset. | 36624898 | `41e1882d3ddc7c8a70778224879c929f9b4d87f77c57e9f031757bb27751e3c5` | MIT; see `LICENSES/moonshine-MIT.txt`. English streaming model from the pinned Moonshine revision. |
+| Alpha 31 optional | `moonshine-small-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-small-streaming-en-quantized_26_08_21-r1.zip` | Published immutable Forgejo release asset. | 121672393 | `ce697ac0dcf1b5b949b4ba1beba4dd19e2c2042c335e26e620ff28706ef8de00` | MIT; see `LICENSES/moonshine-MIT.txt`. English streaming model from the pinned Moonshine revision. |
+| Alpha 31 optional | `moonshine-medium-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-medium-streaming-en-quantized_26_08_21-r1.zip` | Published immutable Forgejo release asset. | 236904989 | `d22e9adbb0232db4fcc2d5594d0155965efd47222fccd59cda38dd84f0e07305` | MIT; see `LICENSES/moonshine-MIT.txt`. English streaming model from the pinned Moonshine revision. |
+
+The runtime archive is measured but remains pending publication after the
+required clean-machine verification. It has a flat root containing the six
+runtime contract files and `moonshine-MIT.txt`, `onnxruntime-MIT.txt`; it
+contains no optional model weights. The three optional archives each contain
+exactly the eight pinned `quantized_26_08_21` files and are downloaded only
+after explicit user action. The closed current optional list is Whisper Small
+plus these three English Moonshine models; Whisper Base remains the default.
+
 Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do
 not make Natural Radio a current installer input or runtime authority.
