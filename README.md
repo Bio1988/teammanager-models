@@ -7,9 +7,20 @@ Race Engineer does **not** fetch this repository's `manifest.json`, signature,
 checksum sidecars, release metadata, or a catalog at runtime. Required Alpha
 components are verified while building Race Engineer and packaged into the one
 complete Windows installer. This repository is not a runtime model registry.
-Only the explicitly selected optional Whisper `small-q5_1` model may be
-downloaded after installation; it is never downloaded or selected
-automatically.
+Only these explicitly selected optional Speech to Text models may be
+downloaded after installation, and only after an explicit user action:
+
+- Whisper `small-q5_1`
+- Moonshine `moonshine-tiny-streaming-en`
+- Moonshine `moonshine-small-streaming-en`
+- Moonshine `moonshine-medium-streaming-en`
+
+The list is closed. A downloaded model is never selected automatically, and
+Whisper Base remains the stable default.
+
+Moonshine provenance, the pinned upstream release, and the packaged archive
+integrity values are in
+[docs/moonshine-alpha31.md](docs/moonshine-alpha31.md).
 
 The exact Alpha inputs, integrity values, licences, and provenance are in
 [docs/alpha-build-inputs.md](docs/alpha-build-inputs.md). Race Engineer records
