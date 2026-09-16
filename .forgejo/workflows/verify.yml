@@ -48,12 +48,13 @@ jobs:
           assert required == [
               "pocket-runtime",
               "pocket-english",
+              "pocket-english-config",
               "pocket-alba",
               "whisper-runtime",
               "whisper-base-q5_1",
           ]
           assert optional == ["whisper-small-q5_1"]
-          assert len(rows) == 6
+          assert len(rows) == 7
 
           required_docs = (
               "These immutable Forgejo release assets are the only model/runtime inputs for",
