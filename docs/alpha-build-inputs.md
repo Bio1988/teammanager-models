@@ -1,19 +1,15 @@
 # Alpha build inputs
 
 These immutable Forgejo release assets are the only model/runtime inputs for
-the first private TeamManager Alpha. Race Engineer pins its **required** and
-**optional** installer inputs in its closed `build/alpha-models.lock.json` and
-copies the required ones into its complete Windows installer. It knows the one
-**optional** input only for an explicit, user-confirmed download. URLs, sizes,
-and hashes below were recorded from the Forgejo releases on 2026-08-02;
-the Pocket 3.1.0 runtime and its English config overlay were recorded on
-2026-09-16.
+the first private TeamManager Alpha. Race Engineer copies the five **required**
+inputs into its complete Windows installer. It knows the one **optional** input
+only for an explicit, user-confirmed download. URLs, sizes, and hashes below
+were recorded from the Forgejo releases on 2026-08-02.
 
 | Class | ID | Immutable URL | Size (bytes) | SHA-256 | Licence and upstream provenance |
 | --- | --- | --- | ---: | --- | --- |
-| Required | `pocket-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-runtime-win-cpu-v3.1.0-r2.zip` | 278866753 | `55a11ac8bf1b2662640426aa712f64f6b0551f62d3e7729a1ac35d2c0fcd40ad` | MIT and bundled upstream dependency licences. TeamManager Windows CPU package of Kyutai Pocket TTS 3.1.0, Python 3.11.9 and CPU-only wheels; model revision `39592ff23c9ef80098bb74895d104c26275fe2c9`. Supersedes the never-consumed `pocket-tts-v3.1.0-r1` prerelease, which is retained unchanged but must not be used. |
-| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-model-en-v2.1.0.zip` | 219090877 | `97889ede2dad2f82dbcabe2e52cca4544fefb4cfb1ae5a201e7e69b15e87bcf5` | CC-BY-4.0 with upstream model-card terms. Kyutai Pocket TTS English model, revision `39592ff23c9ef80098bb74895d104c26275fe2c9`. Immutable model bytes shared by Pocket 2.1 and 3.1; the runtime upgrade does not republish them. |
-| Required | `pocket-english-config` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-model-en-config-v3.1.0-r1.zip` | 739 | `fe5b3e6b7c5be1c73ba43e05476d0c4b0ad23142cf2035423a6fa9221bf2daf9` | CC-BY-4.0 with upstream model-card terms. Pocket TTS 3.1.0 English generation config (`default_temperature: 0.3`) from the pinned `pocket_tts==3.1.0` wheel, with local model-pack weight and tokenizer paths. TeamManager packaging only. |
+| Required | `pocket-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-runtime-win-cpu-v2.1.0-r3.zip` | 306398674 | `b6994cfc4fa48799c59473378baf0e228265cd4562ee61890615ac66b4df4713` | MIT and bundled upstream dependency licences. TeamManager Windows CPU package of [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts), model revision `39592ff23c9ef80098bb74895d104c26275fe2c9`. |
+| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0/pocket-model-en-v2.1.0.zip` | 219090877 | `97889ede2dad2f82dbcabe2e52cca4544fefb4cfb1ae5a201e7e69b15e87bcf5` | CC-BY-4.0 with upstream model-card terms. Kyutai Pocket TTS English model, revision `39592ff23c9ef80098bb74895d104c26275fe2c9`. |
 | Required | `pocket-alba` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v2.1.0-r3/pocket-voice-alba-v2.1.0-r3.zip` | 6195421 | `53dee14d891fe666e35151511888ca7281582c8c55268a02b2181220881a7f1d` | CC0-1.0 catalog voice state. Official Kyutai Pocket TTS Alba voice, immutable upstream revision `e041936c75475d350b405bc870bcf7c22da4e9e6`. |
 | Required | `whisper-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whispercpp-v1.9.1/teammanager-whisper-runtime-only-win-x64-v1.9.1.zip` | 4505044 | `6ac6eecf51eb0e84bf091bc06d7c2dbb700fef3e4b4e38bb6de1b852b47ba0b6` | MIT; see `LICENSES/whisper.cpp-MIT.txt`. TeamManager runtime-only package of [ggml-org/whisper.cpp v1.9.1](https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.1), upstream archive SHA-256 `7d8be46ecd31828e1eb7a2ecdd0d6b314feafd82163038ab6092594b0a063539`. |
 | Required | `whisper-base-q5_1` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/whisper-q5-v1/ggml-base-q5_1.bin` | 59707625 | `422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898` | MIT; see `LICENSES/openai-whisper-MIT.txt`. Immutable q5_1 mirror of the OpenAI Whisper base model, converted for whisper.cpp from [ggerganov/whisper.cpp revision `5359861c739e955e79d9a303bcbc70fb988958b1`](https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1). |
@@ -40,6 +36,18 @@ and any Whisper model other than the explicitly selected optional
 `whisper-small-q5_1` must not be selected, fetched, or interpreted by the
 Alpha runtime. The optional Small input may be downloaded only after explicit
 user action; it is never fetched or selected automatically.
+
+## Pocket TTS 3.1.0 release provenance (2026-09-16)
+
+Race Engineer Alpha 2's closed `build/alpha-models.lock.json` is the authority
+for installer inputs. This dated record documents assets published in the
+`pocket-tts-v3.1.0-r2` prerelease; it does not revise the historical first-Alpha
+table or select these assets for an installer.
+
+| Asset | Immutable URL | Size (bytes) | SHA-256 | Licence and upstream provenance |
+| --- | --- | ---: | --- | --- |
+| Pocket TTS Windows CPU runtime `pocket-runtime-win-cpu-v3.1.0-r2.zip` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-runtime-win-cpu-v3.1.0-r2.zip` | 278866753 | `55a11ac8bf1b2662640426aa712f64f6b0551f62d3e7729a1ac35d2c0fcd40ad` | MIT and bundled upstream dependency licences. TeamManager Windows CPU package of Kyutai Pocket TTS 3.1.0, Python 3.11.9 and CPU-only wheels; model revision `39592ff23c9ef80098bb74895d104c26275fe2c9`. It supersedes the never-consumed `pocket-tts-v3.1.0-r1` prerelease, which remains unchanged. |
+| Pocket English generation config `pocket-model-en-config-v3.1.0-r1.zip` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-model-en-config-v3.1.0-r1.zip` | 739 | `fe5b3e6b7c5be1c73ba43e05476d0c4b0ad23142cf2035423a6fa9221bf2daf9` | CC-BY-4.0 with upstream model-card terms. Pocket TTS 3.1.0 English generation config (`default_temperature: 0.3`) from the pinned `pocket_tts==3.1.0` wheel, with local model-pack weight and tokenizer paths. |
 
 ## Alpha 31 Moonshine increment
 

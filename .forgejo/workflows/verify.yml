@@ -48,13 +48,12 @@ jobs:
           assert required == [
               "pocket-runtime",
               "pocket-english",
-              "pocket-english-config",
               "pocket-alba",
               "whisper-runtime",
               "whisper-base-q5_1",
           ]
           assert optional == ["whisper-small-q5_1"]
-          assert len(rows) == 7
+          assert len(rows) == 6
 
           required_docs = (
               "These immutable Forgejo release assets are the only model/runtime inputs for",
@@ -67,6 +66,20 @@ jobs:
           )
           document = "\n".join(lines)
           assert all(text in document for text in required_docs)
+
+          pocket31_section = document.split("## Pocket TTS 3.1.0 release provenance (2026-09-16)", 1)[1].split("\n## ", 1)[0]
+          assert "Race Engineer Alpha 2's closed `build/alpha-models.lock.json` is the authority" in pocket31_section
+          assert "does not revise the historical first-Alpha" in pocket31_section
+          assert "table or select these assets for an installer." in pocket31_section
+          for asset_record in (
+              "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-runtime-win-cpu-v3.1.0-r2.zip",
+              "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-v3.1.0-r2/pocket-model-en-config-v3.1.0-r1.zip",
+          ):
+              assert asset_record in pocket31_section
+          assert "278866753" in pocket31_section
+          assert "55a11ac8bf1b2662640426aa712f64f6b0551f62d3e7729a1ac35d2c0fcd40ad" in pocket31_section
+          assert "739" in pocket31_section
+          assert "fe5b3e6b7c5be1c73ba43e05476d0c4b0ad23142cf2035423a6fa9221bf2daf9" in pocket31_section
 
           moonshine_section = document.split("## Alpha 31 Moonshine increment", 1)[1]
           for asset_id in (
