@@ -86,6 +86,27 @@ Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do
 not make Natural Radio a current installer input or runtime authority.
 
+## MiniLM intent embedding model
+
+Race Engineer copies the local voice-intent embedding model into every complete
+Windows installer as three required, hash-pinned files
+(`build/alpha-models.lock.json` ids `minilm-model`, `minilm-vocab`,
+`minilm-license`). It is a build input only: the installed files are
+`runtime/intent/all-MiniLM-L6-v2-quint8-avx2.onnx`,
+`runtime/intent/all-MiniLM-L6-v2-vocab.txt` and
+`runtime/licenses/minilm-LICENSE-Apache-2.0.txt`, and the application falls
+back to typed rules when they are missing. ONNX Runtime is reused from the
+Moonshine runtime. The files are unmodified upstream files from
+[sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+(`onnx/model_quint8_avx2.onnx` and `vocab.txt`), renamed only; the release also
+carries `NOTICE.md` and `SHA256SUMS`.
+
+| Class | ID | Immutable URL | Size (bytes) | SHA-256 | Licence and upstream provenance |
+| --- | --- | --- | ---: | --- | --- |
+| Installer required | `minilm-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/all-MiniLM-L6-v2-quint8-avx2.onnx` | 23046789 | `b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21` | Apache-2.0; see the release's `LICENSE-Apache-2.0.txt`. Quantised (quint8, AVX2) ONNX export of all-MiniLM-L6-v2 from the sentence-transformers authors. |
+| Installer required | `minilm-vocab` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/all-MiniLM-L6-v2-vocab.txt` | 231508 | `07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3` | Apache-2.0. WordPiece vocabulary that belongs to the model above. |
+| Installer required | `minilm-license` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | Apache License 2.0 text shipped under `runtime/licenses/` with the model. |
+
 ## Natural Radio release record
 
 `natural-radio-qwen3-0.6b-dev.1` is an immutable development release. It is

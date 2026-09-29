@@ -95,6 +95,16 @@ jobs:
           assert "The ZIP has no single umbrella license" in moonshine_section
           assert "these notices do not reclassify TeamManager helper code" in moonshine_section
 
+          minilm_section = document.split("## MiniLM intent embedding model", 1)[1].split("\n## ", 1)[0]
+          for asset_id, size, digest in (
+              ("minilm-model", "23046789", "b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21"),
+              ("minilm-vocab", "231508", "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"),
+              ("minilm-license", "11358", "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"),
+          ):
+              record = next(line for line in minilm_section.splitlines() if f"`{asset_id}`" in line and line.startswith("|"))
+              assert "minilm-l6-v2-quint8-avx2-r1" in record and size in record and digest in record
+          assert "Apache-2.0" in minilm_section
+
           case_path = root / "docs" / "natural-radio-d1-gold-cases.json"
           result_path = root / "docs" / "natural-radio-d1-gold-results.json"
           cases = json.loads(case_path.read_text(encoding="utf-8"))
