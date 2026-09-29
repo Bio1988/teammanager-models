@@ -68,27 +68,14 @@ Every PR states production files, packages, dependencies, and database tables ad
 - Race Engineer pins required Alpha inputs in its closed
   `build/alpha-models.lock.json` and packages them into the complete Windows
   installer.
-- Only these four explicitly selected Speech to Text models may be downloaded
-  after installation, solely after explicit user action and never
-  automatically: `whisper-small-q5_1`,
-  `moonshine-tiny-streaming-en`, `moonshine-small-streaming-en`, and
-  `moonshine-medium-streaming-en`. The list is closed and English-only.
+- Only `whisper-small-q5_1` may be downloaded after installation, solely after
+  explicit user action and never automatically.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and
   provenance records.
 
-## Codex Model and Execution Policy
-
-Use `gpt-6-astra` for TeamManager orchestration, planning, and independent
-review. Use `gpt-5.6-luna` for discovery, implementation, test execution, and
-documentation work unless the user explicitly selects another model. Preserve
-supported reasoning effort; use `low` instead of `none` or `minimal`, and
-`xhigh` for Luna work previously assigned unsupported `ultra` effort. Use the
-configured TeamManager roles or explicitly select the matching model for a
-generic worker. Do not silently replace Luna workers with Astra, Terra, or Sol.
-This policy concerns the coding agent, not the product's speech or inference
-models.
+## Working agreements
 
 ### Task Execution & Autonomy
 - For implementation or fix requests, carry the authorized work through implementation and relevant verification. Do not stop at a proposed plan when you can proceed.
@@ -116,3 +103,31 @@ an explicit planning-only request or requested pause. Do not create separate
 user-visible Codex tasks unless the user asks for them. Existing independent
 review, merge, release, and production approval requirements still apply;
 approval already given in the current task need not be requested again.
+
+## Worktrees, branches and test runs
+
+- Work in a dedicated git worktree next to the primary clone (`/home/jarvis/Projects/Team-Manager/<short-name>`), created from current Forgejo `main`.
+- When the pull request is merged or abandoned, remove the worktree (`git worktree remove`) and delete the local and remote branch. Do not keep finished worktrees around.
+- Run at most one heavy test suite (Playwright, full `npm test`, `go test ./...`) per worktree at a time, and wrap it with `mem-guard 8000000 <command>` (`~/.local/bin/mem-guard`) so a runaway process cannot exhaust the machine.
+- In JavaScript tests, never compare DOM nodes with `assert.equal`/`assert.deepEqual`; use identity checks such as `assert.ok(a === b, "…")`. A failing assertion otherwise renders the whole DOM graph and can consume all memory.
+
+## Codex CLI only
+
+This section applies to OpenAI Codex CLI (and OpenCode when explicitly requested). Claude Code does not follow it; its routing lives in `CLAUDE.md`.
+
+### Model routing and delegation
+
+Use the cheapest model that can reliably complete a bounded task. Decompose complex work into small, independently verifiable work packages before implementation. Each package states the goal, relevant scope/files, constraints and non-goals, expected result, and validation/tests. Prefer fresh work packages over switching models inside one long conversation. Parallelize only genuinely independent packages with separate ownership.
+
+- `gpt-6-luna` is the default high-volume worker for discovery, read-only evidence gathering, locating code and tests, documentation, tests, mechanical changes, and small bounded implementations. Use `xhigh` effort. Luna must not redefine architecture or broaden scope; report blockers with evidence.
+- `gpt-5.6-luna` is a selective fallback after a failed bounded Luna task, for a second narrow bug hunt, or when a different generation improves debugging. Use `xhigh` effort.
+- `gpt-6-sol` handles clearly specified medium-complexity implementation, multi-file changes, and isolated refactors with `high` or `xhigh` effort. `gpt-5.6-sol` handles difficult or high-reliability implementation involving state, concurrency, persistence, migrations, contracts, difficult debugging, or recovery, with `medium`, `high`, or `xhigh` effort.
+- Reserve `gpt-6-astra` for architecture, ambiguity, decomposition, difficult failures, and final acceptance. Implementation and acceptance are separate responsibilities. Astra independently inspects the diff and surrounding code; the implementing model selects review effort (`medium`, `high`, or `xhigh`) from actual complexity and risk. Use `medium` for ordinary review, `high` for coupled/API/persistence/lifecycle changes, and `xhigh` for architecture, concurrency, risky migrations, release-critical work, or repeated failure. Review correctness, scope, regressions, complexity, duplication, dead code, architecture, and validation; passing tests alone is insufficient. Meaningful implementation work requiring review is accepted by Astra.
+
+Use the escalation path `gpt-6-luna -> gpt-5.6-luna or gpt-6-sol -> gpt-5.6-sol -> gpt-6-astra`. Escalate for reasoning depth, coupling, risk, ambiguity, or a failed worker, not line count. Workers report changed files, validation, uncertainty, and exact blockers. If Astra finds a problem, send concrete findings to an appropriate worker for repair; after one repair cycle with the same class of failure, escalate instead of repeating it.
+
+OpenCode is an optional worker only when the user explicitly requests it, limited to discovery or cheap bounded work using `opencode-go/deepseek-v4.1-flash` or `opencode-go/glm-5.3-flash`. It is never an automatic fallback, architecture authority, or final reviewer. Do not invoke other agent CLIs or install additional agent CLIs or wrappers without explicit user instruction.
+
+This policy concerns coding agents, not the product's speech or inference models.
+
+Prefer the simplest adequate solution. Reuse existing code and libraries; add frameworks, abstractions, services, interfaces, or parallel architectures only when the current requirement makes them necessary.
