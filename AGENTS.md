@@ -75,6 +75,25 @@ Every PR states production files, packages, dependencies, and database tables ad
 - Preserve immutable published release assets and their associated integrity and
   provenance records.
 
+## Engineering best practices
+
+These rules apply to all new code and to code a change touches. Existing outliers are not rewritten wholesale; they must not grow, and they are improved when a change touches them.
+
+### All repositories
+
+- Keep new source files under 800 lines (tests under 1200). A file that would cross 1500 lines is split by responsibility in the same change.
+- One package or module has one responsibility. Composition roots (`main`, `app` wiring) wire; they do not hold domain logic.
+- No alpha numbers, issue numbers, review rounds, OpenSpec ids or dates in identifiers, file names, package names, branch names or test names. Name things by behaviour; traceability belongs in commit messages and PRs.
+- Before adding a helper, search this repo, the shared packages and `@teammanager/ui`. Logic that exists in two repos is extracted to a shared module instead of a third copy.
+- Generated output (bindings aside, which are checked for drift), build output, test results and reports are not committed.
+- Remove dead code in the change that makes it dead. No TODO without a linked issue.
+- CI runs the same gates as the documented local commands; a PR states which gates it ran.
+
+### Documentation
+
+- One authoritative document per topic; superseded plans, handoffs and completed OpenSpec changes are archived, not linked from active docs.
+- README and AGENTS.md list the authoritative documents; everything else is history.
+
 ## Working agreements
 
 ### Task Execution & Autonomy
