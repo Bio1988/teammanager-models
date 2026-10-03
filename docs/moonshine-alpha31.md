@@ -111,9 +111,9 @@ python scripts/package-moonshine-models.py --out <staging>
 The script downloads the pinned files from
 `https://download.moonshine.ai/model/<model>/quantized_26_08_21/`, verifies
 each one against the exact size and SHA-256 above, and writes deterministic
-ZIPs (sorted entries, fixed 1980-01-01 timestamps, deflate level 9) plus a
-JSON record file. The pinned per-file values are measured from upstream, not
-copied from an upstream manifest.
+ZIPs (sorted entries, fixed 1980-01-01 timestamps, Unix metadata, default
+deflate compression) plus a JSON record file. The pinned per-file values are
+measured from upstream, not copied from an upstream manifest.
 
 ## Approved optional downloads
 

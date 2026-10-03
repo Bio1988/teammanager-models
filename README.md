@@ -38,6 +38,12 @@ and attribution material remain available unchanged.
 This repository intentionally has no model publication, signing-candidate,
 candidate-evidence, application-update-channel, or runtime-manifest workflow.
 
+Run the offline archive reproduction test used by CI with:
+
+```sh
+python3 -B -m unittest discover -s scripts -p 'test_*.py'
+```
+
 The retired signed public application-update-channel design is retained as
 [historical documentation](docs/archive/alpha-channel.md). Private Alpha
 updates instead use TeamManager Server's authenticated release endpoints to

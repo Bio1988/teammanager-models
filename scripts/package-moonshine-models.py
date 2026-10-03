@@ -107,9 +107,11 @@ def main():
         names = sorted(spec["files"])
         paths = [fetch(model, name, cache) for name in names]
         archive = os.path.join(args.out, spec["archive"])
-        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
             for path, name in zip(paths, names):
                 info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                # Match the published ZIP metadata even when run on Windows.
+                info.create_system = 3
                 info.compress_type = zipfile.ZIP_DEFLATED
                 info.external_attr = 0o644 << 16
                 with open(path, "rb") as handle:
