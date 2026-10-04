@@ -21,6 +21,8 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+      - name: Test deterministic model packaging
+        run: python3 -B -m unittest discover -s scripts -p 'test_*.py'
       - name: Validate immutable Alpha build-input records
         run: |
           python3 - <<'PY'
