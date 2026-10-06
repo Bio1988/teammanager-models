@@ -86,6 +86,37 @@ Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do
 not make Natural Radio a current installer input or runtime authority.
 
+## Pocket English September 2026 native model package
+
+The staged immutable asset is
+`https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip`
+(207,279,132 bytes; SHA-256
+`4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce`).
+Race Engineer selects installer inputs through its closed
+`build/alpha-models.lock.json`; this record alone does not select an input.
+
+The release archive contains exactly five FP32 ONNX graphs under `cpp/`,
+`weights/tokenizer.model`, `NOTICE.md`, and `LICENSES/CC-BY-4.0.txt`. It was
+repacked deterministically from the development export
+`new-dev-Pocket-English-2026-09-dev-model.zip` (207,273,014 bytes; SHA-256
+`8a3dffbca1d7c33a41f312173e08a7df69df7f0e2b2ac6f494fb4d4e842cd9aa`).
+The exporter evidence records eleven FP32 comparisons and a Linux native CPU
+smoke test; this packaging step verified the source archive and each model
+file against its manifest, but did not re-export the weights or verify Windows
+audio output.
+
+The source weights are [Kyutai Pocket TTS](https://huggingface.co/kyutai/pocket-tts)
+at revision `983151f13aaeab1b13c1e5e3c2c383d49a9edf3f`, with full-clone
+weights SHA-256 `fb0dc01b0d4d2e1c905b7a3e0676e3d9c96d5ae460e24e3ab94981805babf997`.
+The Pocket TTS v3.3.0 configuration source is commit
+`3dbee45d343d7dddd0d105468d17f8dcba14db3e`. The tokenizer came from
+[kyutai/pocket-tts-without-voice-cloning](https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/tree/e7205b6ee50e654a5ea19f0e9df2b0813b05e921)
+at revision `e7205b6ee50e654a5ea19f0e9df2b0813b05e921`, path
+`languages/english_2026-09/tokenizer.model` (59,339 bytes; SHA-256
+`d461765ae179566678c93091c5fa6f2984c31bbe990bf1aa62d92c64d91bc3f6`). The model is
+identified as CC BY 4.0 with additional upstream model-card use conditions;
+the bundled notice and license retain attribution and terms.
+
 ## Natural Radio release record
 
 `natural-radio-qwen3-0.6b-dev.1` is an immutable development release. It is
