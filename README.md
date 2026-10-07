@@ -33,6 +33,23 @@ contract. The build then generates local `model-pack.json` inside the installer.
 `model-pack.json` is the local runtime descriptor: it contains installed paths,
 not network URLs, and is not a model catalog or authority.
 
+## Repository map
+
+- `scripts/package-moonshine-models.py` verifies pinned upstream files and
+  reproduces the Moonshine ZIPs; `scripts/package-pocket-september.py` verifies
+  and repackages the pinned Pocket export.
+- `scripts/test_package_models.py` and
+  `scripts/test_package_pocket_september.py` cover those packaging paths.
+  Forgejo CI runs them and validates the Alpha-4 input records in
+  [.forgejo/workflows/verify.yml](.forgejo/workflows/verify.yml).
+- `docs/alpha-build-inputs.md` is the current installer input and provenance
+  record. `docs/moonshine-alpha31.md` and `docs/archive/` retain historical
+  publication and design records.
+- This repository has no application UI or model runtime. Race Engineer owns
+  installer preparation and runtime consumption through its closed
+  `build/alpha-models.lock.json` and installed `model-pack.json`; see its
+  [installer documentation](https://forgejo.g-grp.com/Max/race-engineer-go/src/branch/main/installer/README.md).
+
 `manifest.json` is retained solely as historical provenance for already
 published Pocket R3 assets. It is not a runtime authority and must not evolve
 into another model-manifest generation, catalog, publication protocol, or
