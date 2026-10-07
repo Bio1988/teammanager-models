@@ -1,10 +1,50 @@
 # Alpha build inputs
 
-These immutable Forgejo release assets are the only model/runtime inputs for
-the first private TeamManager Alpha. Race Engineer copies the five **required**
-inputs into its complete Windows installer. It knows the one **optional** input
-only for an explicit, user-confirmed download. URLs, sizes, and hashes below
-were recorded from the Forgejo releases on 2026-08-02.
+## Current Alpha-4 inventory
+
+Race Engineer's closed `build/alpha-models.lock.json` is the build-input
+authority. The current lock has nine required installer inputs and two
+optional downloads. The URLs, sizes, SHA-256 values, targets, and classifications
+below match that lock.
+
+| Class | ID | Immutable URL | Install target | Size (bytes) | SHA-256 | Licence and upstream provenance |
+| --- | --- | --- | --- | ---: | --- | --- |
+| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. The exact source revision and ONNX conversion record for this September package are not retained here; see the provenance note below. |
+| Required | `pocket-voice-charles` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p254_023_enhanced.wav` | `pocket/voice/charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | Enhanced VCTK recording (`p254_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `pocket-voice-michael` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p360_023_enhanced.wav` | `pocket/voice/michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | Enhanced VCTK recording (`p360_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `pocket-voice-eve` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p361_023_enhanced.wav` | `pocket/voice/eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | Enhanced VCTK recording (`p361_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `moonshine-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` | `moonshine/runtime` | 11455945 | `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335` | Mixed component bundle built from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; Moonshine and ONNX Runtime MIT notices plus Microsoft VC redistributable terms. The archive has no single umbrella licence; TeamManager helper code remains proprietary under Race Engineer's LICENSE. |
+| Required | `moonshine-small-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-small-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/small-streaming-en` | 121672393 | `ce697ac0dcf1b5b949b4ba1beba4dd19e2c2042c335e26e620ff28706ef8de00` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
+| Required | `minilm-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/all-MiniLM-L6-v2-quint8-avx2.onnx` | `intent/all-MiniLM-L6-v2-quint8-avx2.onnx` | 23046789 | `b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21` | Based on [Sentence Transformers all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), whose model card specifies Apache 2.0. The exact ONNX conversion revision and recipe are not retained here. |
+| Required | `minilm-vocab` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/all-MiniLM-L6-v2-vocab.txt` | `intent/all-MiniLM-L6-v2-vocab.txt` | 231508 | `07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3` | Tokenizer vocabulary for all-MiniLM-L6-v2; Apache 2.0 model distribution. |
+| Required | `minilm-license` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/LICENSE-Apache-2.0.txt` | `licenses/minilm-LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | Apache License 2.0 notice packaged alongside the MiniLM model. |
+| Optional | `moonshine-tiny-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-tiny-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/optional/moonshine-tiny-streaming-en` | 36624898 | `41e1882d3ddc7c8a70778224879c929f9b4d87f77c57e9f031757bb27751e3c5` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
+| Optional | `moonshine-medium-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-medium-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/optional/moonshine-medium-streaming-en` | 236904989 | `d22e9adbb0232db4fcc2d5594d0155965efd47222fccd59cda38dd84f0e07305` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
+
+Only the two optional entries may be downloaded after installation, and only
+after explicit user action. Required Moonshine Small is packaged with the
+installer. No Whisper model is part of this current lock. The `tts-voices`
+revision identifies the three VCTK source files; the
+[pinned Kyutai voice catalog](https://huggingface.co/kyutai/tts-voices/tree/323332d33f997de8394f24a193e1a76df720e01a/vctk)
+and [its README](https://huggingface.co/kyutai/tts-voices/blob/323332d33f997de8394f24a193e1a76df720e01a/README.md)
+say VCTK is CC BY 4.0 and enhanced recordings are cleaned versions created
+using ai-coustics. The upstream Pocket model card specifies CC BY 4.0, but this
+repository does not retain the exact source revision or conversion steps for
+the September ONNX package. The MiniLM model card specifies Apache 2.0, while
+this repository does not retain the exact ONNX conversion revision or recipe.
+For these packages, the listed TeamManager asset URL, size, and SHA-256 pin the
+delivered artifact; they do not establish missing upstream transformation
+history. The three VCTK WAVs are a direct-upstream-source exception: this
+repository does not mirror them, and this review did not download or rehash the
+files. Their availability and exact object bytes therefore remain unverified
+here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
+
+## Historical first-Alpha inventory
+
+The table below records the first private TeamManager Alpha only. Race Engineer
+copied five required inputs into that installer and allowed one optional input
+after explicit user confirmation. URLs, sizes, and hashes were recorded from
+Forgejo releases on 2026-08-02.
 
 | Class | ID | Immutable URL | Size (bytes) | SHA-256 | Licence and upstream provenance |
 | --- | --- | --- | ---: | --- | --- |
@@ -30,12 +70,12 @@ copies the separate Forgejo asset into its attribution material:
   1063 bytes, SHA-256
   `b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d`.
 
-No other release asset is a first-Alpha dependency. In particular, historical
+No other release asset was a first-Alpha dependency. In particular, historical
 Pocket language packs, non-Alba voices, Whisper manifest or authority files,
 and any Whisper model other than the explicitly selected optional
-`whisper-small-q5_1` must not be selected, fetched, or interpreted by the
-Alpha runtime. The optional Small input may be downloaded only after explicit
-user action; it is never fetched or selected automatically.
+`whisper-small-q5_1` were outside that first-Alpha snapshot. The optional Small
+input could be downloaded only after explicit user action; it was not fetched
+or selected automatically.
 
 ## Pocket TTS 3.1.0 release provenance (2026-09-16)
 
@@ -51,13 +91,10 @@ table or select these assets for an installer.
 
 ## Alpha 31 Moonshine increment
 
-The table above is the historical first-Alpha record and remains unchanged.
-Race Engineer's current `build/alpha-models.lock.json` is the authority for
-the Alpha 31 installer inputs. The reviewed runtime pin below is being merged
-into Race Engineer's tracked lock; precise installer input selection is
-deferred to that lock. The three optional model assets and the runtime asset
-are now published. This section records provenance and does not replace or
-reinterpret the historical table.
+This section records the Alpha 31 publication and selection history. It does
+not describe the current Alpha-4 selection above. At Alpha 31, the runtime and
+three English model archives below were published; the then-current installer
+selection remained defined by Race Engineer's lock.
 
 The upstream pin is [moonshine-ai/moonshine v0.1.5](https://github.com/moonshine-ai/moonshine/releases/tag/v0.1.5),
 annotated tag `bf6ae1590d0928fd704772d0e80d6fef39424be8`, resolving to commit
@@ -70,17 +107,17 @@ annotated tag `bf6ae1590d0928fd704772d0e80d6fef39424be8`, resolving to commit
 | Alpha 31 optional | `moonshine-small-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-small-streaming-en-quantized_26_08_21-r1.zip` | Published immutable Forgejo release asset. | 121672393 | `ce697ac0dcf1b5b949b4ba1beba4dd19e2c2042c335e26e620ff28706ef8de00` | MIT; see `LICENSES/moonshine-MIT.txt`. English streaming model from the pinned Moonshine revision. |
 | Alpha 31 optional | `moonshine-medium-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-medium-streaming-en-quantized_26_08_21-r1.zip` | Published immutable Forgejo release asset. | 236904989 | `d22e9adbb0232db4fcc2d5594d0155965efd47222fccd59cda38dd84f0e07305` | MIT; see `LICENSES/moonshine-MIT.txt`. English streaming model from the pinned Moonshine revision. |
 
-The runtime archive is published in `moonshine-v0.1.5` and its canonical URL
+The runtime archive was published in `moonshine-v0.1.5` and its canonical URL
 was verified by a full public readback against the recorded 11,455,945 bytes
 and SHA-256. The product owner authorized publication after the recorded local
 build and smoke evidence. A clean Windows verification without Visual Studio
 remains pending; this record does not claim that criterion. The archive has a
 flat root containing the six runtime contract files and `moonshine-MIT.txt`,
-`onnxruntime-MIT.txt`; it contains no optional model weights. The three
-optional archives each contain exactly the eight pinned `quantized_26_08_21`
-files and are downloaded only after explicit user action. The closed current
-optional list is Whisper Small plus these three English Moonshine models;
-Whisper Base remains the default.
+`onnxruntime-MIT.txt`; it contains no model weights. The three model archives
+each contain exactly the eight pinned `quantized_26_08_21` files. In the
+Alpha-31 policy snapshot, these three Moonshine models and Whisper Small were
+optional downloads and Whisper Base was the default. Current Alpha-4 marks
+Moonshine Small required and Tiny/Medium optional; see the inventory above.
 
 Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do

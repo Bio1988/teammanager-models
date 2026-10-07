@@ -40,33 +40,74 @@ jobs:
               "`build/alpha-models.lock.json`",
               "`model-pack.json` is the local runtime descriptor",
               "does **not** fetch this repository's `manifest.json`",
+              "`moonshine-small-streaming-en` a required",
+              "Moonshine `moonshine-tiny-streaming-en`",
+              "Moonshine `moonshine-medium-streaming-en`",
+              "no Whisper model is in the current lock",
+              "three required VCTK voice files",
           )
           assert all(text in readme for text in required_readme)
+          agents = (root / "AGENTS.md").read_text(encoding="utf-8")
+          assert all(asset in agents for asset in (
+              "moonshine-small-streaming-en",
+              "moonshine-tiny-streaming-en",
+              "moonshine-medium-streaming-en",
+          ))
+          assert "whisper-small-q5_1" not in agents
+          moonshine_doc = (root / "docs" / "moonshine-alpha31.md").read_text(encoding="utf-8")
+          assert "In the current Alpha-4 lock, Moonshine Small is required and\nTiny/Medium are optional." in moonshine_doc
+          assert "Alpha 31 optional-download policy (historical)" in moonshine_doc
 
           lines = (root / "docs" / "alpha-build-inputs.md").read_text(encoding="utf-8").splitlines()
-          rows = [line.split("|") for line in lines if line.startswith("| Required |") or line.startswith("| Optional |")]
-          required = [row[2].strip().strip("`") for row in rows if row[1].strip() == "Required"]
-          optional = [row[2].strip().strip("`") for row in rows if row[1].strip() == "Optional"]
+          document = "\n".join(lines)
+          current_section = document.split("## Current Alpha-4 inventory", 1)[1].split("\n## Historical first-Alpha inventory", 1)[0]
+          current_rows = [line.split("|") for line in current_section.splitlines() if line.startswith("| Required |") or line.startswith("| Optional |")]
+          required = [row[2].strip().strip("`") for row in current_rows if row[1].strip() == "Required"]
+          optional = [row[2].strip().strip("`") for row in current_rows if row[1].strip() == "Optional"]
           assert required == [
+              "pocket-english",
+              "pocket-voice-charles",
+              "pocket-voice-michael",
+              "pocket-voice-eve",
+              "moonshine-runtime",
+              "moonshine-small-streaming-en",
+              "minilm-model",
+              "minilm-vocab",
+              "minilm-license",
+          ]
+          assert optional == ["moonshine-tiny-streaming-en", "moonshine-medium-streaming-en"]
+          assert len(current_rows) == 11
+          assert "The three VCTK WAVs are a direct-upstream-source exception" in current_section
+          for row in current_rows:
+              asset_id = row[2].strip().strip("`")
+              assert row[3].strip().strip("`").startswith("https://"), asset_id
+              assert row[4].strip().strip("`"), asset_id
+              assert row[5].strip().isdigit(), asset_id
+              assert re.fullmatch(r"[0-9a-f]{64}", row[6].strip().strip("`")), asset_id
+              assert row[7].strip(), asset_id
+
+          historical_section = document.split("## Historical first-Alpha inventory", 1)[1].split("\n## Pocket TTS 3.1.0 release provenance", 1)[0]
+          historical_rows = [line.split("|") for line in historical_section.splitlines() if line.startswith("| Required |") or line.startswith("| Optional |")]
+          historical_required = [row[2].strip().strip("`") for row in historical_rows if row[1].strip() == "Required"]
+          historical_optional = [row[2].strip().strip("`") for row in historical_rows if row[1].strip() == "Optional"]
+          assert historical_required == [
               "pocket-runtime",
               "pocket-english",
               "pocket-alba",
               "whisper-runtime",
               "whisper-base-q5_1",
           ]
-          assert optional == ["whisper-small-q5_1"]
-          assert len(rows) == 6
+          assert historical_optional == ["whisper-small-q5_1"]
+          assert len(historical_rows) == 6
 
           required_docs = (
-              "These immutable Forgejo release assets are the only model/runtime inputs for",
-              "the first private TeamManager Alpha.",
-              "No other release asset is a first-Alpha dependency.",
+              "The table below records the first private TeamManager Alpha only.",
+              "No other release asset was a first-Alpha dependency.",
               "and any Whisper model other than the explicitly selected optional\n"
-              "`whisper-small-q5_1` must not be selected, fetched, or interpreted by the\n"
-              "Alpha runtime. The optional Small input may be downloaded only after explicit\n"
-              "user action; it is never fetched or selected automatically.",
+              "`whisper-small-q5_1` were outside that first-Alpha snapshot. The optional Small\n"
+              "input could be downloaded only after explicit user action; it was not fetched\n"
+              "or selected automatically.",
           )
-          document = "\n".join(lines)
           assert all(text in document for text in required_docs)
 
           pocket31_section = document.split("## Pocket TTS 3.1.0 release provenance (2026-09-16)", 1)[1].split("\n## ", 1)[0]

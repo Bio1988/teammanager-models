@@ -1,10 +1,13 @@
 # Moonshine Alpha 31 build inputs
 
 Alpha 31 adds the experimental Moonshine streaming Speech to Text backend to
-Race Engineer. This document records the immutable TeamManager release assets
-and their upstream provenance. Race Engineer's closed
-`build/alpha-models.lock.json` remains the runtime authority; this document is
-provenance, not a runtime registry.
+Race Engineer. This historical document records the immutable TeamManager
+release assets and their upstream provenance; it does not state the current
+model selection. In the current Alpha-4 lock, Moonshine Small is required and
+Tiny/Medium are optional. See the current inventory in
+[docs/alpha-build-inputs.md](alpha-build-inputs.md). Race Engineer's closed
+`build/alpha-models.lock.json` remains the build-input authority; this document
+is provenance, not a runtime registry.
 
 Upstream pin: `moonshine-ai/moonshine` **v0.1.5**, annotated tag
 `bf6ae1590d0928fd704772d0e80d6fef39424be8` -> commit
@@ -66,9 +69,9 @@ answered `shutdown`; each helper process exited with code 0. The smoke input
 was a synthetic 16-kHz mono PCM16 English phrase, so this record makes no
 clean-machine, microphone, or iRacing performance claim.
 
-## Optional model downloads
+## Alpha 31 model release archives
 
-The three English streaming models are packaged as one ZIP per model. Every
+The three English streaming models were packaged as one ZIP per model. Every
 archive contains exactly the eight upstream `quantized_26_08_21` files at the
 archive root. The bytes were reproduced from the pinned upstream files and the
 packages are published as immutable release assets.
@@ -79,7 +82,8 @@ packages are published as immutable release assets.
 | `moonshine-small-streaming-en` | `moonshine-small-streaming-en-quantized_26_08_21-r1.zip` | 121672393 | `ce697ac0dcf1b5b949b4ba1beba4dd19e2c2042c335e26e620ff28706ef8de00` |
 | `moonshine-medium-streaming-en` | `moonshine-medium-streaming-en-quantized_26_08_21-r1.zip` | 236904989 | `d22e9adbb0232db4fcc2d5594d0155965efd47222fccd59cda38dd84f0e07305` |
 
-Release tag: `moonshine-v0.1.5`. Target directories:
+Release tag: `moonshine-v0.1.5`. The following were the Alpha 31 target
+directories; current targets are listed in `docs/alpha-build-inputs.md`:
 
 - `moonshine/optional/moonshine-tiny-streaming-en`
 - `moonshine/optional/moonshine-small-streaming-en`
@@ -115,18 +119,18 @@ ZIPs (sorted entries, fixed 1980-01-01 timestamps, Unix metadata, default
 deflate compression) plus a JSON record file. The pinned per-file values are
 measured from upstream, not copied from an upstream manifest.
 
-## Approved optional downloads
+## Alpha 31 optional-download policy (historical)
 
-The closed list of post-install Speech to Text downloads is now:
+At Alpha 31, the closed list of post-install Speech to Text downloads was:
 
 - `whisper-small-q5_1` (existing)
 - `moonshine-tiny-streaming-en`
 - `moonshine-small-streaming-en`
 - `moonshine-medium-streaming-en`
 
-The list is closed. There is no remote catalog, marketplace, or arbitrary
-download path; production clients fetch only pinned TeamManager Forgejo
-release assets.
+The current Alpha-4 optional list is Moonshine Tiny and Medium; Moonshine Small
+is required. There is no remote catalog, marketplace, or arbitrary download
+path; production clients fetch only pinned TeamManager Forgejo release assets.
 
 ## License material
 

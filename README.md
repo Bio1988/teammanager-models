@@ -7,20 +7,24 @@ Race Engineer does **not** fetch this repository's `manifest.json`, signature,
 checksum sidecars, release metadata, or a catalog at runtime. Required Alpha
 components are verified while building Race Engineer and packaged into the one
 complete Windows installer. This repository is not a runtime model registry.
-Only these explicitly selected optional Speech to Text models may be
-downloaded after installation, and only after an explicit user action:
+The current Alpha-4 lock makes `moonshine-small-streaming-en` a required
+installer input.
+Only these optional Speech to Text models may be downloaded after
+installation, and only after an explicit user action:
 
-- Whisper `small-q5_1`
 - Moonshine `moonshine-tiny-streaming-en`
-- Moonshine `moonshine-small-streaming-en`
 - Moonshine `moonshine-medium-streaming-en`
 
-The list is closed. A downloaded model is never selected automatically, and
-Whisper Base remains the stable default.
+The list is closed; no Whisper model is in the current lock. A downloaded
+model is never selected automatically. The required/optional split and exact
+asset pins are recorded in the current Alpha-4 section of
+[docs/alpha-build-inputs.md](docs/alpha-build-inputs.md).
+That inventory includes three required VCTK voice files pinned directly to an
+upstream Hugging Face commit; they are not mirrored in this repository.
 
-Moonshine provenance, the pinned upstream release, and the packaged archive
-integrity values are in
-[docs/moonshine-alpha31.md](docs/moonshine-alpha31.md).
+The Alpha 31 Moonshine publication record is retained in
+[docs/moonshine-alpha31.md](docs/moonshine-alpha31.md); its old optional-model
+list is historical.
 
 The exact Alpha inputs, integrity values, licences, and provenance are in
 [docs/alpha-build-inputs.md](docs/alpha-build-inputs.md). Race Engineer records
