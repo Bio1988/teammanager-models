@@ -11,14 +11,40 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_TAG = "managed-radio-granite-350m-r1"
-RELEASE_BASE = f"https://forgejo.g-grp.com/Max/teammanager-models/releases/download/{RELEASE_TAG}"
+RUNTIME_RELEASE_TAG = "managed-radio-granite-350m-r2"
+MODEL_RELEASE_TAG = "managed-radio-granite-350m-r1"
+RELEASE_ROOT = "https://forgejo.g-grp.com/Max/teammanager-models/releases/download"
+RUNTIME_RELEASE_BASE = f"{RELEASE_ROOT}/{RUNTIME_RELEASE_TAG}"
+MODEL_RELEASE_BASE = f"{RELEASE_ROOT}/{MODEL_RELEASE_TAG}"
 
 RUNTIME_SOURCE = "llama-b8696-bin-win-cpu-x64.zip"
 RUNTIME_SOURCE_SIZE = 39_345_159
 RUNTIME_SOURCE_SHA256 = "8e0e2a0d86b5d3f4795a89edb60dc82f70a430dac69897f12e81f2f0cd5260d4"
 RUNTIME_SOURCE_URL = "https://github.com/ggml-org/llama.cpp/releases/download/b8696/llama-b8696-bin-win-cpu-x64.zip"
 RUNTIME_SOURCE_COMMIT = "69c28f1547c169902f62ca48bee75fb876c4d8e6"
+REDIST_SOURCE = "teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip"
+REDIST_SOURCE_SIZE = 11_455_945
+REDIST_SOURCE_SHA256 = "718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335"
+REDIST_SOURCE_URL = (
+    "https://forgejo.g-grp.com/Max/teammanager-models/releases/download/"
+    "moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip"
+)
+REDIST_SOURCE_REVISION = "234f60faa0eb388b01cdf7e60aca232af37aefda"
+REDIST_VERSION = "14.44.35211.0"
+REDIST_FILES = {
+    "msvcp140.dll": (
+        557_728,
+        "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    ),
+    "vcruntime140.dll": (
+        124_544,
+        "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    ),
+    "vcruntime140_1.dll": (
+        49_792,
+        "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    ),
+}
 RUNTIME_LICENSES = {
     "LICENSE-llama.cpp-MIT.txt": (
         "llama.cpp-MIT.txt",
@@ -39,6 +65,11 @@ RUNTIME_LICENSES = {
         "LLVM-20.1.8-Apache-2.0-with-LLVM-exception.txt",
         "3340babe8ac7bc6ae294d93aa01c310a250d43d5b760e5c12954882d4e5c83c7",
         "https://github.com/llvm/llvm-project/releases/tag/llvmorg-20.1.8",
+    ),
+    "NOTICE-Microsoft-Visual-Cpp-Redistributable.txt": (
+        "Microsoft-Visual-Cpp-Redistributable-NOTICE.txt",
+        "c386b552f0b37ea63eb452b8a60a7f711c21fdf48093170250aeda36fb27ecf8",
+        "https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution",
     ),
 }
 
@@ -135,6 +166,9 @@ def build(source_dir, output_dir, repo_root=ROOT):
     runtime_input = verify_source(
         source_dir / RUNTIME_SOURCE, RUNTIME_SOURCE_SIZE, RUNTIME_SOURCE_SHA256
     )
+    redist_input = verify_source(
+        source_dir / REDIST_SOURCE, REDIST_SOURCE_SIZE, REDIST_SOURCE_SHA256
+    )
     model_input = verify_source(
         source_dir / MODEL_SOURCE, MODEL_SOURCE_SIZE, MODEL_SOURCE_SHA256
     )
@@ -151,6 +185,7 @@ def build(source_dir, output_dir, repo_root=ROOT):
         raise ValueError("Apache license text does not match the pinned canonical text")
 
     runtime_source_members = []
+    redist_source_members = []
     with tempfile.TemporaryDirectory(prefix="managed-radio-") as temporary:
         extracted = Path(temporary)
         with zipfile.ZipFile(runtime_input) as source:
@@ -173,12 +208,30 @@ def build(source_dir, output_dir, repo_root=ROOT):
                 copy_member(source, info, extracted / name)
                 runtime_files[name] = extracted / name
                 runtime_source_members.append(name)
+        with zipfile.ZipFile(redist_input) as source:
+            infos = source.infolist()
+            source_names = [item.filename for item in infos]
+            if len(source_names) != len(set(source_names)):
+                raise ValueError("duplicate member in pinned redistributable source ZIP")
+            for info in infos:
+                check_flat_name(info.filename)
+                mode = stat.S_IFMT(info.external_attr >> 16)
+                if info.is_dir() or mode not in (0, stat.S_IFREG) or info.flag_bits & 1:
+                    raise ValueError(f"unsupported redistributable source ZIP member: {info.filename!r}")
+            for name, expected in REDIST_FILES.items():
+                if name not in source_names:
+                    raise ValueError(f"pinned redistributable source lacks {name}")
+                details = copy_member(source, source.getinfo(name), extracted / name)
+                if (details["size_bytes"], details["sha256"]) != expected:
+                    raise ValueError(f"redistributable member size or SHA-256 mismatch: {name}")
+                runtime_files[name] = extracted / name
+                redist_source_members.append(name)
         for output_name, license_path in runtime_licenses.items():
             if not license_path.is_file():
                 raise FileNotFoundError(license_path)
             runtime_files[output_name] = license_path
 
-        runtime_filename = "runtime-b8696-win-cpu-x64.zip"
+        runtime_filename = "runtime-b8696-win-cpu-x64-r2.zip"
         model_filename = "granite-4.0-h-350m-q8-0.zip"
         runtime_record = deterministic_zip(output_dir / runtime_filename, runtime_files)
         model_record = deterministic_zip(
@@ -189,17 +242,20 @@ def build(source_dir, output_dir, repo_root=ROOT):
     runtime_files_record = runtime_record.pop("files")
     model_files_record = model_record.pop("files")
     return {
-        "format_version": 1,
+        "format_version": 2,
         "release": {
             "repo": "Max/teammanager-models",
-            "tag": RELEASE_TAG,
-            "state": "prepared-not-published",
-            "download_base_url": RELEASE_BASE,
+            "runtime_tag": RUNTIME_RELEASE_TAG,
+            "runtime_state": "prepared-not-published",
+            "runtime_download_base_url": RUNTIME_RELEASE_BASE,
+            "model_tag": MODEL_RELEASE_TAG,
+            "model_state": "published-immutable",
+            "model_download_base_url": MODEL_RELEASE_BASE,
         },
         "packages": [
             {
-                "ID": "llama-cpp-b8696-win-cpu-x64",
-                "ArchiveURL": f"{RELEASE_BASE}/{runtime_filename}",
+                "ID": "llama-cpp-b8696-win-cpu-x64-r2",
+                "ArchiveURL": f"{RUNTIME_RELEASE_BASE}/{runtime_filename}",
                 "ArchiveSizeBytes": runtime_record["archive_size_bytes"],
                 "ArchiveSHA256": runtime_record["archive_sha256"],
                 "Files": [
@@ -209,7 +265,7 @@ def build(source_dir, output_dir, repo_root=ROOT):
             },
             {
                 "ID": "granite-4.0-h-350m-q8-0",
-                "ArchiveURL": f"{RELEASE_BASE}/{model_filename}",
+                "ArchiveURL": f"{MODEL_RELEASE_BASE}/{model_filename}",
                 "ArchiveSizeBytes": model_record["archive_size_bytes"],
                 "ArchiveSHA256": model_record["archive_sha256"],
                 "Files": [
@@ -235,6 +291,17 @@ def build(source_dir, output_dir, repo_root=ROOT):
                     }
                     for output_name, (source_name, expected_sha256, source_url) in sorted(RUNTIME_LICENSES.items())
                 ],
+            },
+            "redistributable_runtime": {
+                "url": REDIST_SOURCE_URL,
+                "release_tag": "moonshine-v0.1.5",
+                "source_revision": REDIST_SOURCE_REVISION,
+                "archive_size_bytes": REDIST_SOURCE_SIZE,
+                "archive_sha256": REDIST_SOURCE_SHA256,
+                "file_version": REDIST_VERSION,
+                "selected_source_members": sorted(redist_source_members),
+                "license_terms_url": "https://visualstudio.microsoft.com/license-terms/",
+                "redistribution_url": "https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution",
             },
             "model": {
                 "repo": MODEL_SOURCE_REPO,

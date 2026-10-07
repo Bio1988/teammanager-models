@@ -1,0 +1,17 @@
+Microsoft Visual C++ Redistributable Notice
+
+This package includes unmodified Microsoft Visual C++ 2022 x64 runtime files
+version 14.44.35211.0. They were copied from the pinned TeamManager Moonshine
+runtime archive, which records Visual Studio Build Tools 17.14.40 as their
+source environment.
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Microsoft permits distribution of listed Visual C++ runtime files subject to
+the license terms for the Visual Studio installation used to obtain them and
+the Visual C++ redistribution documentation:
+
+https://visualstudio.microsoft.com/license-terms/
+https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution
+
+This notice does not grant rights beyond those Microsoft terms.

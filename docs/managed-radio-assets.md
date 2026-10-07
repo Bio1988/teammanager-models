@@ -2,20 +2,20 @@
 
 These are the two separately installed CPU packages for the explicitly selected managed Radio answer provider. They are not part of the Race Engineer Alpha installer or `build/alpha-models.lock.json`. Downloading either package requires an explicit user action; neither package is selected or started by downloading it.
 
-## Candidate release
+## Published model and candidate runtime repair
 
-The candidate Forgejo release tag is `managed-radio-granite-350m-r1`. The packager emits `prepared-not-published` candidate metadata and never publishes a tag or release. Before enabling application downloads, verify that the release and both assets are available at these URLs; until then they are candidates only.
+The Granite model remains the immutable published r1 asset. The r1 runtime also remains immutable, but it omitted the app-local Microsoft Visual C++ runtime files imported by llama.cpp. Its replacement is the self-contained r2 runtime candidate under tag `managed-radio-granite-350m-r2`. The packager emits `prepared-not-published` for that runtime and never publishes a tag or release.
 
-| Package ID | Candidate asset URL | Archive bytes | Archive SHA-256 |
-| --- | --- | ---: | --- |
-| `llama-cpp-b8696-win-cpu-x64` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r1/runtime-b8696-win-cpu-x64.zip` | 36728706 | `618d59d17dae0fb74b4dfaae348f0d239a6013a251e3e235a975823b243ba1bd` |
-| `granite-4.0-h-350m-q8-0` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r1/granite-4.0-h-350m-q8-0.zip` | 366207248 | `e33d587d6fe6900de41bd965c8551656228a6571d81846d8773dfc48dab16e69` |
+| Package ID | State | Asset URL | Archive bytes | Archive SHA-256 |
+| --- | --- | --- | ---: | --- |
+| `llama-cpp-b8696-win-cpu-x64-r2` | Candidate | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r2/runtime-b8696-win-cpu-x64-r2.zip` | 37462006 | `89d990f6aacbe127b5c48b145939f92dc3cbc3779c46b77fe11e844c3d46ab23` |
+| `granite-4.0-h-350m-q8-0` | Published immutable | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r1/granite-4.0-h-350m-q8-0.zip` | 366207248 | `e33d587d6fe6900de41bd965c8551656228a6571d81846d8773dfc48dab16e69` |
 
 Each archive is a flat ZIP with sorted root files, fixed 1980-01-01 timestamps, regular-file mode 0644 and no compression. The build rejects path separators, duplicate names, directories, links, encrypted source entries, and source size/hash mismatches. Exact extracted sizes and hashes are listed below.
 
 ### Runtime package files
 
-It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU archive, and the listed source/dependency license texts. Other executables in the upstream archive are excluded.
+It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU archive, the three Microsoft runtime DLLs required by the PE dependency closure, and the listed source/dependency license texts. Other executables in the source archives are excluded.
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
@@ -23,6 +23,7 @@ It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU
 | `LICENSE-libomp-Apache-2.0-with-LLVM-exception.txt` | 15140 | `3340babe8ac7bc6ae294d93aa01c310a250d43d5b760e5c12954882d4e5c83c7` |
 | `LICENSE-llama.cpp-MIT.txt` | 1078 | `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d` |
 | `LICENSE-nlohmann-json-MIT.txt` | 1075 | `c0d068392ea65358b798b8c165103560f06e9e3b38c4ab4e2d8810a7b931af86` |
+| `NOTICE-Microsoft-Visual-Cpp-Redistributable.txt` | 746 | `c386b552f0b37ea63eb452b8a60a7f711c21fdf48093170250aeda36fb27ecf8` |
 | `ggml-base.dll` | 687616 | `62dbab5e20eda426f0091f0b51d9c1e166c6a3bd3e62731cdf439d3eed44377a` |
 | `ggml-cpu-alderlake.dll` | 1131008 | `fbcd9da624c45dd7b05e8eb09172dc2a17b0660827087f2de9b385e3382da2c5` |
 | `ggml-cpu-cannonlake.dll` | 1369600 | `ff266d639d59884703cd094f2d54e87bff1d7b958b0f828154b84dd64180c65a` |
@@ -44,6 +45,9 @@ It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU
 | `llama-server.exe` | 14663168 | `bc740f977414046f7f61aa98cc4d50a732a18062b16b0a7e38c19e25cc4db6a8` |
 | `llama.dll` | 2621952 | `f4654b84782f5f6eee582e4be4b3c3dc89f400d3337e1ee1ef7f6ae4d68555a5` |
 | `mtmd.dll` | 1022976 | `cf60552fc2dc8c19f8e0e6e0358933ef2e252e11125044ef6e26a9ac260ddafb` |
+| `msvcp140.dll` | 557728 | `0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9` |
+| `vcruntime140.dll` | 124544 | `d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066` |
+| `vcruntime140_1.dll` | 49792 | `1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f` |
 
 ### Model package files
 
@@ -54,13 +58,15 @@ It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU
 
 ## Source and license provenance
 
-**Runtime.** The source is the official llama.cpp `b8696` Windows CPU x64 release asset (`https://github.com/ggml-org/llama.cpp/releases/download/b8696/llama-b8696-bin-win-cpu-x64.zip`), pinned to source commit `69c28f1547c169902f62ca48bee75fb876c4d8e6`. Its source ZIP is 39345159 bytes with SHA-256 `8e0e2a0d86b5d3f4795a89edb60dc82f70a430dac69897f12e81f2f0cd5260d4`. The curated archive retains `llama-server.exe` and all DLLs, including `libomp140.x86_64.dll`. The included texts cover llama.cpp (MIT), cpp-httplib (MIT), nlohmann/json (MIT), and LLVM OpenMP (Apache-2.0 with LLVM exception). The llama.cpp and vendored license copies come from the pinned source commit; the LLVM license text is the retained upstream LLVM license in `LICENSES/`.
+**Runtime.** The primary source is the official llama.cpp `b8696` Windows CPU x64 release asset (`https://github.com/ggml-org/llama.cpp/releases/download/b8696/llama-b8696-bin-win-cpu-x64.zip`), pinned to source commit `69c28f1547c169902f62ca48bee75fb876c4d8e6`. Its source ZIP is 39345159 bytes with SHA-256 `8e0e2a0d86b5d3f4795a89edb60dc82f70a430dac69897f12e81f2f0cd5260d4`. The curated archive retains `llama-server.exe` and all DLLs, including `libomp140.x86_64.dll`. The included texts cover llama.cpp (MIT), cpp-httplib (MIT), nlohmann/json (MIT), and LLVM OpenMP (Apache-2.0 with LLVM exception). The llama.cpp and vendored license copies come from the pinned source commit; the LLVM license text is the retained upstream LLVM license in `LICENSES/`.
+
+The Microsoft runtime source is the already published immutable Moonshine runtime archive [`teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip`](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip), tag `moonshine-v0.1.5`, Moonshine source revision `234f60faa0eb388b01cdf7e60aca232af37aefda`, 11455945 bytes, SHA-256 `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335`. It records Visual Studio Build Tools 17.14.40 as the source environment; the selected Microsoft DLLs report file version `14.44.35211.0`. Static PE inspection found the llama.cpp closure imports `MSVCP140.dll`, `VCRUNTIME140.dll`, and `VCRUNTIME140_1.dll`; every imported symbol is exported by these pinned files. `msvcp140_1.dll` is present in the source archive but is not imported by this closure, so r2 excludes it. The bundled notice links Microsoft’s [Visual Studio license terms](https://visualstudio.microsoft.com/license-terms/) and [Visual C++ redistribution documentation](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution). Actual Windows loading is verified by the product smoke test, not by this static inspection.
 
 **Model.** The source is IBM’s [`ibm-granite/granite-4.0-h-350m-GGUF` repository at revision `a864f823cce6e6048b5752e2816fe7a23987d790`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/tree/a864f823cce6e6048b5752e2816fe7a23987d790) file [`granite-4.0-h-350m-Q8_0.gguf`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/a864f823cce6e6048b5752e2816fe7a23987d790/granite-4.0-h-350m-Q8_0.gguf), 366195616 bytes, SHA-256 `c7d9873640dc303b6773dcc44e72e5bdf533e1c95ca8421e6191fbff5c94c942`. Its source repository identifies `ibm-granite/granite-4.0-h-350m` as the base model and marks the package Apache-2.0. The model archive includes the complete Apache-2.0 license text (SHA-256 `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`). The pinned GGUF repository README says it contains GGUF conversions of the IBM base model, but does not record a converter version, conversion command, or base-model revision; this package record does not claim those missing details.
 
 ## Rebuild
 
-Place the two verified source files in `artifacts/generative-radio/` and run:
+Place the three verified source files in `artifacts/generative-radio/` and run:
 
 ```sh
 python3 scripts/package_managed_radio_assets.py \
@@ -68,9 +74,10 @@ python3 scripts/package_managed_radio_assets.py \
   --out ../artifacts/managed-radio-assets
 ```
 
-The script writes both candidate ZIPs and `provenance.json` outside the Git repository. It verifies the pinned source archives, verifies the Apache and runtime license text, creates flat deterministic archives, and records each extracted file’s exact size and SHA-256. The output JSON uses the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths.
+The script writes the r2 runtime ZIP, a byte-identical rebuild of the published r1 model ZIP, and `provenance.json` outside the Git repository. It verifies the pinned source archives, every selected redistributable member, and the Apache/runtime license texts; creates flat deterministic archives; and records each extracted file’s exact size and SHA-256. The output JSON uses the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths.
 
 Upstream source pins:
 
 - Runtime release: [b8696](https://github.com/ggml-org/llama.cpp/releases/download/b8696/llama-b8696-bin-win-cpu-x64.zip); commit `69c28f1547c169902f62ca48bee75fb876c4d8e6`.
+- Microsoft runtime files: [published Moonshine runtime](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip); source revision `234f60faa0eb388b01cdf7e60aca232af37aefda`.
 - Model file: [ibm-granite/granite-4.0-h-350m-GGUF at `a864f823cce6e6048b5752e2816fe7a23987d790`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/a864f823cce6e6048b5752e2816fe7a23987d790/granite-4.0-h-350m-Q8_0.gguf).
