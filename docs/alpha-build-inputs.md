@@ -44,6 +44,59 @@ repository does not mirror them, and this review did not download or rehash the
 files. Their availability and exact object bytes therefore remain unverified
 here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
 
+## Alpha 5 intent model inputs
+
+Race Engineer's Alpha-5 candidate lock marks the six E5 and MiniLM L12 files
+below as required. These records document that candidate and do not change the
+current Alpha-4 inventory above. The E5 model and license assets referenced by
+the candidate lock are prepared but unpublished. Lock targets are relative to
+the model pack root; the installer places that pack under `runtime/`, so
+`intent/...` and `licenses/...` are installed as `runtime/intent/...` and
+`runtime/licenses/...`.
+
+### Multilingual E5 Small
+
+The source is [`intfloat/multilingual-e5-small` at revision `0e60b8d9d2166d80387f86e3b48ec9ced55f4d15`](https://huggingface.co/intfloat/multilingual-e5-small/blob/0e60b8d9d2166d80387f86e3b48ec9ced55f4d15/README.md). Its pinned model card declares MIT; the repository has no standalone license file. The source FP32 ONNX file [`onnx/model.onnx`](https://huggingface.co/intfloat/multilingual-e5-small/resolve/0e60b8d9d2166d80387f86e3b48ec9ced55f4d15/onnx/model.onnx) is 470268510 bytes, SHA-256 `ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665`.
+
+| ID | Candidate asset/source | Model-pack target | Size (bytes) | SHA-256 | License and provenance |
+| --- | --- | --- | ---: | --- | --- |
+| `e5-model` | Prepared, unpublished `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/multilingual-e5-small-quint8.onnx` | `intent/multilingual-e5-small-quint8.onnx` | 118330479 | `c9391bd927dbf1aadedde96db8ad660034be110d04de4eb4ee6ec323d5dab618` | MIT; per-channel generic QUInt8 derived from the pinned FP32 source. |
+| `e5-tokenizer` | [Pinned SentencePiece file](https://huggingface.co/intfloat/multilingual-e5-small/resolve/0e60b8d9d2166d80387f86e3b48ec9ced55f4d15/onnx/sentencepiece.bpe.model) | `intent/multilingual-e5-small-sentencepiece.bpe.model` | 5069051 | `cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865` | From the same upstream revision; XLM-R SentencePiece tokenizer. |
+| `e5-license` | Prepared, unpublished `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/e5-LICENSE-MIT.txt` | `licenses/e5-LICENSE-MIT.txt` | 1082 | `6e90701309596a0bda99f53196b72144b0e3387a2b5b364a418a79f5b49595ea` | MIT text from [`microsoft/unilm` commit `31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd`](https://github.com/microsoft/unilm/blob/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/LICENSE). |
+
+The quantizer is Race Engineer's `scripts/quantize-intent-e5.py` from commit
+`730f0ac4f8cfa3f8bf6143d9fe75d19663a270b8`. It uses Python with ONNX Runtime
+1.23.2, ONNX 1.19.0 and NumPy 2.5.3, calling `quantize_dynamic` with
+`per_channel=True`,
+`reduce_range=False`, and `weight_type=QUInt8`. The output is
+`multilingual-e5-small-quint8.onnx` above. No ZIP is used: the model and MIT
+notice are separate assets in the proposed, unpublished tag
+`intent-multilingual-e5-small-0e60b8d9-r1`; the tokenizer stays a direct pinned
+Hugging Face file. The runtime uses ONNX Runtime 1.23.2 and `rembed` v0.3.0
+(Apache-2.0) for the XLM-R SentencePiece tokenizer, with the existing
+`query: ` prefix, masked-mean pooling and L2 normalization.
+
+### MiniLM L12 comparison
+
+The source is [`sentence-transformers/all-MiniLM-L12-v2` at revision `a50ef00143b4d5391434df20ae11632588ac25be`](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2/blob/a50ef00143b4d5391434df20ae11632588ac25be/README.md). The pinned model card declares Apache-2.0. This is an experimental comparison with the existing L6 model; it does not replace the default or establish a safety improvement.
+
+| ID | Pinned source | Model-pack target | Size (bytes) | SHA-256 | License and provenance |
+| --- | --- | --- | ---: | --- | --- |
+| `minilm-l12-model` | [Quantized AVX2 ONNX](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2/resolve/a50ef00143b4d5391434df20ae11632588ac25be/onnx/model_quint8_avx2.onnx) | `intent/all-MiniLM-L12-v2-quint8-avx2.onnx` | 34160110 | `3c5e33c478496a43413086336955119154d56f3c3d0dccadb484041dc1ce762d` | Apache-2.0; upstream quantized export, no local conversion recipe. |
+| `minilm-l12-vocab` | [Vocabulary](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2/resolve/a50ef00143b4d5391434df20ae11632588ac25be/vocab.txt) | `intent/all-MiniLM-L12-v2-vocab.txt` | 231508 | `07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3` | Apache-2.0 model distribution; byte-identical to the existing L6 vocabulary. |
+| `minilm-l12-license` | [Existing immutable L6 Apache license asset](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/LICENSE-Apache-2.0.txt) | `licenses/minilm-l12-LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | Canonical Apache-2.0 text, reused without modification. |
+
+The pinned
+[`sentence_bert_config.json`](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2/resolve/a50ef00143b4d5391434df20ae11632588ac25be/sentence_bert_config.json)
+is 53 bytes, SHA-256
+`70f4448f31320443fe3557cacea5abf2dcc4915dda8c80646bec9f3bb0aa5a1f`, and
+sets `max_seq_length` to 128. The model card describes truncation beyond 256
+word pieces. The existing MiniLM runtime caps input at 64 pieces including
+CLS/SEP, and Alpha 5 retains that limit. The upstream model has 384 dimensions
+and 33.4 million parameters. Its ONNX file is already quantized; no local
+conversion recipe is used. No new Forgejo model release asset or L12-specific
+tag has been published.
+
 ## Historical first-Alpha inventory
 
 The table below records the first private TeamManager Alpha only. Race Engineer
