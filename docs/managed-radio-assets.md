@@ -4,7 +4,7 @@ These are the two separately installed CPU packages for the explicitly selected 
 
 ## Candidate release
 
-The candidate Forgejo release tag is `managed-radio-granite-350m-r1`. Its state is `prepared-not-published`: the tag and release do not exist yet, and no package has been published. The URLs below are reserved candidates; add the assets to that release before using them in the application catalog.
+The candidate Forgejo release tag is `managed-radio-granite-350m-r1`. The packager emits `prepared-not-published` candidate metadata and never publishes a tag or release. Before enabling application downloads, verify that the release and both assets are available at these URLs; until then they are candidates only.
 
 | Package ID | Candidate asset URL | Archive bytes | Archive SHA-256 |
 | --- | --- | ---: | --- |
