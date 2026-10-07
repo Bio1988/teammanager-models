@@ -9,7 +9,7 @@ components are verified while building Race Engineer and packaged into the one
 complete Windows installer. This repository is not a runtime model registry.
 The current Alpha-4 lock makes `moonshine-small-streaming-en` a required
 installer input.
-Only these optional Speech to Text models may be downloaded after
+For Speech to Text, only these optional models may be downloaded after
 installation, and only after an explicit user action:
 
 - Moonshine `moonshine-tiny-streaming-en`
@@ -21,6 +21,12 @@ asset pins are recorded in the current Alpha-4 section of
 [docs/alpha-build-inputs.md](docs/alpha-build-inputs.md).
 That inventory includes three required VCTK voice files pinned directly to an
 upstream Hugging Face commit; they are not mirrored in this repository.
+
+The separately authorized managed Radio answer provider uses one optional
+Windows CPU runtime and the Granite 4.0 H 350M Q8_0 model. Both packages stay
+outside the Alpha installer and require an explicit user download action. Their
+closed file inventories, licenses, source pins, and reproducible packaging
+recipe are in [docs/managed-radio-assets.md](docs/managed-radio-assets.md).
 
 The Alpha 31 Moonshine publication record is retained in
 [docs/moonshine-alpha31.md](docs/moonshine-alpha31.md); its old optional-model
