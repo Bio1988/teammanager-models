@@ -9,7 +9,7 @@ below match that lock.
 
 | Class | ID | Immutable URL | Install target | Size (bytes) | SHA-256 | Licence and upstream provenance |
 | --- | --- | --- | --- | ---: | --- | --- |
-| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. The published release records weights revision `983151f13aaeab1b13c1e5e3c2c383d49a9edf3f`, Pocket TTS v3.3.0 configuration commit `3dbee45d343d7dddd0d105468d17f8dcba14db3e`, and tokenizer revision `e7205b6ee50e654a5ea19f0e9df2b0813b05e921`; the exact ONNX conversion recipe is not retained here. |
+| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. Source pins, exporter evidence, and deterministic packaging are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package) below. |
 | Required | `pocket-voice-charles` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p254_023_enhanced.wav` | `pocket/voice/charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | Enhanced VCTK recording (`p254_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
 | Required | `pocket-voice-michael` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p360_023_enhanced.wav` | `pocket/voice/michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | Enhanced VCTK recording (`p360_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
 | Required | `pocket-voice-eve` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p361_023_enhanced.wav` | `pocket/voice/eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | Enhanced VCTK recording (`p361_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
@@ -28,14 +28,20 @@ revision identifies the three VCTK source files; the
 [pinned Kyutai voice catalog](https://huggingface.co/kyutai/tts-voices/tree/323332d33f997de8394f24a193e1a76df720e01a/vctk)
 and [its README](https://huggingface.co/kyutai/tts-voices/blob/323332d33f997de8394f24a193e1a76df720e01a/README.md)
 say VCTK is CC BY 4.0 and enhanced recordings are cleaned versions created
-using ai-coustics. The September Pocket release record contains the source pins
-listed above, but not its ONNX conversion recipe. The MiniLM model card specifies
-Apache 2.0, while this repository does not retain the exact ONNX conversion
-revision or recipe. The listed TeamManager asset URL, size, and SHA-256 pin each
-delivered artifact; they do not establish the missing conversion history.
-The three VCTK WAVs are a direct-upstream-source exception: this repository
-does not mirror them, and this review did not download or rehash the files.
-Their availability and exact object bytes therefore remain unverified
+using ai-coustics. The upstream Pocket model card specifies CC BY 4.0. Source
+pins, exporter evidence, and deterministic packaging for the September ONNX
+package are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package).
+The release records the weight, configuration, and tokenizer revisions below;
+the ONNX conversion recipe is not retained.
+The MiniLM model card specifies Apache 2.0, but this repository does not retain
+its exact ONNX conversion revision or recipe. The asset URLs, sizes, and
+SHA-256 values above pin the delivered Pocket and MiniLM artifacts. The Pocket
+packaging step verified its source archive and model files against its
+manifest, but did not re-export weights or verify Windows audio output; the
+MiniLM artifact pin does not establish its missing conversion history.
+The three VCTK WAVs are a direct-upstream-source exception: this
+repository does not mirror them, and this review did not download or rehash the
+files. Their availability and exact object bytes therefore remain unverified
 here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
 
 ## Historical first-Alpha inventory
@@ -121,6 +127,37 @@ Moonshine Small required and Tiny/Medium optional; see the inventory above.
 Current Race Engineer `main` does not list Natural Radio assets in its closed
 `build/alpha-models.lock.json`. Historical Models release records therefore do
 not make Natural Radio a current installer input or runtime authority.
+
+## Pocket English September 2026 native model package
+
+The staged immutable asset is
+`https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip`
+(207,279,132 bytes; SHA-256
+`4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce`).
+Race Engineer selects installer inputs through its closed
+`build/alpha-models.lock.json`; this record alone does not select an input.
+
+The release archive contains exactly five FP32 ONNX graphs under `cpp/`,
+`weights/tokenizer.model`, `NOTICE.md`, and `LICENSES/CC-BY-4.0.txt`. It was
+repacked deterministically from the development export
+`new-dev-Pocket-English-2026-09-dev-model.zip` (207,273,014 bytes; SHA-256
+`8a3dffbca1d7c33a41f312173e08a7df69df7f0e2b2ac6f494fb4d4e842cd9aa`).
+The exporter evidence records eleven FP32 comparisons and a Linux native CPU
+smoke test; this packaging step verified the source archive and each model
+file against its manifest, but did not re-export the weights or verify Windows
+audio output.
+
+The source weights are [Kyutai Pocket TTS](https://huggingface.co/kyutai/pocket-tts)
+at revision `983151f13aaeab1b13c1e5e3c2c383d49a9edf3f`, with full-clone
+weights SHA-256 `fb0dc01b0d4d2e1c905b7a3e0676e3d9c96d5ae460e24e3ab94981805babf997`.
+The Pocket TTS v3.3.0 configuration source is commit
+`3dbee45d343d7dddd0d105468d17f8dcba14db3e`. The tokenizer came from
+[kyutai/pocket-tts-without-voice-cloning](https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/tree/e7205b6ee50e654a5ea19f0e9df2b0813b05e921)
+at revision `e7205b6ee50e654a5ea19f0e9df2b0813b05e921`, path
+`languages/english_2026-09/tokenizer.model` (59,339 bytes; SHA-256
+`d461765ae179566678c93091c5fa6f2984c31bbe990bf1aa62d92c64d91bc3f6`). The model is
+identified as CC BY 4.0 with additional upstream model-card use conditions;
+the bundled notice and license retain attribution and terms.
 
 ## Natural Radio release record
 
