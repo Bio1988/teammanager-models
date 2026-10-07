@@ -68,8 +68,14 @@ Every PR states production files, packages, dependencies, and database tables ad
 - Race Engineer pins required Alpha inputs in its closed
   `build/alpha-models.lock.json` and packages them into the complete Windows
   installer.
-- Only `whisper-small-q5_1` may be downloaded after installation, solely after
-  explicit user action and never automatically.
+- The current lock may pin upstream files directly. Record their immutable
+  source revision, size, hash, licence, and attribution; do not describe them as
+  mirrored in this repository unless they are.
+- Under the current Race Engineer Alpha-4 lock, only
+  `moonshine-tiny-streaming-en` and `moonshine-medium-streaming-en` may be
+  downloaded after installation, solely after explicit user action and never
+  automatically. `moonshine-small-streaming-en` is required and packaged in
+  the installer.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and
