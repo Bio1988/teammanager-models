@@ -9,7 +9,7 @@ below match that lock.
 
 | Class | ID | Immutable URL | Install target | Size (bytes) | SHA-256 | Licence and upstream provenance |
 | --- | --- | --- | --- | ---: | --- | --- |
-| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. The exact source revision and ONNX conversion record for this September package are not retained here; see the provenance note below. |
+| Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. Source pins, exporter evidence, and deterministic packaging are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package) below. |
 | Required | `pocket-voice-charles` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p254_023_enhanced.wav` | `pocket/voice/charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | Enhanced VCTK recording (`p254_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
 | Required | `pocket-voice-michael` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p360_023_enhanced.wav` | `pocket/voice/michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | Enhanced VCTK recording (`p360_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
 | Required | `pocket-voice-eve` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p361_023_enhanced.wav` | `pocket/voice/eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | Enhanced VCTK recording (`p361_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
@@ -28,13 +28,16 @@ revision identifies the three VCTK source files; the
 [pinned Kyutai voice catalog](https://huggingface.co/kyutai/tts-voices/tree/323332d33f997de8394f24a193e1a76df720e01a/vctk)
 and [its README](https://huggingface.co/kyutai/tts-voices/blob/323332d33f997de8394f24a193e1a76df720e01a/README.md)
 say VCTK is CC BY 4.0 and enhanced recordings are cleaned versions created
-using ai-coustics. The upstream Pocket model card specifies CC BY 4.0, but this
-repository does not retain the exact source revision or conversion steps for
-the September ONNX package. The MiniLM model card specifies Apache 2.0, while
-this repository does not retain the exact ONNX conversion revision or recipe.
-For these packages, the listed TeamManager asset URL, size, and SHA-256 pin the
-delivered artifact; they do not establish missing upstream transformation
-history. The three VCTK WAVs are a direct-upstream-source exception: this
+using ai-coustics. The upstream Pocket model card specifies CC BY 4.0. Source
+pins, exporter evidence, and deterministic packaging for the September ONNX
+package are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package).
+The MiniLM model card specifies Apache 2.0, but this repository does not retain
+its exact ONNX conversion revision or recipe. The asset URLs, sizes, and
+SHA-256 values above pin the delivered Pocket and MiniLM artifacts. The Pocket
+packaging step verified its source archive and model files against its
+manifest, but did not re-export weights or verify Windows audio output; the
+MiniLM artifact pin does not establish its missing conversion history.
+The three VCTK WAVs are a direct-upstream-source exception: this
 repository does not mirror them, and this review did not download or rehash the
 files. Their availability and exact object bytes therefore remain unverified
 here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
