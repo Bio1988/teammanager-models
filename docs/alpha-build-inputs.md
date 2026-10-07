@@ -32,10 +32,10 @@ using ai-coustics. The September Pocket release record contains the source pins
 listed above, but not its ONNX conversion recipe. The MiniLM model card specifies
 Apache 2.0, while this repository does not retain the exact ONNX conversion
 revision or recipe. The listed TeamManager asset URL, size, and SHA-256 pin each
-delivered artifact; they do not establish the missing conversion history. The
-three VCTK WAVs are a direct-upstream-source exception: this
-repository does not mirror them, and this review did not download or rehash the
-files. Their availability and exact object bytes therefore remain unverified
+delivered artifact; they do not establish the missing conversion history.
+The three VCTK WAVs are a direct-upstream-source exception: this repository
+does not mirror them, and this review did not download or rehash the files.
+Their availability and exact object bytes therefore remain unverified
 here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
 
 ## Historical first-Alpha inventory
