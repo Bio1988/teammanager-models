@@ -23,10 +23,13 @@ That inventory includes three required VCTK voice files pinned directly to an
 upstream Hugging Face commit; they are not mirrored in this repository.
 
 The separately authorized managed Radio answer provider uses one optional
-Windows CPU runtime and the Granite 4.0 H 350M Q8_0 model. Both packages stay
-outside the Alpha installer and require an explicit user download action. Their
-closed file inventories, licenses, source pins, and reproducible packaging
-recipe are in [docs/managed-radio-assets.md](docs/managed-radio-assets.md).
+Windows CPU runtime with either the Granite 4.0 H 350M Q8_0 or LiquidAI
+LFM2.5-350M Q8_0 model. The runtime and model packages stay outside the Alpha
+installer. Downloads require explicit user action; model selection is separate
+and explicit, and downloading or selecting a package never starts the provider
+automatically. Their closed file inventories, licenses, source pins, and
+packaging records are in
+[docs/managed-radio-assets.md](docs/managed-radio-assets.md).
 
 The Alpha 31 Moonshine publication record is retained in
 [docs/moonshine-alpha31.md](docs/moonshine-alpha31.md); its old optional-model

@@ -1,17 +1,18 @@
 # Managed Radio optional assets
 
-These are the two separately installed CPU packages for the explicitly selected managed Radio answer provider. They are not part of the Race Engineer Alpha installer or `build/alpha-models.lock.json`. Downloading either package requires an explicit user action; neither package is selected or started by downloading it.
+The managed Radio answer provider uses one optional Windows CPU runtime and one of two optional model packages: IBM Granite 4.0 H 350M Q8_0 or LiquidAI LFM2.5-350M Q8_0. These assets are not part of the Race Engineer Alpha installer or `build/alpha-models.lock.json`. Each download requires explicit user action, and model selection is a separate explicit action. Downloading or selecting a package never starts the provider automatically.
 
-## Published model and candidate runtime repair
+## Package choices and publication state
 
-The Granite model remains the immutable published r1 asset. The r1 runtime also remains immutable, but it omitted the app-local Microsoft Visual C++ runtime files imported by llama.cpp. Its replacement is the self-contained r2 runtime candidate under tag `managed-radio-granite-350m-r2`. The packager emits `prepared-not-published` for that runtime and never publishes a tag or release.
+The Granite model remains the immutable published r1 asset. The LFM model archive below is prepared but not published; its proposed release tag and URL are recorded for review, not as a live download. The r1 runtime also remains immutable, but it omitted the app-local Microsoft Visual C++ runtime files imported by llama.cpp. Its replacement is the self-contained r2 runtime candidate under tag `managed-radio-granite-350m-r2`. The packager emits `prepared-not-published` for that runtime and never publishes a tag or release. Both model choices use that same b8696-r2 runtime.
 
 | Package ID | State | Asset URL | Archive bytes | Archive SHA-256 |
 | --- | --- | --- | ---: | --- |
 | `llama-cpp-b8696-win-cpu-x64-r2` | Candidate | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r2/runtime-b8696-win-cpu-x64-r2.zip` | 37462006 | `89d990f6aacbe127b5c48b145939f92dc3cbc3779c46b77fe11e844c3d46ab23` |
 | `granite-4.0-h-350m-q8-0` | Published immutable | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r1/granite-4.0-h-350m-q8-0.zip` | 366207248 | `e33d587d6fe6900de41bd965c8551656228a6571d81846d8773dfc48dab16e69` |
+| `lfm2.5-350m-q8-0` | Prepared, not published | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-lfm-2-5-350m-r1/LFM2.5-350M-Q8_0.zip` | 379228488 | `b059557558b883274c7bcba58427fe9bc6da6bda451ef59621c70cc75af38390` |
 
-Each archive is a flat ZIP with sorted root files, fixed 1980-01-01 timestamps, regular-file mode 0644 and no compression. The build rejects path separators, duplicate names, directories, links, encrypted source entries, and source size/hash mismatches. Exact extracted sizes and hashes are listed below.
+The archives are flat ZIPs with sorted root files, fixed 1980-01-01 timestamps, regular-file mode 0644 and no compression. The existing runtime/Granite build rejects path separators, duplicate names, directories, links, encrypted source entries, and source size/hash mismatches. The prepared LFM ZIP contains exactly the two files listed below. Exact extracted sizes and hashes are recorded below.
 
 ### Runtime package files
 
@@ -51,10 +52,12 @@ It contains `llama-server.exe`, all 20 DLLs from the pinned upstream Windows CPU
 
 ### Model package files
 
-| File | Bytes | SHA-256 |
-| --- | ---: | --- |
-| `LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
-| `granite-4.0-h-350m-Q8_0.gguf` | 366195616 | `c7d9873640dc303b6773dcc44e72e5bdf533e1c95ca8421e6191fbff5c94c942` |
+| Package | File | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| Granite | `LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| Granite | `granite-4.0-h-350m-Q8_0.gguf` | 366195616 | `c7d9873640dc303b6773dcc44e72e5bdf533e1c95ca8421e6191fbff5c94c942` |
+| LFM | `LICENSE-LFM-Open-License-v1.0.txt` | 10574 | `4d28ca14dedc0b3d0fcc2b3339f0e79931faa33874f3d24f522183a8fc70068c` |
+| LFM | `LFM2.5-350M-Q8_0.gguf` | 379217632 | `be036a757295e550098b85e13f6af2735d0fa73b41e1156a40c7d8e8e32a5766` |
 
 ## Source and license provenance
 
@@ -64,9 +67,11 @@ The Microsoft runtime source is the already published immutable Moonshine runtim
 
 **Model.** The source is IBM’s [`ibm-granite/granite-4.0-h-350m-GGUF` repository at revision `a864f823cce6e6048b5752e2816fe7a23987d790`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/tree/a864f823cce6e6048b5752e2816fe7a23987d790) file [`granite-4.0-h-350m-Q8_0.gguf`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/a864f823cce6e6048b5752e2816fe7a23987d790/granite-4.0-h-350m-Q8_0.gguf), 366195616 bytes, SHA-256 `c7d9873640dc303b6773dcc44e72e5bdf533e1c95ca8421e6191fbff5c94c942`. Its source repository identifies `ibm-granite/granite-4.0-h-350m` as the base model and marks the package Apache-2.0. The model archive includes the complete Apache-2.0 license text (SHA-256 `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`). The pinned GGUF repository README says it contains GGUF conversions of the IBM base model, but does not record a converter version, conversion command, or base-model revision; this package record does not claim those missing details.
 
+**LFM model.** The source is LiquidAI’s [`LiquidAI/LFM2.5-350M-GGUF` repository at revision `657e078c94084481950a2d555a941481f715536b`](https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/tree/657e078c94084481950a2d555a941481f715536b), file [`LFM2.5-350M-Q8_0.gguf`](https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/657e078c94084481950a2d555a941481f715536b/LFM2.5-350M-Q8_0.gguf), 379217632 bytes, SHA-256 `be036a757295e550098b85e13f6af2735d0fa73b41e1156a40c7d8e8e32a5766`. The model has 354483968 parameters. Its license is **LFM Open License v1.0**, copied from [`LiquidAI/LFM2.5-350M` at revision `9e6c6ccf47cd318696e137d381a7ded8fe4df09f`](https://huggingface.co/LiquidAI/LFM2.5-350M/blob/9e6c6ccf47cd318696e137d381a7ded8fe4df09f/LICENSE); the archive includes that complete license as `LICENSE-LFM-Open-License-v1.0.txt` (10574 bytes, SHA-256 `4d28ca14dedc0b3d0fcc2b3339f0e79931faa33874f3d24f522183a8fc70068c`). The prepared LFM ZIP is a flat archive with sorted root files, stored entries, fixed 1980-01-01 timestamps, and regular-file mode 0644. Its local provenance sidecar records the source pins, file hashes, archive hash, and proposed release tag; it is not a member of the model ZIP.
+
 ## Rebuild
 
-Place the three verified source files in `artifacts/generative-radio/` and run:
+Place the three verified runtime and Granite source files in `artifacts/generative-radio/` and run:
 
 ```sh
 python3 scripts/package_managed_radio_assets.py \
@@ -74,10 +79,12 @@ python3 scripts/package_managed_radio_assets.py \
   --out ../artifacts/managed-radio-assets
 ```
 
-The script writes the r2 runtime ZIP, a byte-identical rebuild of the published r1 model ZIP, and `provenance.json` outside the Git repository. It verifies the pinned source archives, every selected redistributable member, and the Apache/runtime license texts; creates flat deterministic archives; and records each extracted file’s exact size and SHA-256. The output JSON uses the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths.
+The script writes the r2 runtime ZIP, a byte-identical rebuild of the published r1 Granite model ZIP, and `provenance.json` outside the Git repository. It verifies the pinned source archives, every selected redistributable member, and the Apache/runtime license texts; creates flat deterministic archives; and records each extracted file’s exact size and SHA-256. The output JSON uses the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths. The prepared LFM archive and its provenance sidecar are separate local artifacts; the current script does not rebuild them.
 
 Upstream source pins:
 
 - Runtime release: [b8696](https://github.com/ggml-org/llama.cpp/releases/download/b8696/llama-b8696-bin-win-cpu-x64.zip); commit `69c28f1547c169902f62ca48bee75fb876c4d8e6`.
 - Microsoft runtime files: [published Moonshine runtime](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip); source revision `234f60faa0eb388b01cdf7e60aca232af37aefda`.
 - Model file: [ibm-granite/granite-4.0-h-350m-GGUF at `a864f823cce6e6048b5752e2816fe7a23987d790`](https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/a864f823cce6e6048b5752e2816fe7a23987d790/granite-4.0-h-350m-Q8_0.gguf).
+- LFM model file: [LiquidAI/LFM2.5-350M-GGUF at `657e078c94084481950a2d555a941481f715536b`](https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/657e078c94084481950a2d555a941481f715536b/LFM2.5-350M-Q8_0.gguf).
+- LFM license: [LiquidAI/LFM2.5-350M at `9e6c6ccf47cd318696e137d381a7ded8fe4df09f`](https://huggingface.co/LiquidAI/LFM2.5-350M/blob/9e6c6ccf47cd318696e137d381a7ded8fe4df09f/LICENSE).
