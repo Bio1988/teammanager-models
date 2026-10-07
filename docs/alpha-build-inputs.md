@@ -48,10 +48,11 @@ here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
 
 Race Engineer's Alpha-5 candidate lock marks the six E5 and MiniLM L12 files
 below as required. These records document that candidate and do not change the
-current Alpha-4 inventory above. The E5 model and license assets referenced by
-the candidate lock are prepared but unpublished. Lock targets are relative to
-the model pack root; the installer places that pack under `runtime/`, so
-`intent/...` and `licenses/...` are installed as `runtime/intent/...` and
+current Alpha-4 inventory above. The E5 model and license assets are published
+and their anonymous readbacks matched the recorded bytes and hashes; the Alpha-5
+installer remains a candidate. Lock targets are relative to the model pack
+root; the installer places that pack under `runtime/`, so `intent/...` and
+`licenses/...` are installed as `runtime/intent/...` and
 `runtime/licenses/...`.
 
 ### Multilingual E5 Small
@@ -60,9 +61,11 @@ The source is [`intfloat/multilingual-e5-small` at revision `0e60b8d9d2166d80387
 
 | ID | Candidate asset/source | Model-pack target | Size (bytes) | SHA-256 | License and provenance |
 | --- | --- | --- | ---: | --- | --- |
-| `e5-model` | Prepared, unpublished `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/multilingual-e5-small-quint8.onnx` | `intent/multilingual-e5-small-quint8.onnx` | 118330479 | `c9391bd927dbf1aadedde96db8ad660034be110d04de4eb4ee6ec323d5dab618` | MIT; per-channel generic QUInt8 derived from the pinned FP32 source. |
+| `e5-model` | Published immutable [`multilingual-e5-small-quint8.onnx`](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/multilingual-e5-small-quint8.onnx) | `intent/multilingual-e5-small-quint8.onnx` | 118330479 | `c9391bd927dbf1aadedde96db8ad660034be110d04de4eb4ee6ec323d5dab618` | MIT; per-channel generic QUInt8 derived from the pinned FP32 source. |
 | `e5-tokenizer` | [Pinned SentencePiece file](https://huggingface.co/intfloat/multilingual-e5-small/resolve/0e60b8d9d2166d80387f86e3b48ec9ced55f4d15/onnx/sentencepiece.bpe.model) | `intent/multilingual-e5-small-sentencepiece.bpe.model` | 5069051 | `cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865` | From the same upstream revision; XLM-R SentencePiece tokenizer. |
-| `e5-license` | Prepared, unpublished `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/e5-LICENSE-MIT.txt` | `licenses/e5-LICENSE-MIT.txt` | 1082 | `6e90701309596a0bda99f53196b72144b0e3387a2b5b364a418a79f5b49595ea` | MIT text from [`microsoft/unilm` commit `31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd`](https://github.com/microsoft/unilm/blob/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/LICENSE). |
+| `e5-license` | Published immutable [`e5-LICENSE-MIT.txt`](https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/e5-LICENSE-MIT.txt) | `licenses/e5-LICENSE-MIT.txt` | 1082 | `6e90701309596a0bda99f53196b72144b0e3387a2b5b364a418a79f5b49595ea` | MIT; pinned source and formatting details below. |
+
+The source MIT notice is [`microsoft/unilm` at commit `0e31c7c09737df491e7ff74ded19614b884c52b4`](https://github.com/microsoft/unilm/blob/0e31c7c09737df491e7ff74ded19614b884c52b4/LICENSE), 1104 bytes, SHA-256 `904dc4d8749877f1dba1cda48200d2462dccbeb7c134d5e4ef6fa75e0198c8fe`. The published notice is 1082 bytes, SHA-256 `6e90701309596a0bda99f53196b72144b0e3387a2b5b364a418a79f5b49595ea`; packaging converted CRLF line endings to LF and removed one empty line between “following conditions:” and “The above copyright”. The text of the license terms is unchanged, but the published notice is not byte-identical to its upstream source.
 
 The quantizer is Race Engineer's `scripts/quantize-intent-e5.py` from commit
 `730f0ac4f8cfa3f8bf6143d9fe75d19663a270b8`. It uses Python with ONNX Runtime
@@ -70,8 +73,9 @@ The quantizer is Race Engineer's `scripts/quantize-intent-e5.py` from commit
 `per_channel=True`,
 `reduce_range=False`, and `weight_type=QUInt8`. The output is
 `multilingual-e5-small-quint8.onnx` above. No ZIP is used: the model and MIT
-notice are separate assets in the proposed, unpublished tag
-`intent-multilingual-e5-small-0e60b8d9-r1`; the tokenizer stays a direct pinned
+notice are separate published immutable assets in tag
+`intent-multilingual-e5-small-0e60b8d9-r1`, with anonymous readbacks matching
+their recorded sizes and hashes; the tokenizer stays a direct pinned
 Hugging Face file. The runtime uses ONNX Runtime 1.23.2 and `rembed` v0.3.0
 (Apache-2.0) for the XLM-R SentencePiece tokenizer, with the existing
 `query: ` prefix, masked-mean pooling and L2 normalization.
