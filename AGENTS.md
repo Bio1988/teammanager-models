@@ -76,6 +76,10 @@ Every PR states production files, packages, dependencies, and database tables ad
   downloaded after installation, solely after explicit user action and never
   automatically. `moonshine-small-streaming-en` is required and packaged in
   the installer.
+- That closed list applies to Speech to Text. The separately authorized
+  managed Radio provider may download only the pinned llama.cpp CPU runtime and
+  Granite model package pair in `docs/managed-radio-assets.md`, also after an
+  explicit user action. Keep those packages outside the Alpha installer lock.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and
