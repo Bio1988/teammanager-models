@@ -31,6 +31,8 @@ say VCTK is CC BY 4.0 and enhanced recordings are cleaned versions created
 using ai-coustics. The upstream Pocket model card specifies CC BY 4.0. Source
 pins, exporter evidence, and deterministic packaging for the September ONNX
 package are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package).
+The release records the weight, configuration, and tokenizer revisions below;
+the ONNX conversion recipe is not retained.
 The MiniLM model card specifies Apache 2.0, but this repository does not retain
 its exact ONNX conversion revision or recipe. The asset URLs, sizes, and
 SHA-256 values above pin the delivered Pocket and MiniLM artifacts. The Pocket
