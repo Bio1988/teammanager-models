@@ -26,9 +26,10 @@ The separately authorized managed Radio answer provider uses one optional
 Windows CPU runtime with either the Granite 4.0 H 350M Q8_0 or LiquidAI
 LFM2.5-350M Q8_0 model. The runtime and model packages stay outside the Alpha
 installer. Downloads require explicit user action; model selection is separate
-and explicit, and downloading or selecting a package never starts the provider
-automatically. Their closed file inventories, licenses, source pins, and
-packaging records are in
+and explicit. Downloading only installs files; selecting a model while Engine
+is running may warm its runtime, while enabling or using the provider remains
+explicit. Their closed file inventories, licenses, source pins, and packaging
+records are in
 [docs/managed-radio-assets.md](docs/managed-radio-assets.md).
 
 The Alpha 31 Moonshine publication record is retained in

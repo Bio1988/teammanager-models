@@ -81,8 +81,9 @@ Every PR states production files, packages, dependencies, and database tables ad
   and either the Granite 4.0 H 350M Q8_0 or LiquidAI LFM2.5-350M Q8_0 model
   package listed in `docs/managed-radio-assets.md`, after explicit user
   action. Keep those packages outside the Alpha installer lock. Model
-  selection is also explicit; downloading or selecting a package does not
-  start the provider automatically.
+  selection is also explicit. Downloading only installs files and does not
+  activate the provider; selecting a model while Engine is running may warm
+  its runtime, while enabling or using the provider remains explicit.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and

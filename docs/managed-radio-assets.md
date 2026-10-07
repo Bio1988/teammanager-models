@@ -1,14 +1,14 @@
 # Managed Radio optional assets
 
-The managed Radio answer provider uses one optional Windows CPU runtime and one of two optional model packages: IBM Granite 4.0 H 350M Q8_0 or LiquidAI LFM2.5-350M Q8_0. These assets are not part of the Race Engineer Alpha installer or `build/alpha-models.lock.json`. Each download requires explicit user action, and model selection is a separate explicit action. Downloading or selecting a package never starts the provider automatically.
+The managed Radio answer provider uses one optional Windows CPU runtime and one of two optional model packages: IBM Granite 4.0 H 350M Q8_0 or LiquidAI LFM2.5-350M Q8_0. These assets are not part of the Race Engineer Alpha installer or `build/alpha-models.lock.json`. Each download requires explicit user action, and model selection is a separate explicit action. Downloading only installs files; selecting a model while Engine is running may warm its runtime, while enabling or using the provider remains explicit.
 
 ## Package choices and publication state
 
-The Granite model remains the immutable published r1 asset. The LFM model archive below is prepared but not published; its proposed release tag and URL are recorded for review, not as a live download. The r1 runtime also remains immutable, but it omitted the app-local Microsoft Visual C++ runtime files imported by llama.cpp. Its replacement is the self-contained r2 runtime candidate under tag `managed-radio-granite-350m-r2`. The packager emits `prepared-not-published` for that runtime and never publishes a tag or release. Both model choices use that same b8696-r2 runtime.
+The Granite model remains the immutable published r1 asset. The LFM model archive below is prepared but not published; its proposed release tag and URL are recorded for review, not as a live download. The r1 runtime also remains immutable, but it omitted the app-local Microsoft Visual C++ runtime files imported by llama.cpp. Its self-contained r2 replacement is published and immutable under tag `managed-radio-granite-350m-r2`. Both model choices use that same b8696-r2 runtime.
 
 | Package ID | State | Asset URL | Archive bytes | Archive SHA-256 |
 | --- | --- | --- | ---: | --- |
-| `llama-cpp-b8696-win-cpu-x64-r2` | Candidate | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r2/runtime-b8696-win-cpu-x64-r2.zip` | 37462006 | `89d990f6aacbe127b5c48b145939f92dc3cbc3779c46b77fe11e844c3d46ab23` |
+| `llama-cpp-b8696-win-cpu-x64-r2` | Published immutable | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r2/runtime-b8696-win-cpu-x64-r2.zip` | 37462006 | `89d990f6aacbe127b5c48b145939f92dc3cbc3779c46b77fe11e844c3d46ab23` |
 | `granite-4.0-h-350m-q8-0` | Published immutable | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-granite-350m-r1/granite-4.0-h-350m-q8-0.zip` | 366207248 | `e33d587d6fe6900de41bd965c8551656228a6571d81846d8773dfc48dab16e69` |
 | `lfm2.5-350m-q8-0` | Prepared, not published | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/managed-radio-lfm-2-5-350m-r1/LFM2.5-350M-Q8_0.zip` | 379228488 | `b059557558b883274c7bcba58427fe9bc6da6bda451ef59621c70cc75af38390` |
 
@@ -71,7 +71,7 @@ The Microsoft runtime source is the already published immutable Moonshine runtim
 
 ## Rebuild
 
-Place the three verified runtime and Granite source files in `artifacts/generative-radio/` and run:
+Place the three verified runtime and Granite source files in `artifacts/generative-radio/` and run this from the repository root:
 
 ```sh
 python3 scripts/package_managed_radio_assets.py \
@@ -79,7 +79,42 @@ python3 scripts/package_managed_radio_assets.py \
   --out ../artifacts/managed-radio-assets
 ```
 
-The script writes the r2 runtime ZIP, a byte-identical rebuild of the published r1 Granite model ZIP, and `provenance.json` outside the Git repository. It verifies the pinned source archives, every selected redistributable member, and the Apache/runtime license texts; creates flat deterministic archives; and records each extracted file’s exact size and SHA-256. The output JSON uses the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths. The prepared LFM archive and its provenance sidecar are separate local artifacts; the current script does not rebuild them.
+The command-line build is limited to the r2 runtime and Granite model. It writes their ZIPs and `provenance.json` outside the Git repository, verifies the pinned source archives and selected members, and creates flat deterministic archives. Its JSON records the application package shape: `ID`, `ArchiveURL`, `ArchiveSizeBytes`, `ArchiveSHA256`, and `Files` (`Name`, `SizeBytes`, `SHA256`). The generated runtime `runtime_state` still says `prepared-not-published`, reflecting the packager's pre-publication record; it is build provenance, not the current release state shown above. The script does not publish tags or releases. The repository test suite exercises deterministic output, closed inventories, omission of extra executables, and rejection of unsafe source paths.
+
+The LFM archive uses the same existing `verify_source` and `deterministic_zip` helpers; the command-line build does not include it. Place the model and license from the pinned sources below at `../artifacts/generative-radio/lfm/LFM2.5-350M-Q8_0.gguf` and `../artifacts/generative-radio/lfm/LICENSE-LFM-Open-License-v1.0.txt`. Then run this from the repository root to recreate the flat, uncompressed archive and verify its exact output hash:
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+from scripts.package_managed_radio_assets import deterministic_zip, verify_source
+
+source_dir = Path("../artifacts/generative-radio/lfm")
+model = verify_source(
+    source_dir / "LFM2.5-350M-Q8_0.gguf",
+    379217632,
+    "be036a757295e550098b85e13f6af2735d0fa73b41e1156a40c7d8e8e32a5766",
+)
+license_text = verify_source(
+    source_dir / "LICENSE-LFM-Open-License-v1.0.txt",
+    10574,
+    "4d28ca14dedc0b3d0fcc2b3339f0e79931faa33874f3d24f522183a8fc70068c",
+)
+record = deterministic_zip(
+    Path("../artifacts/managed-radio-assets/LFM2.5-350M-Q8_0.zip"),
+    {
+        "LFM2.5-350M-Q8_0.gguf": model,
+        "LICENSE-LFM-Open-License-v1.0.txt": license_text,
+    },
+)
+assert (record["archive_size_bytes"], record["archive_sha256"]) == (
+    379228488,
+    "b059557558b883274c7bcba58427fe9bc6da6bda451ef59621c70cc75af38390",
+)
+print(record)
+PY
+```
+
+The source files are the model and license pinned in the provenance section above. The resulting ZIP has the proposed LFM release tag and URL in the table; it remains unpublished until a release is created.
 
 Upstream source pins:
 
