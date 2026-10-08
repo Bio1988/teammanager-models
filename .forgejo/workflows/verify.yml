@@ -34,7 +34,7 @@ jobs:
           root = Path(".")
           json.loads((root / "manifest.json").read_text(encoding="utf-8"))
 
-          readme = (root / "README.md").read_text(encoding="utf-8")
+          readme = " ".join((root / "README.md").read_text(encoding="utf-8").split())
           required_readme = (
               "`teammanager-models` is immutable build-input storage",
               "`build/alpha-models.lock.json`",
@@ -43,7 +43,7 @@ jobs:
               "`moonshine-small-streaming-en` a required",
               "Moonshine `moonshine-tiny-streaming-en`",
               "Moonshine `moonshine-medium-streaming-en`",
-              "no Whisper model is in the current lock",
+              "No Whisper model is in the current lock",
               "three required VCTK voice files",
           )
           assert all(text in readme for text in required_readme)
@@ -54,13 +54,10 @@ jobs:
               "moonshine-medium-streaming-en",
           ))
           assert "whisper-small-q5_1" not in agents
-          moonshine_doc = (root / "docs" / "moonshine-alpha31.md").read_text(encoding="utf-8")
-          assert "In the current Alpha-4 lock, Moonshine Small is required and\nTiny/Medium are optional." in moonshine_doc
-          assert "Alpha 31 optional-download policy (historical)" in moonshine_doc
 
           lines = (root / "docs" / "alpha-build-inputs.md").read_text(encoding="utf-8").splitlines()
           document = "\n".join(lines)
-          current_section = document.split("## Current Alpha-4 inventory", 1)[1].split("\n## Historical first-Alpha inventory", 1)[0]
+          current_section = document.split("## Current inventory (model pack alpha-5)", 1)[1].split("\n## Historical first-Alpha inventory", 1)[0]
           current_rows = [line.split("|") for line in current_section.splitlines() if line.startswith("| Required |") or line.startswith("| Optional |")]
           required = [row[2].strip().strip("`") for row in current_rows if row[1].strip() == "Required"]
           optional = [row[2].strip().strip("`") for row in current_rows if row[1].strip() == "Optional"]
@@ -75,9 +72,14 @@ jobs:
               "minilm-vocab",
               "minilm-license",
           ]
-          assert optional == ["moonshine-tiny-streaming-en", "moonshine-medium-streaming-en"]
-          assert len(current_rows) == 11
-          assert "The three VCTK WAVs are a direct-upstream-source exception" in current_section
+          assert optional == [
+              "moonshine-tiny-streaming-en", "moonshine-medium-streaming-en",
+              "distiluse-model", "distiluse-vocab", "distiluse-projection",
+              "e5-model", "e5-tokenizer", "e5-license",
+              "minilm-l12-model", "minilm-l12-vocab", "minilm-l12-license",
+          ]
+          assert len(current_rows) == 20
+          assert "mirrored as Forgejo release assets" in " ".join(current_section.split())
           for row in current_rows:
               asset_id = row[2].strip().strip("`")
               assert row[3].strip().strip("`").startswith("https://"), asset_id
@@ -138,8 +140,8 @@ jobs:
           assert "The ZIP has no single umbrella license" in moonshine_section
           assert "these notices do not reclassify TeamManager helper code" in moonshine_section
 
-          case_path = root / "docs" / "natural-radio-d1-gold-cases.json"
-          result_path = root / "docs" / "natural-radio-d1-gold-results.json"
+          case_path = root / "docs" / "archive" / "natural-radio-d1-gold-cases.json"
+          result_path = root / "docs" / "archive" / "natural-radio-d1-gold-results.json"
           cases = json.loads(case_path.read_text(encoding="utf-8"))
           result = json.loads(result_path.read_text(encoding="utf-8"))
           assert result["case_file_sha256"] == hashlib.sha256(case_path.read_bytes()).hexdigest()

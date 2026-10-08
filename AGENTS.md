@@ -68,22 +68,26 @@ Every PR states production files, packages, dependencies, and database tables ad
 - Race Engineer pins required Alpha inputs in its closed
   `build/alpha-models.lock.json` and packages them into the complete Windows
   installer.
-- The current lock may pin upstream files directly. Record their immutable
-  source revision, size, hash, licence, and attribution; do not describe them as
-  mirrored in this repository unless they are.
-- Under the current Race Engineer Alpha-4 lock, only
-  `moonshine-tiny-streaming-en` and `moonshine-medium-streaming-en` may be
-  downloaded after installation, solely after explicit user action and never
+- Every file Race Engineer builds in or offers (including the VCTK voices and
+  the intent encoders) is an unmodified upstream or TeamManager-packaged
+  Forgejo release asset here; record the immutable source revision, size, hash,
+  licence, and attribution. Hugging Face is provenance only.
+- Under the current Race Engineer lock (model pack `alpha-5`), the Speech to
+  Text downloads after installation are `moonshine-tiny-streaming-en` and
+  `moonshine-medium-streaming-en`, solely after explicit user action and never
   automatically. `moonshine-small-streaming-en` is required and packaged in
-  the installer.
-- That closed list applies to Speech to Text. The separately authorized
-  managed Radio provider may download only the pinned llama.cpp CPU runtime
-  and either the Granite 4.0 H 350M Q8_0 or LiquidAI LFM2.5-350M Q8_0 model
-  package listed in `docs/managed-radio-assets.md`, after explicit user
-  action. Keep those packages outside the Alpha installer lock. Model
-  selection is also explicit. Downloading only installs files and does not
-  activate the provider; selecting a model while Engine is running may warm
-  its runtime, while enabling or using the provider remains explicit.
+  the installer. The optional DistilUSE intent encoder is likewise downloaded
+  on user action; E5 and MiniLM L12 are pinned but not offered.
+- That closed list applies to Speech to Text and intent models. The separately
+  authorized managed Radio provider may download only the pinned llama.cpp CPU
+  runtime and either the Granite 4.0 350M Q8_0 (default) or the experimental
+  Gemma 3 270M IT Q8_0 model package listed in `docs/managed-radio-assets.md`,
+  after explicit user action; Gemma needs click-to-accept of its terms. The
+  retired Granite 4.0 H and LFM2.5 releases stay published. Keep those packages
+  outside the Alpha installer lock. Model selection is also explicit.
+  Downloading only installs files and does not activate the provider; selecting
+  a model while Engine is running may warm its runtime, while enabling or using
+  the provider remains explicit.
 - Do not add runtime catalogs, remote default-model manifests, signing-candidate
   workflows, or candidate-evidence protocols.
 - Preserve immutable published release assets and their associated integrity and

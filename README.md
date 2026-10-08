@@ -7,7 +7,7 @@ Race Engineer does **not** fetch this repository's `manifest.json`, signature,
 checksum sidecars, release metadata, or a catalog at runtime. Required Alpha
 components are verified while building Race Engineer and packaged into the one
 complete Windows installer. This repository is not a runtime model registry.
-The current Alpha-4 lock makes `moonshine-small-streaming-en` a required
+The current lock (model pack `alpha-5`) makes `moonshine-small-streaming-en` a required
 installer input.
 For Speech to Text, only these optional models may be downloaded after
 installation, and only after an explicit user action:
@@ -15,28 +15,29 @@ installation, and only after an explicit user action:
 - Moonshine `moonshine-tiny-streaming-en`
 - Moonshine `moonshine-medium-streaming-en`
 
-The list is closed; no Whisper model is in the current lock. A downloaded
-model is never selected automatically. The required/optional split and exact
-asset pins are recorded in the current Alpha-4 section of
-[docs/alpha-build-inputs.md](docs/alpha-build-inputs.md).
-That inventory includes three required VCTK voice files pinned directly to an
-upstream Hugging Face commit; they are not mirrored in this repository.
+No Whisper model is in the current lock.
+A downloaded model is never selected automatically. The installer also ships
+the required all-MiniLM-L6-v2 intent encoder; the optional DistilUSE intent
+encoder is downloaded from Advanced on user action. Multilingual E5 Small and
+all-MiniLM-L12-v2 are pinned under `optional` but not offered by the app. The
+required/optional split and exact asset pins are in
+[docs/alpha-build-inputs.md](docs/alpha-build-inputs.md). The three required
+VCTK voice files and all intent models are unmodified upstream bytes mirrored
+here as Forgejo release assets; no build or runtime input comes from Hugging
+Face.
 
 The separately authorized managed Radio answer provider uses one optional
-Windows CPU runtime with either the Granite 4.0 H 350M Q8_0 or LiquidAI
-LFM2.5-350M Q8_0 model. The runtime and model packages stay outside the Alpha
-installer. Downloads require explicit user action; model selection is separate
-and explicit. Downloading only installs files; selecting a model while Engine
-is running may warm its runtime, while enabling or using the provider remains
-explicit. Their closed file inventories, licenses, source pins, and packaging
-records are in
-[docs/managed-radio-assets.md](docs/managed-radio-assets.md).
+Windows CPU runtime with either IBM Granite 4.0 350M Q8_0 (default) or Google
+Gemma 3 270M IT Q8_0 (experimental; the app requires click-to-accept of the
+Gemma terms). The retired Granite 4.0 H 350M and LiquidAI LFM2.5-350M releases
+stay published for older apps. The runtime and model packages stay outside the
+Alpha installer. Downloads require explicit user action; model selection is
+separate and explicit. Downloading only installs files; selecting a model while
+Engine is running may warm its runtime, while enabling or using the provider
+remains explicit. Their closed file inventories, licenses, source pins, and
+packaging records are in [docs/managed-radio-assets.md](docs/managed-radio-assets.md).
 
-The Alpha 31 Moonshine publication record is retained in
-[docs/moonshine-alpha31.md](docs/moonshine-alpha31.md); its old optional-model
-list is historical.
-
-The exact Alpha inputs, integrity values, licences, and provenance are in
+The exact inputs, integrity values, licences, and provenance are in
 [docs/alpha-build-inputs.md](docs/alpha-build-inputs.md). Race Engineer records
 them in its closed `build/alpha-models.lock.json`; that lock is the build-input
 contract. The build then generates local `model-pack.json` inside the installer.
