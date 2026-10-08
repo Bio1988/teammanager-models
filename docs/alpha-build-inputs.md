@@ -43,6 +43,8 @@ The three VCTK WAVs are a direct-upstream-source exception: this
 repository does not mirror them, and this review did not download or rehash the
 files. Their availability and exact object bytes therefore remain unverified
 here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
+The Forgejo mirrors published on 2026-10-08 (see the last section) supersede
+this exception once the lock switches to them.
 
 ## Historical first-Alpha inventory
 
@@ -196,3 +198,35 @@ with its installer-owned assets.
 repeatable model-and-runtime Gold evaluation for these exact development
 fingerprints. It is a model-side Windows result, not D2 integration evidence or
 a substitute for the still-pending Windows VM criterion.
+
+## Hugging Face mirrors (2026-10-08)
+
+Owner order 2026-10-08: every model Race Engineer uses or offers is hosted here
+as an immutable Forgejo release asset, so no runtime or build depends on
+Hugging Face. The files below are unmodified upstream bytes (renamed only),
+downloaded at the pinned 40-hex revision; size and SHA-256 equal the values in
+Race Engineer's `build/alpha-models.lock.json` and were re-verified by a full
+read-back of the public release URLs. Each release also carries `NOTICE.md`,
+`SHA256SUMS` and the licence text. Consumers should switch their lock/catalog
+URLs to the Forgejo URLs; the Hugging Face URLs remain provenance only.
+Base URL: `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/<tag>/<asset>`.
+
+| Lock ID | Tag | Asset | Size (bytes) | SHA-256 | Upstream pin and licence |
+| --- | --- | --- | ---: | --- | --- |
+| `pocket-voice-charles` | `pocket-voices-vctk-323332d3-r1` | `charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | `kyutai/tts-voices` @ `323332d33f997de8394f24a193e1a76df720e01a`, `vctk/p254_023_enhanced.wav`; CC BY 4.0 |
+| `pocket-voice-michael` | `pocket-voices-vctk-323332d3-r1` | `michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | same revision, `vctk/p360_023_enhanced.wav`; CC BY 4.0 |
+| `pocket-voice-eve` | `pocket-voices-vctk-323332d3-r1` | `eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | same revision, `vctk/p361_023_enhanced.wav`; CC BY 4.0 |
+| `distiluse-model` | `intent-distiluse-bfe45d07-r1` | `distiluse-base-multilingual-cased-v2-quint8-avx2.onnx` | 135377779 | `6a5852e0da9ca0e4532274b6c5eed71f9938fa8ff15e8345c6873a1969093f80` | `sentence-transformers/distiluse-base-multilingual-cased-v2` @ `bfe45d0732ca50787611c0fe107ba278c7f3f889`, `onnx/model_quint8_avx2.onnx`; Apache-2.0 |
+| `distiluse-vocab` | `intent-distiluse-bfe45d07-r1` | `distiluse-base-multilingual-cased-v2-vocab.txt` | 995526 | `fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c` | same revision, `vocab.txt`; Apache-2.0 |
+| `distiluse-projection` | `intent-distiluse-bfe45d07-r1` | `distiluse-base-multilingual-cased-v2-dense.safetensors` | 1575104 | `0a21b1ce908e772ebf09f93c20ca09524c32706e9918d9c0169a3f0663b191ed` | same revision, `2_Dense/model.safetensors`; Apache-2.0 |
+| `minilm-l12-model` | `intent-minilm-l12-v2-a50ef001-r1` | `all-MiniLM-L12-v2-quint8-avx2.onnx` | 34160110 | `3c5e33c478496a43413086336955119154d56f3c3d0dccadb484041dc1ce762d` | `sentence-transformers/all-MiniLM-L12-v2` @ `a50ef00143b4d5391434df20ae11632588ac25be`, `onnx/model_quint8_avx2.onnx`; Apache-2.0 |
+| `minilm-l12-vocab` | `intent-minilm-l12-v2-a50ef001-r1` | `all-MiniLM-L12-v2-vocab.txt` | 231508 | `07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3` | same revision, `vocab.txt`; Apache-2.0 |
+| `e5-tokenizer` | `intent-multilingual-e5-small-tokenizer-0e60b8d9-r1` | `multilingual-e5-small-sentencepiece.bpe.model` | 5069051 | `cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865` | `intfloat/multilingual-e5-small` @ `0e60b8d9d2166d80387f86e3b48ec9ced55f4d15`, `onnx/sentencepiece.bpe.model`; MIT |
+
+Already hosted here before this record (unchanged): E5 quint8 ONNX and MIT
+licence (`intent-multilingual-e5-small-0e60b8d9-r1`), MiniLM L6 and the shared
+Apache-2.0 text (`minilm-l6-v2-quint8-avx2-r1`), Moonshine
+(`moonshine-v0.1.5`), Pocket English (`pocket-tts-english-2026-09-onnx-r1`),
+and the managed Radio answer models Granite 4.0 H 350M and LFM2.5-350M with the
+llama.cpp runtime (`managed-radio-*`, see
+[managed-radio-assets.md](managed-radio-assets.md)).
