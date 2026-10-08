@@ -1,6 +1,6 @@
 param(
-    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\natural-radio-d1-gold-cases.json'),
-    [string]$ResultFile = (Join-Path $PSScriptRoot '..\docs\natural-radio-d1-gold-results.json')
+    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\archive\natural-radio-d1-gold-cases.json'),
+    [string]$ResultFile = (Join-Path $PSScriptRoot '..\docs\archive\natural-radio-d1-gold-results.json')
 )
 
 $ErrorActionPreference = 'Stop'

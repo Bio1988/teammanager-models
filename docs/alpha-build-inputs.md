@@ -1,18 +1,18 @@
 # Alpha build inputs
 
-## Current Alpha-4 inventory
+## Current inventory (model pack alpha-5)
 
 Race Engineer's closed `build/alpha-models.lock.json` is the build-input
-authority. The current lock has nine required installer inputs and two
-optional downloads. The URLs, sizes, SHA-256 values, targets, and classifications
+authority. The current lock has nine required installer inputs and eleven
+optional entries (Moonshine Tiny/Medium, DistilUSE, E5 and MiniLM L12). The URLs, sizes, SHA-256 values, targets, and classifications
 below match that lock.
 
 | Class | ID | Immutable URL | Install target | Size (bytes) | SHA-256 | Licence and upstream provenance |
 | --- | --- | --- | --- | ---: | --- | --- |
 | Required | `pocket-english` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-tts-english-2026-09-onnx-r1/pocket-tts-english-2026-09-onnx-r1.zip` | `pocket/model` | 207279132 | `4461e94535d8ded09032ec778e774c16f6264ab4b9e49168fdf06ddd38f992ce` | The upstream [Kyutai Pocket TTS model](https://huggingface.co/kyutai/pocket-tts) is marked CC BY 4.0. Source pins, exporter evidence, and deterministic packaging are recorded in the [September package provenance](#pocket-english-september-2026-native-model-package) below. |
-| Required | `pocket-voice-charles` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p254_023_enhanced.wav` | `pocket/voice/charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | Enhanced VCTK recording (`p254_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
-| Required | `pocket-voice-michael` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p360_023_enhanced.wav` | `pocket/voice/michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | Enhanced VCTK recording (`p360_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
-| Required | `pocket-voice-eve` | `https://huggingface.co/kyutai/tts-voices/resolve/323332d33f997de8394f24a193e1a76df720e01a/vctk/p361_023_enhanced.wav` | `pocket/voice/eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | Enhanced VCTK recording (`p361_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `pocket-voice-charles` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-voices-vctk-323332d3-r1/charles.wav` | `pocket/voice/charles.wav` | 639272 | `6b681a429198f16e378d53bccb08d06939da7b00144a7696111d4f8f76be7756` | Enhanced VCTK recording (`p254_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `pocket-voice-michael` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-voices-vctk-323332d3-r1/michael.wav` | `pocket/voice/michael.wav` | 751140 | `b6743e9195e5e3fd34fe9d1633ae93f7ffab787b249e45f6467d7d6f7a6ee6ad` | Enhanced VCTK recording (`p360_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
+| Required | `pocket-voice-eve` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/pocket-voices-vctk-323332d3-r1/eve.wav` | `pocket/voice/eve.wav` | 671872 | `396e7cbd066b0f3fb6d67fa26e7904076958239d736d4390f15b5fe88feb14cd` | Enhanced VCTK recording (`p361_023_enhanced.wav`), pinned to Kyutai `tts-voices` commit `323332d33f997de8394f24a193e1a76df720e01a`; CC BY 4.0. |
 | Required | `moonshine-runtime` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/teammanager-moonshine-runtime-win-x64-v0.1.5-r1.zip` | `moonshine/runtime` | 11455945 | `718dca3a95fd02eeb02f483fa750500a51a24576dc099c507de48af154c48335` | Mixed component bundle built from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; Moonshine and ONNX Runtime MIT notices plus Microsoft VC redistributable terms. The archive has no single umbrella licence; TeamManager helper code remains proprietary under Race Engineer's LICENSE. |
 | Required | `moonshine-small-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-small-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/small-streaming-en` | 121672393 | `ce697ac0dcf1b5b949b4ba1beba4dd19e2c2042c335e26e620ff28706ef8de00` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
 | Required | `minilm-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/all-MiniLM-L6-v2-quint8-avx2.onnx` | `intent/all-MiniLM-L6-v2-quint8-avx2.onnx` | 23046789 | `b941bf19f1f1283680f449fa6a7336bb5600bdcd5f84d10ddc5cd72218a0fd21` | Based on [Sentence Transformers all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), whose model card specifies Apache 2.0. The exact ONNX conversion revision and recipe are not retained here. |
@@ -20,11 +20,22 @@ below match that lock.
 | Required | `minilm-license` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/LICENSE-Apache-2.0.txt` | `licenses/minilm-LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | Apache License 2.0 notice packaged alongside the MiniLM model. |
 | Optional | `moonshine-tiny-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-tiny-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/optional/moonshine-tiny-streaming-en` | 36624898 | `41e1882d3ddc7c8a70778224879c929f9b4d87f77c57e9f031757bb27751e3c5` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
 | Optional | `moonshine-medium-streaming-en` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/moonshine-v0.1.5/moonshine-medium-streaming-en-quantized_26_08_21-r1.zip` | `moonshine/optional/moonshine-medium-streaming-en` | 236904989 | `d22e9adbb0232db4fcc2d5594d0155965efd47222fccd59cda38dd84f0e07305` | English streaming model from Moonshine v0.1.5, commit `234f60faa0eb388b01cdf7e60aca232af37aefda`; MIT. |
+| Optional | `distiluse-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-distiluse-bfe45d07-r1/distiluse-base-multilingual-cased-v2-quint8-avx2.onnx` | `intent/distiluse-base-multilingual-cased-v2-quint8-avx2.onnx` | 135377779 | `6a5852e0da9ca0e4532274b6c5eed71f9938fa8ff15e8345c6873a1969093f80` | Optional intent encoder (experimental), downloaded on user action from Advanced. Unmodified [sentence-transformers/distiluse-base-multilingual-cased-v2](https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2) bytes at `bfe45d0732ca50787611c0fe107ba278c7f3f889`; Apache 2.0. |
+| Optional | `distiluse-vocab` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-distiluse-bfe45d07-r1/distiluse-base-multilingual-cased-v2-vocab.txt` | `intent/distiluse-base-multilingual-cased-v2-vocab.txt` | 995526 | `fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c` | Optional intent encoder (experimental), downloaded on user action from Advanced. Unmodified [sentence-transformers/distiluse-base-multilingual-cased-v2](https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2) bytes at `bfe45d0732ca50787611c0fe107ba278c7f3f889`; Apache 2.0. |
+| Optional | `distiluse-projection` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-distiluse-bfe45d07-r1/distiluse-base-multilingual-cased-v2-dense.safetensors` | `intent/distiluse-base-multilingual-cased-v2-dense.safetensors` | 1575104 | `0a21b1ce908e772ebf09f93c20ca09524c32706e9918d9c0169a3f0663b191ed` | Optional intent encoder (experimental), downloaded on user action from Advanced. Unmodified [sentence-transformers/distiluse-base-multilingual-cased-v2](https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2) bytes at `bfe45d0732ca50787611c0fe107ba278c7f3f889`; Apache 2.0. |
+| Optional | `e5-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/multilingual-e5-small-quint8.onnx` | `intent/multilingual-e5-small-quint8.onnx` | 118330479 | `c9391bd927dbf1aadedde96db8ad660034be110d04de4eb4ee6ec323d5dab618` | Pinned, not offered by the app. Unmodified [intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small) bytes at `0e60b8d9d2166d80387f86e3b48ec9ced55f4d15`; MIT. |
+| Optional | `e5-tokenizer` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-tokenizer-0e60b8d9-r1/multilingual-e5-small-sentencepiece.bpe.model` | `intent/multilingual-e5-small-sentencepiece.bpe.model` | 5069051 | `cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865` | Pinned, not offered by the app. Unmodified [intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small) bytes at `0e60b8d9d2166d80387f86e3b48ec9ced55f4d15`; MIT. |
+| Optional | `e5-license` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-multilingual-e5-small-0e60b8d9-r1/e5-LICENSE-MIT.txt` | `licenses/e5-LICENSE-MIT.txt` | 1082 | `6e90701309596a0bda99f53196b72144b0e3387a2b5b364a418a79f5b49595ea` | Pinned, not offered by the app. Unmodified [intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small) bytes at `0e60b8d9d2166d80387f86e3b48ec9ced55f4d15`; MIT. |
+| Optional | `minilm-l12-model` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-minilm-l12-v2-a50ef001-r1/all-MiniLM-L12-v2-quint8-avx2.onnx` | `intent/all-MiniLM-L12-v2-quint8-avx2.onnx` | 34160110 | `3c5e33c478496a43413086336955119154d56f3c3d0dccadb484041dc1ce762d` | Pinned, not offered by the app. Unmodified [sentence-transformers/all-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2) bytes at `a50ef00143b4d5391434df20ae11632588ac25be`; Apache 2.0. |
+| Optional | `minilm-l12-vocab` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/intent-minilm-l12-v2-a50ef001-r1/all-MiniLM-L12-v2-vocab.txt` | `intent/all-MiniLM-L12-v2-vocab.txt` | 231508 | `07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3` | Pinned, not offered by the app. Unmodified [sentence-transformers/all-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2) bytes at `a50ef00143b4d5391434df20ae11632588ac25be`; Apache 2.0. |
+| Optional | `minilm-l12-license` | `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/minilm-l6-v2-quint8-avx2-r1/LICENSE-Apache-2.0.txt` | `licenses/minilm-l12-LICENSE-Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | Pinned, not offered by the app. Unmodified [sentence-transformers/all-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2) bytes at `a50ef00143b4d5391434df20ae11632588ac25be`; Apache 2.0. |
 
-Only the two optional entries may be downloaded after installation, and only
-after explicit user action. Required Moonshine Small is packaged with the
-installer. No Whisper model is part of this current lock. The `tts-voices`
-revision identifies the three VCTK source files; the
+Only Moonshine Tiny/Medium and DistilUSE may be downloaded after installation,
+and only after explicit user action; the app offers no other optional entry.
+E5 and MiniLM L12 are pinned in the lock but not offered. Required Moonshine
+Small and MiniLM L6 are packaged with the installer. No Whisper model is part
+of the current lock. The `tts-voices` revision identifies the three VCTK source
+files; the
 [pinned Kyutai voice catalog](https://huggingface.co/kyutai/tts-voices/tree/323332d33f997de8394f24a193e1a76df720e01a/vctk)
 and [its README](https://huggingface.co/kyutai/tts-voices/blob/323332d33f997de8394f24a193e1a76df720e01a/README.md)
 say VCTK is CC BY 4.0 and enhanced recordings are cleaned versions created
@@ -39,12 +50,10 @@ SHA-256 values above pin the delivered Pocket and MiniLM artifacts. The Pocket
 packaging step verified its source archive and model files against its
 manifest, but did not re-export weights or verify Windows audio output; the
 MiniLM artifact pin does not establish its missing conversion history.
-The three VCTK WAVs are a direct-upstream-source exception: this
-repository does not mirror them, and this review did not download or rehash the
-files. Their availability and exact object bytes therefore remain unverified
-here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
-The Forgejo mirrors published on 2026-10-08 (see the last section) supersede
-this exception once the lock switches to them.
+The three VCTK WAVs, DistilUSE, E5 and MiniLM L12 files are unmodified upstream
+bytes mirrored as Forgejo release assets (see
+[Hugging Face mirrors](#hugging-face-mirrors-2026-10-08)); nothing the app
+builds or runs fetches from Hugging Face.
 
 ## Historical first-Alpha inventory
 
@@ -99,7 +108,7 @@ table or select these assets for an installer.
 ## Alpha 31 Moonshine increment
 
 This section records the Alpha 31 publication and selection history. It does
-not describe the current Alpha-4 selection above. At Alpha 31, the runtime and
+not describe the current selection above. At Alpha 31, the runtime and
 three English model archives below were published; the then-current installer
 selection remained defined by Race Engineer's lock.
 
@@ -123,7 +132,7 @@ flat root containing the six runtime contract files and `moonshine-MIT.txt`,
 `onnxruntime-MIT.txt`; it contains no model weights. The three model archives
 each contain exactly the eight pinned `quantized_26_08_21` files. In the
 Alpha-31 policy snapshot, these three Moonshine models and Whisper Small were
-optional downloads and Whisper Base was the default. Current Alpha-4 marks
+optional downloads and Whisper Base was the default. The current lock marks
 Moonshine Small required and Tiny/Medium optional; see the inventory above.
 
 Current Race Engineer `main` does not list Natural Radio assets in its closed
@@ -164,8 +173,9 @@ the bundled notice and license retain attribution and terms.
 ## Natural Radio release record
 
 `natural-radio-qwen3-0.6b-dev.1` is an immutable development release. It is
-not an Alpha installer input until Race Engineer pins an approved release in
-its closed build-input lock.
+retired: Race Engineer never pinned it, and radio answers now use the managed
+Granite/Gemma models in [managed-radio-assets.md](managed-radio-assets.md).
+The release stays published for provenance.
 
 The release's Q4_K_M GGUF is
 `race-engineer-qwen3-0.6b-q4_k_m.gguf` (396,705,632 bytes, SHA-256
@@ -194,11 +204,6 @@ retained text omits only the upstream terminal blank line).
 Any later immutable Natural Radio release must retain all applicable notices
 with its installer-owned assets.
 
-`docs/natural-radio-d1-gold.md` and its retained JSON result record the fixed,
-repeatable model-and-runtime Gold evaluation for these exact development
-fingerprints. It is a model-side Windows result, not D2 integration evidence or
-a substitute for the still-pending Windows VM criterion.
-
 ## Hugging Face mirrors (2026-10-08)
 
 Owner order 2026-10-08: every model Race Engineer uses or offers is hosted here
@@ -207,8 +212,8 @@ Hugging Face. The files below are unmodified upstream bytes (renamed only),
 downloaded at the pinned 40-hex revision; size and SHA-256 equal the values in
 Race Engineer's `build/alpha-models.lock.json` and were re-verified by a full
 read-back of the public release URLs. Each release also carries `NOTICE.md`,
-`SHA256SUMS` and the licence text. Consumers should switch their lock/catalog
-URLs to the Forgejo URLs; the Hugging Face URLs remain provenance only.
+`SHA256SUMS` and the licence text. Race Engineer's lock already uses the Forgejo URLs; the Hugging Face
+URLs remain provenance only.
 Base URL: `https://forgejo.g-grp.com/Max/teammanager-models/releases/download/<tag>/<asset>`.
 
 | Lock ID | Tag | Asset | Size (bytes) | SHA-256 | Upstream pin and licence |
@@ -227,6 +232,6 @@ Already hosted here before this record (unchanged): E5 quint8 ONNX and MIT
 licence (`intent-multilingual-e5-small-0e60b8d9-r1`), MiniLM L6 and the shared
 Apache-2.0 text (`minilm-l6-v2-quint8-avx2-r1`), Moonshine
 (`moonshine-v0.1.5`), Pocket English (`pocket-tts-english-2026-09-onnx-r1`),
-and the managed Radio answer models Granite 4.0 H 350M and LFM2.5-350M with the
-llama.cpp runtime (`managed-radio-*`, see
+and the managed Radio answer models (Granite 4.0 350M, Gemma 3 270M IT, retired
+Granite 4.0 H and LFM2.5) with the llama.cpp runtime (`managed-radio-*`, see
 [managed-radio-assets.md](managed-radio-assets.md)).

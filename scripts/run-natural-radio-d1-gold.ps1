@@ -1,6 +1,6 @@
 param(
     [string]$ServerUrl = 'http://127.0.0.1:18878',
-    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\natural-radio-d1-gold-cases.json'),
+    [string]$CaseFile = (Join-Path $PSScriptRoot '..\docs\archive\natural-radio-d1-gold-cases.json'),
     [string]$OutputPath = ''
 )
 
