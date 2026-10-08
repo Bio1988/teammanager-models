@@ -39,8 +39,12 @@ SHA-256 values above pin the delivered Pocket and MiniLM artifacts. The Pocket
 packaging step verified its source archive and model files against its
 manifest, but did not re-export weights or verify Windows audio output; the
 MiniLM artifact pin does not establish its missing conversion history.
-The three VCTK WAVs were a direct-upstream-source exception until the
-Hugging Face mirrors below were published (2026-10-08).
+The three VCTK WAVs are a direct-upstream-source exception: this
+repository does not mirror them, and this review did not download or rehash the
+files. Their availability and exact object bytes therefore remain unverified
+here; the lock's full commit, size, and SHA-256 remain the consumer's pins.
+The Forgejo mirrors published on 2026-10-08 (see the last section) supersede
+this exception once the lock switches to them.
 
 ## Historical first-Alpha inventory
 
