@@ -9,7 +9,7 @@ Ship the smallest safe implementation that solves the current real product need.
 1. Current Forgejo `main` source and tests.
 2. The current Forgejo issue and PR.
 3. This `AGENTS.md`.
-4. `README.md` and `docs/architecture.md`.
+4. `README.md` and `docs/alpha-build-inputs.md`.
 5. OpenSpec only when explicitly required below.
 
 Old plans, cached SHAs, manifests, completed task lists, fixture hashes, and archived specifications are not current product authority.
