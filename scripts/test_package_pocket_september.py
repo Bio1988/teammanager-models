@@ -39,18 +39,36 @@ class SourceChecks(unittest.TestCase):
             ).hexdigest(),
         }
 
-    def check(self, sizes=None):
+    def source_members(self):
         files = dict(self.files)
         files[packager.MANIFEST_MEMBER] = json.dumps(self.manifest).encode()
+        return files
+
+    def write_source(self):
+        files = self.source_members()
         with zipfile.ZipFile(self.archive, "w") as archive:
             for name, content in files.items():
                 archive.writestr(name, content)
+        return files
+
+    def pinned_source(self, files):
+        sizes = {name: len(data) for name, data in files.items()}
+        return patch.multiple(
+            packager,
+            SOURCE_SIZE=self.archive.stat().st_size,
+            SOURCE_SHA256=packager.sha256_file(self.archive),
+            SOURCE_MEMBER_SIZES=sizes,
+        )
+
+    def check(self, sizes=None):
+        files = self.write_source()
         if sizes is None:
             sizes = {name: len(data) for name, data in files.items()}
-        with patch.object(packager, "SOURCE_SIZE", self.archive.stat().st_size), patch.object(
-            packager, "SOURCE_SHA256", packager.sha256_file(self.archive)
-        ), patch.object(
-            packager, "SOURCE_MEMBER_SIZES", sizes
+        with patch.multiple(
+            packager,
+            SOURCE_SIZE=self.archive.stat().st_size,
+            SOURCE_SHA256=packager.sha256_file(self.archive),
+            SOURCE_MEMBER_SIZES=sizes,
         ):
             return packager.checked_source(self.archive)
 
@@ -74,6 +92,74 @@ class SourceChecks(unittest.TestCase):
         sizes[next(iter(sizes))] += 1
         with self.assertRaisesRegex(ValueError, "member sizes"):
             self.check(sizes)
+
+    def test_package_records_deterministic_archive_members(self):
+        files = self.write_source()
+        first_path = Path(self.temp.name) / "first.zip"
+        second_path = Path(self.temp.name) / "second.zip"
+        with self.pinned_source(files):
+            first = packager.package(self.archive, first_path)
+            second = packager.package(self.archive, second_path)
+
+        self.assertEqual(first, second)
+        self.assertEqual(first_path.read_bytes(), second_path.read_bytes())
+        archive_hash = hashlib.sha256(first_path.read_bytes()).hexdigest()
+        self.assertEqual(
+            first["archive"],
+            {"size_bytes": first_path.stat().st_size, "sha256": archive_hash},
+        )
+
+        expected_members = {
+            **{
+                output: self.files[source]
+                for source, output in packager.INPUT_TO_OUTPUT.items()
+            },
+            "NOTICE.md": packager.NOTICE_PATH.read_bytes(),
+            packager.LICENSE_MEMBER: packager.LICENSE_PATH.read_bytes(),
+        }
+        with zipfile.ZipFile(first_path) as bundle:
+            self.assertEqual(bundle.namelist(), sorted(expected_members))
+            for name, content in expected_members.items():
+                info = bundle.getinfo(name)
+                self.assertEqual(bundle.read(name), content)
+                self.assertEqual(info.date_time, (1980, 1, 1, 0, 0, 0))
+                self.assertEqual(info.create_system, 3)
+                self.assertEqual(info.external_attr, 0o100644 << 16)
+                self.assertEqual(info.compress_type, zipfile.ZIP_DEFLATED)
+                self.assertEqual(
+                    first["members"][name],
+                    {
+                        "size_bytes": len(content),
+                        "sha256": hashlib.sha256(content).hexdigest(),
+                    },
+                )
+
+    def test_source_change_keeps_destination_and_cleans_partial(self):
+        files = self.write_source()
+        output = Path(self.temp.name) / "published.zip"
+        partial = output.with_name(output.name + ".partial")
+        previous = b"existing immutable destination"
+        output.write_bytes(previous)
+        checked_source = packager.checked_source
+
+        def check_then_change_source(path):
+            expected = checked_source(path)
+            changed = self.source_members()
+            source_name = next(name for name in self.files if name.endswith(".onnx"))
+            changed[source_name] = b"changed after verification"
+            with zipfile.ZipFile(path, "w") as archive:
+                for name, content in changed.items():
+                    archive.writestr(name, content)
+            return expected
+
+        with self.pinned_source(files), patch.object(
+            packager, "checked_source", side_effect=check_then_change_source
+        ):
+            with self.assertRaisesRegex(ValueError, "source changed while packaging"):
+                packager.package(self.archive, output)
+
+        self.assertEqual(output.read_bytes(), previous)
+        self.assertFalse(partial.exists())
 
 
 if __name__ == "__main__":
