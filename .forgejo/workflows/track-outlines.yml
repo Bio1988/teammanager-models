@@ -44,7 +44,7 @@ jobs:
           $py scripts/osm_extract.py extract --plan "$STATE/plan.json" --pbf "$STATE/pbf" --out "$STATE/cut"
           $py scripts/track_outlines.py build --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --osm "$STATE/cut" --out "$STATE/out"
           rm -rf "$STATE/release" && mkdir -p "$STATE/release"
-          $py scripts/track_outlines.py bundle --built "$STATE/out" --version "$(date -u +%Y%m%d)" --commit "$GITHUB_SHA" --out "$STATE/release"
+          $py scripts/track_outlines.py bundle --built "$STATE/out" --version "$(date -u +%Y%m%d)" --commit "$GITHUB_SHA" --out "$STATE/release" --min-coverage 0.9
       - name: Publish when the geometry changed
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}

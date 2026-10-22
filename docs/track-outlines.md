@@ -34,7 +34,8 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
 ## Release
 
 `bundle` writes `track-outlines-<version>.zip` (`circuit/<id>.json`, `background/<id>.json`,
-`quality.json`, `NOTICE.txt`; byte-reproducible), `SHA256SUMS` and `provenance.json` (asset hash,
+`quality.json`, `NOTICE.txt`; byte-reproducible; tracks under 90 % OSM coverage are left out so the
+Server keeps its fallback for them), `SHA256SUMS` and `provenance.json` (asset hash,
 `content_sha256` over the geometry only, build time, builder commit, track ids, line sources, OSM
 snapshot times, attribution). They are published as the Forgejo release `track-outlines-<version>`.
 The Server pins one release by URL and SHA-256; a newer release changes nothing until that pin moves.

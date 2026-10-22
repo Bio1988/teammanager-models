@@ -555,10 +555,13 @@ def cmd_bundle(args):
     out.mkdir(parents=True, exist_ok=True)
     name = f"track-outlines-{args.version}.zip"
     tracks, sources, regions, built_at = [], defaultdict(int), set(), ""
-    members, content = [], hashlib.sha256()
+    members, content, skipped = [], hashlib.sha256(), []
     for f in sorted(built.glob("*.circuit.json"), key=lambda p: int(p.name.split(".")[0])):
         tid = int(f.name.split(".")[0])
         circuit = json.loads(f.read_text())
+        if circuit["quality"]["coverage"] < args.min_coverage:  # mostly the line itself: let the Server's fallback draw it
+            skipped.append(tid)
+            continue
         tracks.append(tid)
         sources[circuit["line_source"]] += 1
         regions.add(circuit.get("osm_timestamp") or "")
@@ -578,6 +581,7 @@ def cmd_bundle(args):
     (out / "provenance.json").write_text(json.dumps({
         "asset": name, "sha256": digest, "content_sha256": content.hexdigest(), "size": (out / name).stat().st_size, "format": FORMAT,
         "built_at": built_at, "builder_commit": args.commit, "tracks": tracks,
+        "skipped_low_coverage": skipped, "min_coverage": args.min_coverage,
         "line_sources": dict(sorted(sources.items())),
         "osm": {"source": "Geofabrik regional extracts", "timestamps": sorted(regions - {""}),
                 "attribution": ATTRIBUTION, "license": LICENSE},
@@ -607,6 +611,7 @@ def main(argv=None):
     c.add_argument("--version", required=True)
     c.add_argument("--commit", required=True, help="builder git commit")
     c.add_argument("--out", required=True)
+    c.add_argument("--min-coverage", type=float, default=0.9, help="leave out tracks whose outline is mostly not OSM")
     c.set_defaults(fn=cmd_bundle)
     args = p.parse_args(argv)
     args.fn(args)
