@@ -46,6 +46,8 @@ not network URLs, and is not a model catalog or authority.
 
 ## Repository map
 
+- `scripts/track_outlines.py` and `scripts/osm_extract.py` build the GPS-aligned circuit
+  outlines for the Web telemetry map; see [docs/track-outlines.md](docs/track-outlines.md).
 - `scripts/package-moonshine-models.py` verifies pinned upstream files and
   reproduces the Moonshine ZIPs; `scripts/package-pocket-september.py` verifies
   and repackages the pinned Pocket export.
