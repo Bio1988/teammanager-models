@@ -46,6 +46,7 @@ class BuildTrackTest(unittest.TestCase):
             way(3, {"highway": "raceway", "name": "Karting"}, [(300, 120), (500, 120), (500, 280), (300, 280), (300, 120)]),
             way(4, {"highway": "tertiary"}, [(600, -300), (600, 700)]),  # crosses the lap at right angles
             way(5, {"highway": "raceway", "name": "Pit Lane"}, [move((200, 25)), move((600, 25))]),
+            way(8, {"service": "pit_lane"}, [move((300, 150)), move((500, 150))]),  # another layout's pit lane, inside the lap
             way(6, {"landuse": "forest"}, [(900, 600), (1000, 600), (1000, 700), (900, 600)]),
             {"type": "node", "id": 7, "lat": ll([(100, 600)])[0][0], "lon": ll([(100, 600)])[0][1], "tags": {"natural": "tree"}},
         ]

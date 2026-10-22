@@ -42,7 +42,8 @@ MAX_ANGLE = 30.0      # deg between a run and the line
 FIT_STEPS = (80.0, 60.0, 40.0, 25.0) + (15.0,) * 30  # nearest-point ICP slides slowly along straights
 FIT_ANGLE = 25.0
 SCALE_LIMIT = 0.003   # the racing line cuts corners, so a free scale fit is biased
-PIT_NEAR_M = 250.0
+PIT_END_M = 50.0     # a pit lane joins the circuit: both ends of a pit way lie this close to the line
+PIT_MEDIAN_M = 40.0  # and it runs alongside it (another layout's pit lane does not)
 
 DRIVABLE = {"raceway", "motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential",
             "service", "road", "living_street", "motorway_link", "trunk_link", "primary_link", "secondary_link",
@@ -445,8 +446,12 @@ def build_track(line_ll, elements, origin):
         for p in line:
             raw_cov += sgrid.near(p, KEEP_M)[1] >= 0
 
-    # 4. pit lane: pit-tagged ways near the circuit
-    pits = [pts for _, _, pts in pit_ways if min(lgrid.near(q, PIT_NEAR_M)[0] for q in pts[:: max(1, len(pts) // 8)]) < PIT_NEAR_M]
+    # 4. pit lane: pit-tagged ways that join this circuit and run alongside it
+    def pit_of_this_layout(pts):
+        d = [lgrid.near(q, 200.0)[0] for q in (resample(pts, 5.0) if length(pts) > 5 else pts)]
+        return max(d[0], d[-1]) <= PIT_END_M and statistics.median(d) <= PIT_MEDIAN_M
+
+    pits = [pts for _, _, pts in pit_ways if pit_of_this_layout(pts)]
 
     back = lambda pts: [frame.ll(apply(inv, p)) for p in pts]
     a, b, tx, ty = m
