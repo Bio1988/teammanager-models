@@ -1,5 +1,10 @@
+import json
 import math
+import tempfile
 import unittest
+import zipfile
+from pathlib import Path
+from types import SimpleNamespace
 
 import track_outlines as T
 
@@ -74,6 +79,29 @@ class BuildTrackTest(unittest.TestCase):
         self.assertFalse(circuit["quality"]["aligned"])
         self.assertEqual(circuit["quality"]["coverage"], 0)
         self.assertGreater(len(circuit["outline"]), 10)
+
+
+class BundleTest(unittest.TestCase):
+    def test_bundle_is_reproducible_and_carries_provenance(self):
+        built = Path(tempfile.mkdtemp())
+        circuit, background = T.build_track(ll(stadium()), [], ORIGIN)
+        meta = {"track_id": 7, "built_at": "2026-10-22T00:00:00Z", "line_source": "garage61", "line_laps": 3, "osm_timestamp": "2026-10-21T20:00:00Z"}
+        (built / "7.circuit.json").write_text(json.dumps({**meta, **circuit}))
+        (built / "7.background.json").write_text(json.dumps({**meta, **background}))
+        (built / "quality.json").write_text("[]")
+        digests = []
+        for _ in range(2):
+            out = Path(tempfile.mkdtemp())
+            T.cmd_bundle(SimpleNamespace(built=str(built), version="t1", commit="abc", out=str(out)))
+            digests.append((out / "SHA256SUMS").read_text())
+        self.assertEqual(digests[0], digests[1])
+        provenance = json.loads((out / "provenance.json").read_text())
+        self.assertEqual(provenance["tracks"], [7])
+        self.assertEqual(provenance["line_sources"], {"garage61": 1})
+        self.assertIn(provenance["sha256"], digests[0])
+        with zipfile.ZipFile(out / "track-outlines-t1.zip") as z:
+            self.assertEqual(z.namelist(), ["circuit/7.json", "background/7.json", "quality.json", "NOTICE.txt"])
+            self.assertIn(b"OpenStreetMap contributors", z.read("NOTICE.txt"))
 
 
 class LinesTest(unittest.TestCase):

@@ -19,8 +19,8 @@ where the laps are drawn.
 from __future__ import annotations
 
 import argparse
-import bisect
 import csv
+import hashlib
 import json
 import math
 import re
@@ -29,6 +29,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ATTRIBUTION = "© OpenStreetMap contributors"
 LICENSE = "ODbL-1.0"
@@ -535,6 +536,55 @@ def cmd_build(args):
     (out / "quality.json").write_text(json.dumps(rows, indent=1))
 
 
+NOTICE = """Track outlines for the TeamManager telemetry map.
+
+Map data (c) OpenStreetMap contributors, available under the Open Database License 1.0
+(https://opendatacommons.org/licenses/odbl/1-0/, https://www.openstreetmap.org/copyright).
+These files are a derived database of that data and are offered under the same licence.
+
+Reference lines are derived from Garage 61 lap telemetry (line_source "garage61") or from
+TeamManager users' own .ibt imports (line_source "ibt"); only a 5 m resampled line was used,
+no driver names, lap ids or raw rows. Coordinates are in iRacing's own Lat/Lon frame.
+"""
+
+
+def cmd_bundle(args):
+    """One zip per version (circuit/<id>.json, background/<id>.json, quality.json, NOTICE.txt), SHA256SUMS and
+    provenance.json. The zip is byte-reproducible: fixed member order and timestamps."""
+    built, out = Path(args.built), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    name = f"track-outlines-{args.version}.zip"
+    tracks, sources, regions, built_at = [], defaultdict(int), set(), ""
+    members, content = [], hashlib.sha256()
+    for f in sorted(built.glob("*.circuit.json"), key=lambda p: int(p.name.split(".")[0])):
+        tid = int(f.name.split(".")[0])
+        circuit = json.loads(f.read_text())
+        tracks.append(tid)
+        sources[circuit["line_source"]] += 1
+        regions.add(circuit.get("osm_timestamp") or "")
+        built_at = max(built_at, circuit["built_at"])
+        bg = (built / f"{tid}.background.json").read_bytes()
+        members += [(f"circuit/{tid}.json", f.read_bytes()), (f"background/{tid}.json", bg)]
+        for doc in (circuit, json.loads(bg)):  # geometry only: a new OSM snapshot without changes is no new release
+            content.update(json.dumps({k: v for k, v in doc.items() if k not in ("built_at", "osm_timestamp")}, sort_keys=True).encode())
+    members += [("quality.json", (built / "quality.json").read_bytes()), ("NOTICE.txt", NOTICE.encode())]
+    with ZipFile(out / name, "w", ZIP_DEFLATED) as z:
+        for arc, data in members:
+            info = ZipInfo(arc, date_time=(2020, 1, 1, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    digest = hashlib.sha256((out / name).read_bytes()).hexdigest()
+    (out / "SHA256SUMS").write_text(f"{digest}  {name}\n")
+    (out / "provenance.json").write_text(json.dumps({
+        "asset": name, "sha256": digest, "content_sha256": content.hexdigest(), "size": (out / name).stat().st_size, "format": FORMAT,
+        "built_at": built_at, "builder_commit": args.commit, "tracks": tracks,
+        "line_sources": dict(sorted(sources.items())),
+        "osm": {"source": "Geofabrik regional extracts", "timestamps": sorted(regions - {""}),
+                "attribution": ATTRIBUTION, "license": LICENSE},
+    }, indent=1) + "\n")
+    print(f"{name} {digest} {len(tracks)} tracks", file=sys.stderr)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(required=True)
@@ -552,6 +602,12 @@ def main(argv=None):
     b.add_argument("--out", required=True)
     b.add_argument("--ids", default="")
     b.set_defaults(fn=cmd_build)
+    c = sub.add_parser("bundle")
+    c.add_argument("--built", required=True, help="output directory of build")
+    c.add_argument("--version", required=True)
+    c.add_argument("--commit", required=True, help="builder git commit")
+    c.add_argument("--out", required=True)
+    c.set_defaults(fn=cmd_bundle)
     args = p.parse_args(argv)
     args.fn(args)
 
