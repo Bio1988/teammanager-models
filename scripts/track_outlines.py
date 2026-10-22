@@ -11,7 +11,7 @@ Standard library only. Two steps, each a subcommand:
              <id>.background.json (landmarks), both in iRacing's frame.
 
 iRacing's Lat/Lon is a local model frame: at some tracks it is rotated or shifted against
-the real world (Le Mans -0.54 deg, up to 50 m on the far side). The build therefore fits a
+the real world (Le Mans -0.58 deg, up to 56 m on the far side). The build therefore fits a
 similarity (rotation, shift, scale clamped near 1) from the line onto parallel OSM roads,
 selects the circuit in the aligned frame and moves everything back into iRacing's frame,
 where the laps are drawn.
@@ -43,6 +43,10 @@ MAX_ANGLE = 30.0      # deg between a run and the line
 FIT_STEPS = (80.0, 60.0, 40.0, 25.0) + (15.0,) * 30  # nearest-point ICP slides slowly along straights
 FIT_ANGLE = 25.0
 SCALE_LIMIT = 0.003   # the racing line cuts corners, so a free scale fit is biased
+# A plausible iRacing-to-OSM fit: the worst measured is Imola (-1.03 deg, 39 m) and Le Mans (-0.58 deg, 56 m).
+# Anything far beyond that matched the wrong roads, so the line is kept unaligned.
+MAX_FIT_ROTATION_DEG = 2.0
+MAX_FIT_SHIFT_M = 100.0
 PIT_END_M = 50.0     # a pit lane joins the circuit: both ends of a pit way lie this close to the line
 PIT_MEDIAN_M = 40.0  # and it runs alongside it (another layout's pit lane does not)
 
@@ -383,6 +387,9 @@ def build_track(line_ll, elements, origin):
             prev, m, fitted = m, similarity(src, dst), True
             if thr == FIT_STEPS[-1] and max(math.dist(apply(prev, p), apply(m, p)) for p in line[:: max(1, len(line) // 50)]) < 0.05:
                 break
+    if fitted and (abs(math.degrees(math.atan2(m[1], m[0]))) > MAX_FIT_ROTATION_DEG
+                   or max(math.dist(p, apply(m, p)) for p in line) > MAX_FIT_SHIFT_M):
+        fitted = False
     if not fitted:
         m = (1.0, 0.0, 0.0, 0.0)
     aligned = [apply(m, p) for p in line]
@@ -570,6 +577,8 @@ def cmd_bundle(args):
         members += [(f"circuit/{tid}.json", f.read_bytes()), (f"background/{tid}.json", bg)]
         for doc in (circuit, json.loads(bg)):  # geometry only: a new OSM snapshot without changes is no new release
             content.update(json.dumps({k: v for k, v in doc.items() if k not in ("built_at", "osm_timestamp")}, sort_keys=True).encode())
+    if not tracks:
+        raise SystemExit(f"bundle: no track reaches coverage {args.min_coverage} in {built}; nothing to release")
     members += [("quality.json", (built / "quality.json").read_bytes()), ("NOTICE.txt", NOTICE.encode())]
     with ZipFile(out / name, "w", ZIP_DEFLATED) as z:
         for arc, data in members:

@@ -37,9 +37,9 @@ def way(wid, tags, points):
 
 
 class BuildTrackTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self, degrees=0.5):
         # OSM is the lap rotated by 0.5 deg about (400, 200) and shifted 25 m east and north: iRacing's frame is off
-        r = math.radians(0.5)
+        r = math.radians(degrees)
         move = lambda p: (400 + (p[0] - 400) * math.cos(r) - (p[1] - 200) * math.sin(r) + 25,
                           225 + (p[0] - 400) * math.sin(r) + (p[1] - 200) * math.cos(r))
         lap = stadium()
@@ -74,6 +74,12 @@ class BuildTrackTest(unittest.TestCase):
         self.assertEqual(kinds, ["area:forest", "tree"])
         self.assertEqual(circuit["attribution"], T.ATTRIBUTION)
 
+    def test_an_implausible_fit_is_dropped(self):
+        self.setUp(degrees=3.0)  # beyond any measured iRacing offset: these would be the wrong roads
+        circuit, _ = T.build_track(self.line, self.elements, ORIGIN)
+        self.assertFalse(circuit["quality"]["aligned"])
+        self.assertEqual(circuit["quality"]["rotation_deg"], 0)
+
     def test_without_roads_keeps_the_line_and_says_so(self):
         circuit, _ = T.build_track(self.line, [], ORIGIN)
         self.assertFalse(circuit["quality"]["aligned"])
@@ -104,6 +110,23 @@ class BundleTest(unittest.TestCase):
         with zipfile.ZipFile(out / "track-outlines-t1.zip") as z:
             self.assertEqual(z.namelist(), ["circuit/7.json", "background/7.json", "quality.json", "NOTICE.txt"])
             self.assertIn(b"OpenStreetMap contributors", z.read("NOTICE.txt"))
+
+
+    def test_low_coverage_tracks_are_left_out_and_an_empty_bundle_fails(self):
+        built = Path(tempfile.mkdtemp())
+        circuit, background = T.build_track(ll(stadium()), [], ORIGIN)
+        for tid, coverage in ((7, 0.95), (8, 0.5)):
+            circuit["quality"]["coverage"] = coverage
+            meta = {"track_id": tid, "built_at": "2026-10-22T00:00:00Z", "line_source": "garage61", "line_laps": 3, "osm_timestamp": ""}
+            (built / f"{tid}.circuit.json").write_text(json.dumps({**meta, **circuit}))
+            (built / f"{tid}.background.json").write_text(json.dumps({**meta, **background}))
+        (built / "quality.json").write_text("[]")
+        out = Path(tempfile.mkdtemp())
+        T.cmd_bundle(SimpleNamespace(built=str(built), version="t1", commit="abc", out=str(out), min_coverage=0.9))
+        provenance = json.loads((out / "provenance.json").read_text())
+        self.assertEqual((provenance["tracks"], provenance["skipped_low_coverage"]), ([7], [8]))
+        with self.assertRaises(SystemExit):
+            T.cmd_bundle(SimpleNamespace(built=str(built), version="t2", commit="abc", out=str(Path(tempfile.mkdtemp())), min_coverage=0.99))
 
 
 class LinesTest(unittest.TestCase):

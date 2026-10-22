@@ -211,7 +211,10 @@ def cmd_extract(args):
                 for t in hit:
                     elements[t].append({"type": "way", "id": obj.id, "tags": tags,
                                         "geometry": [{"lat": a, "lon": b} for a, b in pts]})
-        stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(pbf.stat().st_mtime))
+        # the snapshot time Geofabrik writes into the PBF header, not when it was downloaded
+        reader = osmium.io.Reader(str(pbf), osmium.osm.osm_entity_bits.NOTHING)
+        stamp = reader.header().get("osmosis_replication_timestamp") or reader.header().get("timestamp") or ""
+        reader.close()
         for t in tracks:
             (out / f"{t}.{rid.replace('/', '-')}.osm.json").write_text(json.dumps({"region": rid, "osm_timestamp": stamp, "elements": elements[t]},
                                                           separators=(",", ":"), ensure_ascii=False))

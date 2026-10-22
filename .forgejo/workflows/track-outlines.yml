@@ -1,7 +1,8 @@
 name: track-outlines
 
-# Weekly rebuild of the circuit outlines (docs/track-outlines.md). Runs on the AI box, keeps its Geofabrik
-# extracts, reference lines and catalogue in a persistent state directory, downloads one region after another
+# Weekly rebuild of the circuit outlines (docs/track-outlines.md). Runs on the AI box runner (label ai-box,
+# registered as ai-box:host: jobs run directly in the runner container, which PR jobs share). It keeps its
+# Geofabrik extracts, reference lines and catalogue in the persistent host directory /workspace/track-outlines, downloads one region after another
 # (unchanged files are skipped by their MD5) and publishes a new release only when the outline geometry
 # changed. The Server pins a release explicitly; a new release changes nothing until that pin moves.
 on:
@@ -49,19 +50,26 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           api="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY"
-          new=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["content_sha256"])' "$STATE/release/provenance.json")
-          tag=$(curl -fsS "$api/releases?limit=50" | python3 -c 'import json,sys; print(next((r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("track-outlines-")), ""))')
+          prov="$STATE/release/provenance.json"
+          field() { python3 -c 'import json,sys; v=json.load(open(sys.argv[1]))[sys.argv[2]]; print(v if isinstance(v, str) else json.dumps(v))' "$1" "$2"; }
+          tag=$(curl -fsS "$api/releases?limit=50" | python3 -c 'import json,sys; print(next((r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("track-outlines-") and not r["draft"]), ""))')
           if [ -n "$tag" ]; then
-            old=$(curl -fsSL "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag/provenance.json" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("content_sha256", ""))')
-            if [ "$old" = "$new" ]; then echo "geometry unchanged since $tag"; exit 0; fi
+            curl -fsSL -o "$STATE/previous.json" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag/provenance.json"
+            if [ "$(field "$STATE/previous.json" content_sha256)" = "$(field "$prov" content_sha256)" ]; then echo "geometry unchanged since $tag"; exit 0; fi
+            # never publish a bundle that lost tracks the Server may already serve from the previous release
+            python3 -c 'import json,sys; old=set(json.load(open(sys.argv[1]))["tracks"]); new=set(json.load(open(sys.argv[2]))["tracks"]); lost=sorted(old-new); sys.exit(f"tracks missing against the previous release: {lost}" if lost else 0)' "$STATE/previous.json" "$prov"
           fi
-          version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["asset"][len("track-outlines-"):-len(".zip")])' "$STATE/release/provenance.json")
-          body="Circuit outlines and backgrounds for the telemetry map ($(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["tracks"]))' "$STATE/release/provenance.json") tracks). Map data (c) OpenStreetMap contributors, ODbL 1.0. See provenance.json and docs/track-outlines.md. Immutable."
-          id=$(python3 -c 'import json,sys; print(json.dumps({"tag_name": sys.argv[1], "target_commitish": sys.argv[2], "name": sys.argv[1], "body": sys.argv[3]}))' "track-outlines-$version" "$GITHUB_SHA" "$body" \
+          version=$(field "$prov" asset); version=${version#track-outlines-}; version=${version%.zip}
+          body="Circuit outlines and backgrounds for the telemetry map ($(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["tracks"]))' "$prov") tracks). Map data (c) OpenStreetMap contributors, ODbL 1.0. Archive SHA-256 $(field "$prov" sha256). See provenance.json and docs/track-outlines.md. Immutable."
+          # draft first, all assets, then publish: a failure leaves no half release behind
+          id=$(python3 -c 'import json,sys; print(json.dumps({"tag_name": sys.argv[1], "target_commitish": sys.argv[2], "name": sys.argv[1], "body": sys.argv[3], "draft": True}))' "track-outlines-$version" "$GITHUB_SHA" "$body" \
             | curl -fsS -X POST -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data @- "$api/releases" \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          trap 'curl -fsS -X DELETE -H "Authorization: token $TOKEN" "$api/releases/$id" || true; curl -fsS -X DELETE -H "Authorization: token $TOKEN" "$api/tags/track-outlines-$version" || true' ERR
           for f in "$STATE"/release/*; do
             curl -fsS -X POST -H "Authorization: token $TOKEN" -F "attachment=@$f" "$api/releases/$id/assets?name=$(basename "$f")" > /dev/null
           done
+          curl -fsS -X PATCH -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data '{"draft":false}' "$api/releases/$id" > /dev/null
           echo "published track-outlines-$version"

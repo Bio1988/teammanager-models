@@ -23,8 +23,9 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
   which is the line's bounding box plus 4 km. A track on a border uses two regions. `download` resumes and
   skips a file whose Geofabrik MD5 is unchanged.
 - **Alignment.** iRacing's Lat/Lon is rotated or shifted against the real world at some tracks (Le Mans
-  −0.55°, up to 55 m). The build fits a similarity from the line onto parallel OSM roads, with ICP and the
-  scale clamped to 1 ± 0.003. It then selects the drivable ways (raceway and public roads) within 15 m of
+  −0.58°, up to 56 m; Imola −1.03°, up to 39 m). The build fits a similarity from the line onto parallel OSM roads, with ICP and the
+  scale clamped to 1 ± 0.003. A fit that rotates more than 2° or moves a point more than 100 m matched the
+  wrong roads and is dropped (the track stays unaligned). It then selects the drivable ways (raceway and public roads) within 15 m of
   the aligned line, parallel to it and at least 40 m long, and stitches one outline along the line. A
   sample with no OSM way within 15 m keeps the line itself.
 - **Pit lane.** Ways tagged `raceway=pitlane` or `service=pit`, or named pit lane, entry or exit, near the
@@ -45,7 +46,12 @@ The Server pins one release by URL and SHA-256; a newer release changes nothing 
 `.forgejo/workflows/track-outlines.yml` runs on the `ai-box` runner every Monday at 01:17 UTC (and on
 dispatch): Geofabrik index, plan, sequential downloads (unchanged files skipped by MD5), extract, build,
 bundle. It publishes a new release only when `content_sha256` differs from the latest
-`track-outlines-*` release. State lives in `/workspace/track-outlines` on the runner:
+`track-outlines-*` release, and refuses when a track of that release is missing. The release is created as a
+draft, gets all assets and is then published; a failure deletes the draft and its tag.
+
+The job runs on the `ai-box` runner label, which the AI box runner registers as `ai-box:host`: jobs run
+directly in the runner container, which pull-request jobs of every repository share. State therefore lives
+on the host in `/workspace/track-outlines` (the runner's bind mount), outside any job's work tree:
 
 - `catalogue.json`: `{id, name, config, lat, lon, length}` per catalogue track, exported read-only from
   the Server's cached iRacing catalogue. Re-export it to pick up new tracks.
