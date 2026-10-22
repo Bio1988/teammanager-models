@@ -17,6 +17,7 @@ import json
 import math
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -97,30 +98,63 @@ def md5_of(path: Path) -> str:
     return md5.hexdigest()
 
 
-def fetch(url: str, dest: Path):
-    """Download with resume; the .md5 Geofabrik publishes decides whether a file is current."""
-    md5_url = url + ".md5"
-    want = urllib.request.urlopen(urllib.request.Request(md5_url, headers={"User-Agent": USER_AGENT}), timeout=60).read().split()[0].decode()
+def pbf_name(rid: str) -> str:
+    """Local file of a Geofabrik region id; ids such as `us/alabama` hold a slash."""
+    return rid.replace("/", "-") + ".osm.pbf"
+
+
+class _KeepMethod(urllib.request.HTTPRedirectHandler):
+    """urllib turns a redirected HEAD into a GET, which would start the whole download; keep the method."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        return new and urllib.request.Request(new.full_url, headers=dict(new.header_items()), method=req.get_method())
+
+
+_opener = urllib.request.build_opener(_KeepMethod)
+
+
+def _get(url: str, method: str = "GET", headers=None):
+    return _opener.open(urllib.request.Request(url, method=method, headers={"User-Agent": USER_AGENT, **(headers or {})}), timeout=120)
+
+
+def fetch(url: str, dest: Path, pause: float = 30.0):
+    """Download with resume; the .md5 Geofabrik publishes decides whether a file is current.
+
+    Geofabrik answers `<region>-latest.osm.pbf` with a redirect to the dated file (`<region>-261020.osm.pbf`).
+    The dated URL is resolved once, so the file and its .md5 come from the same snapshot, and a partial
+    download is resumed only against the same dated file."""
+    with _get(url, "HEAD") as r:
+        final = r.geturl()  # urllib follows 301/302/303/307/308
+    want = _get(final + ".md5").read().split()[0].decode()
     if dest.exists() and md5_of(dest) == want:
         return "current"
-    part = dest.with_suffix(dest.suffix + ".part")
+    part, source = dest.with_name(dest.name + ".part"), dest.with_name(dest.name + ".part-url")
+    if part.exists() and (not source.exists() or source.read_text() != final):
+        part.unlink()  # started on another snapshot
+    source.write_text(final)
     for attempt in range(5):
         have = part.stat().st_size if part.exists() else 0
-        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **({"Range": f"bytes={have}-"} if have else {})})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r, part.open("ab" if have and r.status == 206 else "wb") as f:
+            with _get(final, headers={"Range": f"bytes={have}-"} if have else None) as r, part.open("ab" if have and r.status == 206 else "wb") as f:
                 while chunk := r.read(1 << 20):
                     f.write(chunk)
             break
+        except urllib.error.HTTPError as e:
+            if e.code == 416 and have:  # already complete; the MD5 below decides
+                break
+            err = e
         except OSError as e:
-            print(f"  retry {attempt + 1} after {e}", file=sys.stderr)
-            time.sleep(30 * (attempt + 1))
+            err = e
+        print(f"  retry {attempt + 1} after {err}", file=sys.stderr)
+        time.sleep(pause * (attempt + 1))
     else:
-        raise RuntimeError(f"download failed: {url}")
+        raise RuntimeError(f"download failed: {final}")
     if md5_of(part) != want:
         part.unlink()
-        raise RuntimeError(f"md5 mismatch: {url}")
+        raise RuntimeError(f"md5 mismatch: {final}")
     part.replace(dest)
+    source.unlink()
     return "downloaded"
 
 
@@ -129,7 +163,7 @@ def cmd_download(args):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for rid in sorted(plan):
-        dest = out / f"{rid}.osm.pbf"
+        dest = out / pbf_name(rid)
         print(rid, fetch(plan[rid]["url"], dest), dest.stat().st_size, file=sys.stderr, flush=True)
         time.sleep(args.pause)
 
@@ -146,7 +180,7 @@ def cmd_extract(args):
         if not tracks:
             continue
         boxes = {t: plan["areas"][str(t)]["bbox"] for t in tracks}
-        pbf = Path(args.pbf) / f"{rid}.osm.pbf"
+        pbf = Path(args.pbf) / pbf_name(rid)
         t0 = time.time()
         within = lambda lat, lon: [t for t, b in boxes.items() if b[0] <= lat <= b[2] and b[1] <= lon <= b[3]]
         coords, elements = {}, {t: [] for t in tracks}
