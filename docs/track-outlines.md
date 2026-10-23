@@ -25,7 +25,10 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
 - **Alignment.** iRacing's Lat/Lon is rotated or shifted against the real world at some tracks (Le Mans
   −0.58°, up to 56 m; Imola −1.03°, up to 39 m). The build fits a similarity from the line onto parallel OSM roads, with ICP and the
   scale clamped to 1 ± 0.003. A fit that rotates more than 2° or moves a point more than 100 m matched the
-  wrong roads and is dropped (the track stays unaligned). It then selects the drivable ways (raceway and public roads) within 15 m of
+  wrong roads and is dropped (the track stays unaligned). If that fit fails, a coarse translation search (up to 600 m, 10 m steps) finds the frame offset first (Wild West
+  sits about 480 m off) and the same ICP and rotation limit apply. It then selects the drivable ways (raceway, public roads,
+  service roads and parking aisles, pedestrian ways, `highway=track`, airport runways and taxiways, and ways OSM keeps only
+  as `disused:highway=raceway`, as at St. Petersburg) within 15 m of
   the aligned line, parallel to it and at least 40 m long, and stitches one outline along the line. A
   sample with no OSM way within 15 m keeps the line itself.
 - **Pit lane.** Ways tagged `raceway=pitlane` or `service=pit`, or named pit lane, entry or exit, near the

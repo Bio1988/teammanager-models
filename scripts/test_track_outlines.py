@@ -74,6 +74,27 @@ class BuildTrackTest(unittest.TestCase):
         self.assertEqual(kinds, ["area:forest", "tree"])
         self.assertEqual(circuit["attribution"], T.ATTRIBUTION)
 
+    def test_street_circuit_uses_every_drivable_way_kind(self):
+        lap = stadium()
+        n = len(lap) // 4
+        parts = [({"highway": "raceway"}, lap[: n + 1]), ({"aeroway": "taxiway"}, lap[n: 2 * n + 1]),
+                 ({"disused:highway": "raceway", "name": "Grand Prix"}, lap[2 * n: 3 * n + 1]),
+                 ({"highway": "pedestrian"}, lap[3 * n:] + lap[:1])]
+        elements = [way(i, t, pts) for i, (t, pts) in enumerate(parts, 1)]
+        circuit, _ = T.build_track(ll(lap), elements, ORIGIN)
+        self.assertGreater(circuit["quality"]["coverage"], 0.97)
+        self.assertEqual(circuit["quality"]["osm_ways"], 4)
+        # a footway is not drivable
+        elements[3]["tags"] = {"highway": "footway"}
+        self.assertLess(T.build_track(ll(lap), elements, ORIGIN)[0]["quality"]["coverage"], 0.8)
+
+    def test_frame_hundreds_of_metres_off_is_found(self):
+        lap = stadium()
+        elements = [way(1, {"highway": "raceway", "surface": "dirt"}, [(x + 300, y - 150) for x, y in lap + lap[:1]])]
+        circuit, _ = T.build_track(ll(lap), elements, ORIGIN)
+        self.assertTrue(circuit["quality"]["aligned"])
+        self.assertGreater(circuit["quality"]["coverage"], 0.97)
+
     def test_an_implausible_fit_is_dropped(self):
         self.setUp(degrees=3.0)  # beyond any measured iRacing offset: these would be the wrong roads
         circuit, _ = T.build_track(self.line, self.elements, ORIGIN)
