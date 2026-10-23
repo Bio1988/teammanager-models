@@ -236,23 +236,40 @@ def dist_to_line(pts, line):
     return statistics.median(ds)
 
 
+G61_DIRS = ("telemetry", "telemetry-pro", "telemetry-pairs", "sessions-dirt")
+# lap indexes (track_id, track, variant column) of the G61 downloads; driver names are never read
+G61_INDEXES = (("telemetry/laps.csv", "track_variant"), ("telemetry-pro/pro_laps.csv", "track_variant"),
+               ("telemetry/_missing_laps.csv", "variant"))
+# catalogue names that only mark a layout's status, not a different place
+STATUS_PREFIX = re.compile(r"^\[(retired|legacy)\]\s*", re.I)
+
+
 def g61_index(root: Path):
-    """G61 track id -> (track, variant) from the lap indexes (names of drivers are never read)."""
+    """G61 track id -> (track, variant) from the lap indexes."""
     names = {}
-    for idx in (root / "telemetry" / "laps.csv", root / "telemetry-pro" / "pro_laps.csv"):
-        if idx.exists():
-            with idx.open(newline="") as f:
+    for idx, variant in G61_INDEXES:
+        if (root / idx).exists():
+            with (root / idx).open(newline="") as f:
                 for r in csv.DictReader(f):
-                    names.setdefault(r["track_id"], (r["track"], r.get("track_variant") or ""))
+                    names.setdefault(r["track_id"], (r["track"], r.get(variant) or ""))
     return names
+
+
+def loose_name(s: str) -> str:
+    return norm_name(STATUS_PREFIX.sub("", (s or "").strip()))
+
+
+def g61_laps(root: Path, gids):
+    return [p for gid in gids for d in G61_DIRS for p in sorted((root / d / f"track_{gid}").rglob("*.csv"))]
 
 
 def cmd_lines(args):
     root = Path(args.g61)
     catalogue = json.loads(Path(args.catalogue).read_text())
-    by_name = defaultdict(list)
+    by_name, by_loose = defaultdict(list), defaultdict(list)
     for gid, (track, variant) in g61_index(root).items():
         by_name[(norm_name(track), norm_name(variant))].append(gid)
+        by_loose[(loose_name(track), loose_name(variant))].append(gid)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     wanted = set(map(int, args.ids.split(","))) if args.ids else None
@@ -261,9 +278,11 @@ def cmd_lines(args):
         if wanted and t["id"] not in wanted:
             continue
         gids = by_name.get((norm_name(t["name"]), norm_name(t["config"])), [])
-        files = [p for gid in gids for d in ("telemetry", "telemetry-pro", "telemetry-pairs")
-                 for p in sorted((root / d / f"track_{gid}").glob("*.csv"))]
-        row = {"id": t["id"], "laps_found": len(files)}
+        loose = not gids  # "[Retired] X / [Legacy] Y" matched by the plain names
+        if loose:
+            gids = by_loose.get((loose_name(t["name"]), loose_name(t["config"])), [])
+        files = g61_laps(root, gids)
+        row = {"id": t["id"], "laps_found": len(files), "loose": loose and bool(files)}
         if files:
             line, used = medoid_line([lap for lap in map(read_lap, files) if lap], args.max_laps)
             if line:
@@ -274,7 +293,9 @@ def cmd_lines(args):
                 # the catalogue length is km or miles; the origin must be near the line
                 ok_len = any(abs(lap_m - t["length"] * u) <= 0.06 * t["length"] * u for u in (1000, 1609.344))
                 row.update(laps_used=used, lap_m=round(lap_m), origin_far_m=round(far), length_ok=ok_len)
-                if far < 15_000:  # the catalogue length is only a hint (configs often carry the full-course value)
+                # the catalogue length is only a hint (configs often carry the full-course value), but a loose
+                # name match must also have the catalogue's length: a retired layout may differ from today's
+                if far < 15_000 and (ok_len or not row["loose"]):
                     (out / f"{t['id']}.line.json").write_text(json.dumps(
                         {"track_id": t["id"], "source": "garage61", "laps": used, "step_m": STEP_M, "line": line},
                         separators=(",", ":")))
