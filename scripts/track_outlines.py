@@ -48,6 +48,8 @@ SCALE_LIMIT = 0.003   # the racing line cuts corners, so a free scale fit is bia
 MAX_FIT_ROTATION_DEG = 2.0
 MAX_FIT_SHIFT_M = 100.0
 COARSE_SHIFT_M = 600  # search window for a frame that is hundreds of metres off
+COARSE_MIN_SHARE = 0.6     # share of the lap that must sit on parallel roads for the coarse fit to count
+COARSE_MIN_COVERAGE = 0.9  # and the finished outline must be this much OSM, else the track stays unaligned
 PIT_END_M = 50.0     # a pit lane joins the circuit: both ends of a pit way lie this close to the line
 PIT_MEDIAN_M = 40.0  # and it runs alongside it (another layout's pit lane does not)
 
@@ -354,22 +356,24 @@ def simplify(pts, tol: float):
 # ---------------------------------------------------------------- build
 
 def coarse_shift(line, lt, fit_pts, fit_tan):
-    """Translation (as a transform) within COARSE_SHIFT_M that puts most line samples on a parallel road."""
+    """Best translation within COARSE_SHIFT_M as (transform, share of samples on a parallel road, same at zero offset)."""
     grid, cos_fit = Grid(fit_pts, 20.0), math.cos(math.radians(FIT_ANGLE))
     sample = list(range(0, len(line), 6))
-    best, n = (0.0, 0.0), -1
+    hits_at = lambda dx, dy: sum(grid.near((line[i][0] + dx, line[i][1] + dy), 12.0,
+                                           lambda j: abs(lt[i][0] * fit_tan[j][0] + lt[i][1] * fit_tan[j][1]) >= cos_fit)[1] >= 0
+                                 for i in sample)
+    best, n = (0, 0), -1
     for dx in range(-COARSE_SHIFT_M, COARSE_SHIFT_M + 1, 10):
         for dy in range(-COARSE_SHIFT_M, COARSE_SHIFT_M + 1, 10):
-            hits = sum(grid.near((line[i][0] + dx, line[i][1] + dy), 12.0,
-                                 lambda j: abs(lt[i][0] * fit_tan[j][0] + lt[i][1] * fit_tan[j][1]) >= cos_fit)[1] >= 0
-                       for i in sample)
-            if hits > n:
-                best, n = (float(dx), float(dy)), hits
-    return 1.0, 0.0, best[0], best[1]
+            if (hits := hits_at(dx, dy)) > n:
+                best, n = (dx, dy), hits
+    return (1.0, 0.0, float(best[0]), float(best[1])), n / len(sample), hits_at(0, 0) / len(sample)
 
 
-def build_track(line_ll, elements, origin):
-    """Returns (circuit, background) dicts in iRacing's frame for one track."""
+def build_track(line_ll, elements, origin, coarse=True):
+    """Returns (circuit, background) dicts in iRacing's frame for one track.
+
+    `coarse` allows the large-offset search; it is kept only if the result reaches COARSE_MIN_COVERAGE."""
     frame = Frame(*origin)
     line = [frame.xy(*p) for p in line_ll]
     if math.dist(line[0], line[-1]) > STEP_M:
@@ -387,11 +391,12 @@ def build_track(line_ll, elements, origin):
             ways.append((e["id"], t, [frame.xy(g["lat"], g["lon"]) for g in e["geometry"] if g]))
 
     # 1. fit iRacing line -> OSM on parallel roads
-    fit_pts, fit_tan = [], []
+    fit_pts, fit_tan, roads = [], [], []
     for _, t, pts in ways:
         if (t.get("highway") in FIT_ROADS or t.get("area:highway") == "raceway") and not is_pit(t):
             r = resample(pts, 3.0)
             fit_pts += r
+            roads.append(r)
             fit_tan += tangents(r)
     def icp(m, shift_limit):
         """Slide the line onto the OSM roads from the start transform m; (transform, plausible)."""
@@ -416,13 +421,16 @@ def build_track(line_ll, elements, origin):
             and max(math.dist(p, apply(m, p)) for p in line) <= shift_limit
         return m, ok
 
-    m, fitted = (1.0, 0.0, 0.0, 0.0), False
+    m, fitted, used_coarse = (1.0, 0.0, 0.0, 0.0), False, False
     if fit_pts:
         m, fitted = icp(m, MAX_FIT_SHIFT_M)
-        if not fitted:
-            # iRacing's frame can be hundreds of metres off (Wild West): find the translation putting most of the
-            # line on a parallel road, then let the same fit refine it. The rotation limit still guards it.
-            m, fitted = icp(coarse_shift(line, lt, fit_pts, fit_tan), COARSE_SHIFT_M)
+        # iRacing's frame can be hundreds of metres off (Wild West). The search costs seconds, so it runs only when
+        # the roads are long enough to carry most of the lap; its result must be a clear, mostly parallel match.
+        if not fitted and coarse and sum(length(r) for r in roads) >= COARSE_MIN_SHARE * length(line):
+            m0, share, zero = coarse_shift(line, lt, fit_pts, fit_tan)
+            if share >= COARSE_MIN_SHARE and share >= 2 * zero:
+                m, fitted = icp(m0, COARSE_SHIFT_M)
+                used_coarse = fitted
     if not fitted:
         m = (1.0, 0.0, 0.0, 0.0)
     aligned = [apply(m, p) for p in line]
@@ -512,6 +520,8 @@ def build_track(line_ll, elements, origin):
         "lap_m": round(length(line)),
         "osm_ways": len({w for w, _, _ in runs}),
     }
+    if used_coarse and quality["coverage"] < COARSE_MIN_COVERAGE:
+        return build_track(line_ll, elements, origin, coarse=False)
     circuit = {"format": FORMAT, "frame": "iracing", "attribution": ATTRIBUTION, "license": LICENSE,
                "quality": quality, "outline": back(simplify(outline, 0.5)),
                "pit": [back(simplify(p, 0.5)) for p in pits]}

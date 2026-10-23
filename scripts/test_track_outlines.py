@@ -95,6 +95,13 @@ class BuildTrackTest(unittest.TestCase):
         self.assertTrue(circuit["quality"]["aligned"])
         self.assertGreater(circuit["quality"]["coverage"], 0.97)
 
+    def test_a_decoy_road_far_away_is_not_followed(self):
+        lap = stadium()
+        decoy = [way(1, {"highway": "raceway"}, [(x + 300, 600) for x in range(0, 800, 20)])]  # straight, a third of the lap
+        circuit, _ = T.build_track(ll(lap), decoy, ORIGIN)
+        self.assertFalse(circuit["quality"]["aligned"])
+        self.assertEqual(circuit["quality"]["coverage"], 0)
+
     def test_an_implausible_fit_is_dropped(self):
         self.setUp(degrees=3.0)  # beyond any measured iRacing offset: these would be the wrong roads
         circuit, _ = T.build_track(self.line, self.elements, ORIGIN)
