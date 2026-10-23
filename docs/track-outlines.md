@@ -17,8 +17,15 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
 
 - `catalogue.json` is the list `{id, name, config, lat, lon, length}` read from the Server's cached iRacing
   track catalogue.
-- **Line.** One reference line per track: the medoid closed lap of the Garage 61 laps of that track and
-  configuration, matched by name. Only the derived 5 m line is kept: no driver names, lap ids or raw rows.
+- **Line.** One reference line per track: the medoid of the agreeing closed Garage 61 laps of that
+  track and configuration (at least two for a loose match below). Sources: `telemetry/`, `telemetry-pro/`, `telemetry-pairs/` and
+  `sessions-dirt/` (a lap saved in several folders counts once); names come from `laps.csv`,
+  `pro_laps.csv` and `_missing_laps.csv`. Names match exactly; a `[Retired]`/`[Legacy]` catalogue entry
+  without an exact match falls back to the plain name, but never to a G61 track that an exact catalogue
+  entry claims (those laps are the current layout) and only when the lap length matches the catalogue's
+  (6 %) and two laps agree. A line from the user's own `.ibt` import (`source: "ibt"`, derived from the Server's import
+  blocks outside this script) already in the output directory is kept. Only the derived 5 m line is
+  kept: no driver names, lap ids or raw rows.
 - **OSM.** `plan` picks the smallest Geofabrik region for each corner and the centre of the track area,
   which is the line's bounding box plus 4 km. A track on a border uses two regions. `download` resumes and
   skips a file whose Geofabrik MD5 is unchanged.

@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import math
 import tempfile
@@ -158,6 +160,57 @@ class BundleTest(unittest.TestCase):
 
 
 class LinesTest(unittest.TestCase):
+    def g61(self, tracks):
+        """A G61 root: {g61 id: (track, variant, number of laps)} under telemetry-pairs/, named by _missing_laps.csv."""
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "telemetry").mkdir()
+        index = "track_id,track,variant\n"
+        for gid, (track, variant, laps) in tracks.items():
+            index += f"{gid},{track},{variant}\n"
+            (root / "telemetry-pairs" / f"track_{gid}").mkdir(parents=True)
+            for k in range(laps):
+                rows = "".join(f"{i},0,0,0,{a},{b}\n" for i, (a, b) in enumerate(ll([(x, y + k) for x, y in stadium()])))
+                (root / "telemetry-pairs" / f"track_{gid}" / f"lap{gid}-{k}.csv").write_text(
+                    "sample,t_s,Speed,LapDistPct,Lat,Lon\n#,60 Hz,m/s,0-1,deg,deg\n" + rows)
+        (root / "telemetry" / "_missing_laps.csv").write_text(index)
+        return root
+
+    def lines(self, root, catalogue, out=None):
+        miles = T.length(stadium()) / 1609.344
+        (root / "catalogue.json").write_text(json.dumps([{"lat": ORIGIN[0], "lon": ORIGIN[1], "length": miles, **t} for t in catalogue]))
+        out = out or root / "lines"
+        with contextlib.redirect_stdout(io.StringIO()):
+            T.cmd_lines(SimpleNamespace(g61=str(root), catalogue=str(root / "catalogue.json"), out=str(out), ids="", max_laps=12))
+        return sorted(int(p.name.split(".")[0]) for p in out.glob("*.line.json"))
+
+    def test_retired_layouts_match_loosely_only_with_the_catalogue_length(self):
+        root = self.g61({5: ("Phoenix Raceway - 2008", "Rallycross", 2)})
+        legacy = {"id": 306, "name": "[Legacy] Phoenix Raceway - 2008", "config": "Rallycross"}
+        self.assertEqual(self.lines(root, [legacy]), [306])
+        self.assertEqual(self.lines(root, [{**legacy, "length": 9.0}], root / "other"), [])
+
+    def test_a_retired_layout_never_borrows_the_current_layouts_laps(self):
+        root = self.g61({7: ("Charlotte Motor Speedway", "Roval", 3)})
+        current = {"id": 340, "name": "Charlotte Motor Speedway", "config": "Roval"}
+        retired = {"id": 341, "name": "[Retired] Charlotte Motor Speedway", "config": "[Retired] Roval"}
+        self.assertEqual(self.lines(root, [current, retired]), [340])
+
+    def test_one_lap_is_no_loose_line_and_an_own_import_line_wins(self):
+        root = self.g61({8: ("Lanier National Speedway", "Dirt", 1), 9: ("Road America", "Full Course", 2)})
+        out = root / "lines"
+        out.mkdir()
+        (out / "18.line.json").write_text(json.dumps({"track_id": 18, "source": "ibt", "laps": 12, "line": []}))
+        found = self.lines(root, [{"id": 288, "name": "[Legacy] Lanier National Speedway", "config": "Dirt"},
+                                  {"id": 18, "name": "Road America", "config": "Full Course"}], out)
+        self.assertEqual(found, [18])
+        self.assertEqual(json.loads((out / "18.line.json").read_text())["source"], "ibt")
+
+    def test_a_lap_file_without_coordinates_is_empty(self):
+        d = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (d / "empty.csv").write_text("")
+        (d / "nogps.csv").write_text("sample,Speed\n#,m/s\n0,1\n")
+        self.assertEqual((T.read_lap(d / "empty.csv"), T.read_lap(d / "nogps.csv")), ([], []))
+
     def test_medoid_drops_partial_and_far_laps(self):
         lap = ll(stadium())
         noisy = ll([(x, y + 1.0) for x, y in stadium()])
