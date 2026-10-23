@@ -2,33 +2,43 @@
 """iRacing's own turn numbers for the built circuit outlines.
 
   fetch   catalogue (with each track's `track_map` folder and `layers` file names) -> <id>.active.svg and
-          <id>.turns.svg from iRacing's public track-map CDN, one track after another, existing files kept
+          <id>.turns.svg from iRacing's public track-map CDN, one track after another; a file older than
+          --max-age-days is asked for again with a conditional GET. fetched.json records url, sha256 and fetch time.
   place   built <id>.circuit.json + its reference line + the two SVGs -> adds `turns: [{number, label, apex_pct}]`
-          (apex_pct = where the label sits along the reference lap from the start/finish line, 0..1, like LapDistPct) and
-          `turns_fit` (fit error and transform) to the circuit file
+          (apex_pct = where the label sits along the reference lap from the start/finish line, 0..1, like LapDistPct),
+          `turns_fit` (fit error, transform, lap-order inversions) and `turns_source` (the two SVGs) to the circuit file
 
-The active layer is fitted onto the reference line (same frame as the laps) with a coarse rotation search and
-then iterative closest point with a similarity (as the Web map does); each turn label goes through that fit
-and snaps to the nearest line sample. A fit with a two-sided mean error over TURNS_MAX_ERROR_M places no turns.
+The active layer is fitted onto the reference line (same frame as the laps) with a coarse rotation search and then
+iterative closest point with a similarity (as the Web map does); each turn label goes through that fit and snaps to
+the nearest line sample. Only labels like "3", "3a" or "T14" are turns. Neighbouring labels in the wrong order
+within 200 m (chicanes) are put back in number order; a track whose labels still break the lap order more than
+twice, or whose fit error is over TURNS_MAX_ERROR_M, gets no turns.
 `place` needs svgelements (`pip install svgelements`) to sample SVG paths; the rest is the standard library.
 """
 from __future__ import annotations
 
 import argparse
+import email.utils
+import hashlib
 import json
 import math
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from pathlib import Path
 
-from track_outlines import Frame, Grid, length, resample
+from track_outlines import Frame, Grid, apply as move, length, resample, similarity
 
 USER_AGENT = "TeamManager-track-outlines/1 (circuit outline builder)"
 TURNS_MAX_ERROR_M = 30.0  # the Web map's gate for printing turn numbers from the same fit
 SCALE_SPAN = 0.25          # the scale stays within 25 % of the size estimate (Web fitSimilarity)
-MAX_LABEL = 4              # "12", "3a", "T14": longer texts are not turn labels
+TURN_LABEL = re.compile(r"T?(\d{1,2})[a-z]?")  # "3", "3a", "T14"; not "100R", "180º", "TV3" or words
+CLOSE_TURNS_M = 200.0      # labels this close may swap places (chicanes): put them back in number order
+MAX_INVERSIONS = 2         # more breaks of the lap order than this after the fix: the fit or labels are wrong
 MAX_SVG_BYTES = 2_000_000
 
 
@@ -37,52 +47,48 @@ MAX_SVG_BYTES = 2_000_000
 def cmd_fetch(args):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    record_path = out / "fetched.json"
+    record = json.loads(record_path.read_text()) if record_path.exists() else {}
     wanted = set(map(int, args.ids.split(","))) if args.ids else None
     for t in sorted(json.loads(Path(args.catalogue).read_text()), key=lambda t: t["id"]):
         layers = t.get("layers") or {}
         if wanted and t["id"] not in wanted or not t.get("track_map") or not {"active", "turns"} <= set(layers):
             continue
         for kind in ("active", "turns"):
-            dest = out / f"{t['id']}.{kind}.svg"
-            if dest.exists():
-                continue
+            dest, key = out / f"{t['id']}.{kind}.svg", f"{t['id']}.{kind}"
             url = t["track_map"].rstrip("/") + "/" + layers[kind]
+            seen = record.get(key, {})
+            if dest.exists() and seen.get("url") == url and time.time() - seen.get("checked", 0) < args.max_age_days * 86400:
+                continue
+            headers = {"User-Agent": USER_AGENT}
+            if dest.exists() and seen.get("url") == url and seen.get("last_modified"):
+                headers["If-Modified-Since"] = seen["last_modified"]
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             try:
-                with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": USER_AGENT}), timeout=60) as r:
-                    body = r.read(MAX_SVG_BYTES + 1)
+                with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as r:
+                    body, modified = r.read(MAX_SVG_BYTES + 1), r.headers.get("Last-Modified")
+            except urllib.error.HTTPError as e:
+                if e.code == 304:  # unchanged since the last fetch
+                    record[key] = {**seen, "checked": time.time()}
+                else:
+                    print(f"{t['id']} {kind}: {e}", file=sys.stderr)
+                continue
             except OSError as e:
                 print(f"{t['id']} {kind}: {e}", file=sys.stderr)
                 continue
+            finally:
+                time.sleep(args.pause)
             if len(body) <= MAX_SVG_BYTES:
                 dest.write_bytes(body)
-            time.sleep(args.pause)
+                record[key] = {"url": url, "sha256": hashlib.sha256(body).hexdigest(), "fetched_at": now,
+                               "last_modified": modified or email.utils.formatdate(usegmt=True), "checked": time.time()}
+    record_path.write_text(json.dumps(record, indent=1, sort_keys=True))
 
 
 # ---------------------------------------------------------------- fit
 
 def centroid(pts):
     return sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-
-
-def umeyama(src, dst, limit):
-    """Least-squares similarity src[i] -> dst[i] as (a, b, tx, ty), scale clamped to `limit`."""
-    (mx, my), (nx, ny) = centroid(src), centroid(dst)
-    dot = cross = norm = 0.0
-    for (x, y), (u, v) in zip(src, dst):
-        px, py, qx, qy = x - mx, y - my, u - nx, v - ny
-        dot += px * qx + py * qy
-        cross += px * qy - py * qx
-        norm += px * px + py * py
-    a, b = dot / norm, cross / norm
-    s = math.hypot(a, b) or 1.0
-    c = min(max(s, limit[0]), limit[1]) / s
-    a, b = a * c, b * c
-    return a, b, nx - (a * mx - b * my), ny - (b * mx + a * my)
-
-
-def move(m, p):
-    a, b, tx, ty = m
-    return a * p[0] - b * p[1] + tx, b * p[0] + a * p[1] + ty
 
 
 def decimate(pts, n):
@@ -119,33 +125,57 @@ def fit_svg(src, dst):
     best = None
     for _, m in sorted(starts)[:2]:
         for _ in range(15):
-            m = umeyama(src, [nearest(dgrid, dst, move(m, p)) for p in src], limit)
+            m = similarity(src, [nearest(dgrid, dst, move(m, p)) for p in src], scale_range=limit)
         e = error(m)
         if best is None or e < best[0]:
             best = (e, m)
     return best[1], best[0]
 
 
+def inversions(turns):
+    """Breaks of the lap order: number decreases between neighbours, going round the lap once (the one wrap from the
+    last turn to the first, where the start/finish line sits, is no break)."""
+    n = [t["number"] for t in turns]
+    return max(0, sum(1 for a, b in zip(n, n[1:] + n[:1]) if b < a) - 1) if len(n) > 1 else 0
+
+
+def fix_close_order(turns, lap_m):
+    """Labels within CLOSE_TURNS_M of each other keep their positions, but take their numbers in order."""
+    out, i = [], 0
+    while i < len(turns):
+        j = i
+        while j + 1 < len(turns) and (turns[j + 1]["apex_pct"] - turns[j]["apex_pct"]) * lap_m < CLOSE_TURNS_M:
+            j += 1
+        group = turns[i:j + 1]
+        names = sorted(((t["number"], t["label"]) for t in group))
+        out += [{"number": n, "label": label, "apex_pct": t["apex_pct"]} for (n, label), t in zip(names, group)]
+        i = j + 1
+    return out
+
+
 def place_turns(labels, m, line):
-    """Each (label, x, y) through the fit onto the nearest line sample: [{number, label, apex_pct}] in lap order."""
+    """Each (label, x, y) through the fit onto the nearest sample of the closed line: [{number, label, apex_pct}]."""
+    if math.dist(line[0], line[-1]) > 1.0:
+        line = line + [line[0]]
     cum = [0.0]
     for p, q in zip(line, line[1:]):
         cum.append(cum[-1] + math.dist(p, q))
     total = cum[-1] or 1.0
     grid = Grid(line, 25.0)
-    out = []
+    out, seen = [], set()
     for label, x, y in labels:
-        p = move(m, (x, y))
-        d, i = grid.near(p, 500.0)
-        if i < 0:
+        number = TURN_LABEL.fullmatch(label)
+        d, i = grid.near(move(m, (x, y)), 500.0)
+        if not number or i < 0:
             continue
-        number = re.match(r"\D*(\d+)", label)
-        if number:  # a word label ("Big", "Bend") names a place, not a turn
-            out.append({"number": int(number.group(1)), "label": label, "apex_pct": round(cum[i] / total, 5)})
+        turn = {"number": int(number.group(1)), "label": label, "apex_pct": round(cum[i] / total % 1.0, 5)}
+        if (label, turn["apex_pct"]) not in seen:
+            seen.add((label, turn["apex_pct"]))
+            out.append(turn)
     return sorted(out, key=lambda t: t["apex_pct"])
 
 
-# ---------------------------------------------------------------- SVG reading (svgelements)
+# ---------------------------------------------------------------- SVG reading
 
 def svg_points(path: Path, step_px: float = 6.0):
     import svgelements  # only `place` needs it
@@ -164,43 +194,72 @@ def svg_points(path: Path, step_px: float = 6.0):
     return pts
 
 
-def svg_labels(path: Path):
-    import svgelements
+MATRIX = re.compile(r"matrix\(\s*" + r"[\s,]+".join([r"(-?[\d.]+)"] * 6) + r"\s*\)")
 
+
+def svg_labels(path: Path):
+    """(label, x, -y) per <text>: its tspans joined ("1"+"1" is "11"), placed by the text's own matrix or x/y,
+    as the Web map reads them."""
     out = []
-    for e in svgelements.SVG.parse(str(path)).elements():
-        if isinstance(e, svgelements.Text):
-            label = (e.text or "").strip()
-            if 0 < len(label) <= MAX_LABEL and e.x is not None:
-                p = e.transform.point_in_matrix_space((e.x, e.y)) if e.transform else svgelements.Point(e.x, e.y)
-                out.append((label, p.x, -p.y))
+    for el in ET.parse(path).getroot().iter():
+        if el.tag.rsplit("}", 1)[-1] != "text":
+            continue
+        label = "".join(el.itertext()).strip()
+        m = MATRIX.search(el.get("transform") or "")
+        if m:
+            x, y = float(m.group(5)), float(m.group(6))
+        elif el.get("x") is not None:
+            x, y = float(el.get("x")), float(el.get("y", 0))
+        else:
+            continue
+        if label:
+            out.append((label, x, -y))
     return out[:80]
+
+
+def place_track(tid, circuit, line_ll, active, turns_svg, record):
+    """Adds turns, turns_fit and turns_source to one circuit (in place); returns the quality row."""
+    frame = Frame(*line_ll[0])
+    line = resample([frame.xy(*p) for p in line_ll], 5.0)
+    src, labels = svg_points(active), svg_labels(turns_svg)
+    circuit.pop("turns", None)
+    circuit.pop("turns_fit", None)
+    circuit["turns_source"] = {kind: {k: v for k, v in record.get(f"{tid}.{kind}", {}).items() if k in ("url", "sha256", "fetched_at")}
+                               for kind in ("active", "turns")}
+    row = {"track_id": tid, "labels": len(labels), "turns": 0}
+    if len(src) > 10 and labels:
+        m, error = fit_svg(decimate(src, 150), decimate(line, 250))
+        raw = place_turns(labels, m, line)
+        placed, before = fix_close_order(raw, length(line)), inversions(raw)
+        circuit["turns_fit"] = {"error_m": round(error, 1), "scale_m_per_px": round(math.hypot(m[0], m[1]), 4),
+                                "rotation_deg": round(math.degrees(math.atan2(m[1], m[0])), 2),
+                                "inversions_before_fix": before, "inversions": inversions(placed)}
+        if error <= TURNS_MAX_ERROR_M and inversions(placed) <= MAX_INVERSIONS:
+            circuit["turns"] = placed
+        row.update(turns=len(circuit.get("turns", [])), **circuit["turns_fit"])
+    return row
 
 
 def cmd_place(args):
     built, lines, svg = Path(args.built), Path(args.lines), Path(args.svg)
+    record = json.loads((svg / "fetched.json").read_text()) if (svg / "fetched.json").exists() else {}
     rows = []
     for cf in sorted(built.glob("*.circuit.json"), key=lambda p: int(p.name.split(".")[0])):
         tid = int(cf.name.split(".")[0])
-        active, turns, lf = svg / f"{tid}.active.svg", svg / f"{tid}.turns.svg", lines / f"{tid}.line.json"
-        if args.ids and str(tid) not in args.ids.split(",") or not (active.exists() and turns.exists() and lf.exists()):
+        active, turns_svg, lf = svg / f"{tid}.active.svg", svg / f"{tid}.turns.svg", lines / f"{tid}.line.json"
+        if args.ids and str(tid) not in args.ids.split(",") or not (active.exists() and turns_svg.exists() and lf.exists()):
             continue
-        line_ll = json.loads(lf.read_text())["line"]
-        frame = Frame(*line_ll[0])
-        line = resample([frame.xy(*p) for p in line_ll], 5.0)
-        src, labels = svg_points(active), svg_labels(turns)
         circuit = json.loads(cf.read_text())
-        circuit.pop("turns", None)
-        if len(src) > 10 and labels:
-            m, error = fit_svg(decimate(src, 150), decimate(line, 250))
-            circuit["turns_fit"] = {"error_m": round(error, 1), "scale_m_per_px": round(math.hypot(m[0], m[1]), 4),
-                                    "rotation_deg": round(math.degrees(math.atan2(m[1], m[0])), 2)}
-            if error <= TURNS_MAX_ERROR_M:
-                circuit["turns"] = place_turns(labels, m, line)
+        try:
+            row = place_track(tid, circuit, json.loads(lf.read_text())["line"], active, turns_svg, record)
+        except Exception as e:  # one broken SVG must not stop the other tracks; that track keeps no turns
+            for key in ("turns", "turns_fit", "turns_source"):
+                circuit.pop(key, None)
+            row = {"track_id": tid, "turns": 0, "error": f"{type(e).__name__}: {e}"[:200]}
         cf.write_text(json.dumps(circuit, separators=(",", ":"), ensure_ascii=False))
-        fit = circuit.get("turns_fit", {})
-        rows.append({"track_id": tid, "turns": len(circuit.get("turns", [])), "labels": len(labels), **fit})
-        print(f"{tid:4d} turns {len(circuit.get('turns', []))}/{len(labels)} error {fit.get('error_m')} m", file=sys.stderr)
+        rows.append(row)
+        print(f"{tid:4d} turns {row['turns']}/{row.get('labels', 0)} error {row.get('error_m', row.get('error'))} "
+              f"inversions {row.get('inversions')}", file=sys.stderr)
     (built / "turns-quality.json").write_text(json.dumps(rows, indent=1))
 
 
@@ -212,6 +271,7 @@ def main(argv=None):
     a.add_argument("--out", required=True)
     a.add_argument("--ids", default="")
     a.add_argument("--pause", type=float, default=1.0)
+    a.add_argument("--max-age-days", type=float, default=6.0, help="ask again (conditional GET) after this long")
     a.set_defaults(fn=cmd_fetch)
     b = sub.add_parser("place")
     b.add_argument("--built", required=True)

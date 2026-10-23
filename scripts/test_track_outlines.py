@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
+import track_bundle as B
 import track_outlines as T
 
 ORIGIN = (47.95, 0.21)
@@ -125,6 +126,17 @@ class BuildTrackTest(unittest.TestCase):
         residential = [{**e, "tags": {"highway": "residential"}} if e["id"] in (1, 2) else e for e in self.elements]
         self.assertTrue(T.build_track(self.line, residential, ORIGIN)[0]["quality"]["aligned"])
 
+    def test_a_frame_far_off_is_found_on_the_main_roads_not_on_service_roads_near_the_line(self):
+        lap = stadium()
+        far = [(x + 300, y + 300) for x, y in lap]  # the real circuit, 424 m from where iRacing puts it
+        elements = [way(1, {"highway": "raceway"}, far + far[:1]),
+                    way(2, {"highway": "service"}, [(0, 0), (800, 0)]),  # service roads along both straights
+                    way(3, {"highway": "service"}, [(800, 400), (0, 400)])]
+        q = T.build_track(ll(lap), elements, ORIGIN)[0]["quality"]
+        self.assertTrue(q["aligned"])
+        self.assertAlmostEqual(q["shift_m"], 424, delta=10)
+        self.assertGreater(q["coverage"], 0.9)
+
     def test_only_the_iracing_superspeedway_is_fictional(self):
         self.assertTrue(T.FICTIONAL.match("iRacing Superspeedway"))
         self.assertFalse(T.FICTIONAL.match("Daytona International Speedway"))
@@ -149,9 +161,10 @@ class BundleTest(unittest.TestCase):
         (built / "catalogue.json").write_text(json.dumps([{"id": i, "name": f"Track {i}", "config": ""} for i in (7, 8, 9)]))
         return built
 
-    def bundle(self, built, version="t1"):
+    def bundle(self, built, version="t1", lines="", previous=""):
         out = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        T.cmd_bundle(SimpleNamespace(built=str(built), version=version, commit="abc", out=str(out), catalogue=str(built / "catalogue.json")))
+        B.cmd_bundle(SimpleNamespace(built=str(built), version=version, commit="abc", out=str(out),
+                                     catalogue=str(built / "catalogue.json"), lines=lines, previous=previous))
         return out
 
     def test_bundle_is_reproducible_and_carries_provenance(self):
@@ -172,6 +185,31 @@ class BundleTest(unittest.TestCase):
         self.assertEqual((provenance["tracks"], provenance["labels"]), ([7, 8], {"line": 1, "osm": 1}))
         self.assertEqual([(n["track_id"], n["reason"][:10]) for n in json.loads((out / "needs-line.json").read_text())],
                          [(8, "OSM covers"), (9, "no referen")])
+        self.assertIn("needs-line.json", (out / "SHA256SUMS").read_text())
+        self.assertEqual(json.loads((out / "provenance.json").read_text())["needs_line"]["entries"], 2)
+
+    def test_needs_line_tells_a_missing_osm_extract_from_a_missing_line(self):
+        built = self.built({7: (0.95, "osm")})
+        lines = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (lines / "9.line.json").write_text("{}")
+        needs = json.loads((self.bundle(built, lines=str(lines)) / "needs-line.json").read_text())
+        self.assertEqual({n["track_id"]: n["reason"] for n in needs},
+                         {8: "no reference line", 9: "reference line exists, OSM extract missing"})
+
+    def test_a_release_never_loses_tracks_or_turns(self):
+        built = self.built({7: (0.95, "osm"), 8: (0.95, "osm")})
+        circuit = json.loads((built / "7.circuit.json").read_text())
+        circuit["turns"] = [{"number": 1, "label": "1", "apex_pct": 0.1}]
+        (built / "7.circuit.json").write_text(json.dumps(circuit))
+        provenance = json.loads((self.bundle(built) / "provenance.json").read_text())
+        self.assertEqual(provenance["tracks_with_turns"], [7])
+        previous = built / "previous.json"
+        for change in ("track", "turns"):
+            previous.write_text(json.dumps({**provenance, "tracks": [7, 8, 9]} if change == "track" else {**provenance, "tracks_with_turns": [7, 8]}))
+            with self.assertRaises(SystemExit):
+                self.bundle(built, previous=str(previous))
+        previous.write_text(json.dumps(provenance))
+        self.bundle(built, previous=str(previous))  # the same tracks and turns: fine
 
     def test_an_empty_bundle_fails(self):
         empty = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -236,7 +274,7 @@ class LinesTest(unittest.TestCase):
         lap = ll(stadium())
         noisy = ll([(x, y + 1.0) for x, y in stadium()])
         partial = lap[: len(lap) // 3]
-        line, used = T.medoid_line([partial, noisy, lap, ll(stadium(1.2))])
+        line, used, _ = T.medoid_line([partial, noisy, lap, ll(stadium(1.2))])
         self.assertEqual(used, 2)
         self.assertGreater(len(line), 400)
 

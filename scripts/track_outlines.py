@@ -15,7 +15,6 @@ Standard library only. Subcommands:
   build   reference line + OSM elements of the track area (Overpass `out geom` JSON shape)
           -> <id>.circuit.json (stitched outline, pit lane, quality) and
              <id>.background.json (landmarks), both in iRacing's frame.
-  bundle  built files -> release zip, SHA256SUMS, provenance.json.
 
 iRacing's Lat/Lon is a local model frame: at some tracks it is rotated or shifted against
 the real world (Le Mans -0.58 deg, up to 56 m on the far side). The build therefore fits a
@@ -27,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import math
 import re
@@ -36,7 +34,6 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ATTRIBUTION = "© OpenStreetMap contributors"
 LICENSE = "ODbL-1.0"
@@ -153,8 +150,10 @@ class Grid:
         return best
 
 
-def similarity(src, dst, scale_limit=SCALE_LIMIT):
-    """Closed-form 2D least-squares similarity src -> dst as (a, b, tx, ty): x' = a x - b y + tx, y' = b x + a y + ty."""
+def similarity(src, dst, scale_limit=SCALE_LIMIT, scale_range=None):
+    """Closed-form 2D least-squares similarity src -> dst as (a, b, tx, ty): x' = a x - b y + tx, y' = b x + a y + ty.
+
+    The scale is clamped to `scale_range` (lo, hi) when given, else to 1 +- scale_limit."""
     n = len(src)
     mx, my = sum(p[0] for p in src) / n, sum(p[1] for p in src) / n
     nx, ny = sum(p[0] for p in dst) / n, sum(p[1] for p in dst) / n
@@ -165,8 +164,9 @@ def similarity(src, dst, scale_limit=SCALE_LIMIT):
         cross += px * qy - py * qx
         norm += px * px + py * py
     a, b = dot / norm, cross / norm
-    s = math.hypot(a, b)
-    c = min(max(s, 1 - scale_limit), 1 + scale_limit) / s
+    s = math.hypot(a, b) or 1.0
+    lo, hi = scale_range or (1 - scale_limit, 1 + scale_limit)
+    c = min(max(s, lo), hi) / s
     a, b = a * c, b * c
     return a, b, nx - (a * mx - b * my), ny - (b * mx + a * my)
 
@@ -215,12 +215,12 @@ def read_lap(path: Path):
 
 
 def medoid_line(laps_ll, max_laps=12):
-    """The closed lap closest to all others (median distance), resampled to STEP_M, plus how many laps agreed.
+    """The closed lap closest to all others (median distance), resampled to STEP_M, how many laps agreed and those laps.
 
     Partial laps (out laps, cut recordings) do not close on themselves and are dropped; so are laps with a
     sample jump over 50 m (tow, teleport) and laps more than 3 % off the median closed-lap length."""
     frame = Frame(*laps_ll[0][0])
-    laps = []
+    laps, source = [], []
     for lap in laps_ll:
         pts = [frame.xy(*p) for p in lap]
         if len(pts) < 100 or math.dist(pts[0], pts[-1]) > 100 or any(math.dist(a, b) > 50 for a, b in zip(pts, pts[1:])):
@@ -228,10 +228,12 @@ def medoid_line(laps_ll, max_laps=12):
         r = resample(pts, STEP_M)
         if len(r) * STEP_M >= 300:
             laps.append(r)
+            source.append(lap)
     if not laps:
-        return None, 0
+        return None, 0, []
     med = statistics.median_low(len(l) for l in laps)
-    laps = [l for l in laps if abs(len(l) - med) <= 0.03 * med][:max_laps]
+    keep = [i for i, l in enumerate(laps) if abs(len(l) - med) <= 0.03 * med][:max_laps]
+    laps, agreed = [laps[i] for i in keep], [source[i] for i in keep]
     best, best_score = laps[0], math.inf
     for i, lap in enumerate(laps):
         others = [l for j, l in enumerate(laps) if j != i]
@@ -240,7 +242,7 @@ def medoid_line(laps_ll, max_laps=12):
         score = statistics.median(dist_to_line(lap[::4], o) for o in others)
         if score < best_score:
             best, best_score = lap, score
-    return [frame.ll(p) for p in best], len(laps)
+    return [frame.ll(p) for p in best], len(laps), agreed
 
 
 def lap_spread(line_ll, laps_ll):
@@ -322,7 +324,7 @@ def cmd_lines(args):
         row = {"id": t["id"], "laps_found": len(files), "loose": loose and bool(files)}
         if files:
             laps = [lap for lap in map(read_lap, files) if lap]
-            line, used = medoid_line(laps, args.max_laps)
+            line, used, agreed = medoid_line(laps, args.max_laps)
             if line:
                 f = Frame(t["lat"], t["lon"])
                 pts = [f.xy(*p) for p in line]
@@ -336,7 +338,7 @@ def cmd_lines(args):
                 if far < 15_000 and (ok_len or not row["loose"]) and (used >= MIN_LINE_LAPS or not row["loose"]):
                     (out / f"{t['id']}.line.json").write_text(json.dumps(
                         {"track_id": t["id"], "source": "garage61", "laps": used, "step_m": STEP_M,
-                         "spread_m": lap_spread(line, laps), "line": line},
+                         "spread_m": lap_spread(line, agreed), "line": line},
                         separators=(",", ":")))
                     row["written"] = True
         report.append(row)
@@ -488,18 +490,18 @@ def build_track(line_ll, elements, origin, coarse=True, width_m=DEFAULT_WIDTH_M)
     m, fitted, used_coarse = (1.0, 0.0, 0.0, 0.0), False, False
     if fit_pts:
         m, fitted = icp(m, MAX_FIT_SHIFT_M)
-    if not fitted:  # circuits on residential or service roads (Mount Panorama): fit on every drivable way
-        fit_pts, fit_tan, roads = fit_roads(DRIVABLE)
-        if fit_pts:
-            m, fitted = icp((1.0, 0.0, 0.0, 0.0), MAX_FIT_SHIFT_M)
-    if fit_pts:
         # iRacing's frame can be hundreds of metres off (Wild West). The search costs seconds, so it runs only when
-        # the roads are long enough to carry most of the lap; its result must be a clear, mostly parallel match.
+        # the main roads are long enough to carry most of the lap; its result must be a clear, mostly parallel
+        # match. Service and residential roads stay out of it: near any line they would win a wrong offset.
         if not fitted and coarse and sum(length(r) for r in roads) >= COARSE_MIN_SHARE * length(line):
             m0, share, zero = coarse_shift(line, lt, fit_pts, fit_tan)
             if share >= COARSE_MIN_SHARE and share >= 2 * zero:
                 m, fitted = icp(m0, COARSE_SHIFT_M)
                 used_coarse = fitted
+    if not fitted:  # circuits on residential or service roads (Mount Panorama): a small fit on every drivable way
+        fit_pts, fit_tan, roads = fit_roads(DRIVABLE)
+        if fit_pts:
+            m, fitted = icp((1.0, 0.0, 0.0, 0.0), MAX_FIT_SHIFT_M)
     if not fitted:
         m = (1.0, 0.0, 0.0, 0.0)
     aligned = [apply(m, p) for p in line]
@@ -648,7 +650,7 @@ def cmd_build(args):
         if args.ids and str(tid) not in args.ids.split(",") or not (parts or fictional) or tid not in catalogue:
             continue
         elements, seen, stamps = [], set(), []
-        for part in parts:  # one file per Geofabrik region; a track on a border has two
+        for part in ([] if fictional else parts):  # one file per Geofabrik region; a track on a border has two
             doc = json.loads(part.read_text())
             stamps.append(doc.get("osm_timestamp") or "")
             for e in doc["elements"]:
@@ -662,8 +664,14 @@ def cmd_build(args):
         circuit, background = build_track(line["line"], [] if fictional else elements, (t["lat"], t["lon"]), width_m=width)
         if fictional:
             circuit["quality"]["label"] = "fictional"
+        if circuit["quality"]["label"] in ("line", "fictional"):  # the outline is mostly the lap, not OSM
+            what = "Garage 61 lap telemetry" if line["source"] == "garage61" else "the user's own .ibt laps"
+            circuit["attribution"] = f"Outline from a reference lap of {what}" + ("" if fictional else f"; map data {ATTRIBUTION}")
+            circuit["license"] = "derived lap geometry" if fictional else f"derived lap geometry; map data {LICENSE}"
+            if fictional:
+                background["attribution"], background["license"] = circuit["attribution"], circuit["license"]
         meta = {"track_id": tid, "built_at": built, "line_source": line["source"], "line_laps": line["laps"],
-                "osm_timestamp": min(stamps, default="")}
+                **({"osm_timestamp": min(stamps)} if stamps and not fictional else {})}
         (out / f"{tid}.circuit.json").write_text(json.dumps({**meta, **circuit}, separators=(",", ":"), ensure_ascii=False))
         (out / f"{tid}.background.json").write_text(json.dumps({**meta, **background}, separators=(",", ":"), ensure_ascii=False))
         rows.append({"track_id": tid, **circuit["quality"]})
@@ -671,71 +679,6 @@ def cmd_build(args):
         print(f"{tid:4d} cov {q['coverage']:.3f} (raw {q['coverage_unaligned']:.3f}) median {q['median_m']} p90 {q['p90_m']} "
               f"rot {q['rotation_deg']} shift {q['shift_m']} max {q['max_shift_m']}", file=sys.stderr)
     (out / "quality.json").write_text(json.dumps(rows, indent=1))
-
-
-NOTICE = """Track outlines for the TeamManager telemetry map.
-
-Map data (c) OpenStreetMap contributors, available under the Open Database License 1.0
-(https://opendatacommons.org/licenses/odbl/1-0/, https://www.openstreetmap.org/copyright).
-These files are a derived database of that data and are offered under the same licence.
-
-Reference lines are derived from Garage 61 lap telemetry (line_source "garage61") or from
-TeamManager users' own .ibt imports (line_source "ibt"); only a 5 m resampled line was used,
-no driver names, lap ids or raw rows. Coordinates are in iRacing's own Lat/Lon frame.
-"""
-
-
-def cmd_bundle(args):
-    """One zip per version (circuit/<id>.json, background/<id>.json, quality.json, NOTICE.txt), SHA256SUMS and
-    provenance.json. The zip is byte-reproducible: fixed member order and timestamps."""
-    built, out = Path(args.built), Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    name = f"track-outlines-{args.version}.zip"
-    tracks, sources, regions, built_at = [], defaultdict(int), set(), ""
-    members, content, labels = [], hashlib.sha256(), defaultdict(int)
-    for f in sorted(built.glob("*.circuit.json"), key=lambda p: int(p.name.split(".")[0])):
-        tid = int(f.name.split(".")[0])
-        circuit = json.loads(f.read_text())
-        labels[circuit["quality"]["label"]] += 1
-        tracks.append(tid)
-        sources[circuit["line_source"]] += 1
-        regions.add(circuit.get("osm_timestamp") or "")
-        built_at = max(built_at, circuit["built_at"])
-        bg = (built / f"{tid}.background.json").read_bytes()
-        members += [(f"circuit/{tid}.json", f.read_bytes()), (f"background/{tid}.json", bg)]
-        for doc in (circuit, json.loads(bg)):  # geometry only: a new OSM snapshot without changes is no new release
-            content.update(json.dumps({k: v for k, v in doc.items() if k not in ("built_at", "osm_timestamp")}, sort_keys=True).encode())
-    if not tracks:
-        raise SystemExit(f"bundle: no built track in {built}; nothing to release")
-    members += [("quality.json", (built / "quality.json").read_bytes()), ("NOTICE.txt", NOTICE.encode())]
-    with ZipFile(out / name, "w", ZIP_DEFLATED) as z:
-        for arc, data in members:
-            info = ZipInfo(arc, date_time=(2020, 1, 1, 0, 0, 0))
-            info.compress_type = ZIP_DEFLATED
-            z.writestr(info, data)
-    digest = hashlib.sha256((out / name).read_bytes()).hexdigest()
-    (out / "SHA256SUMS").write_text(f"{digest}  {name}\n")
-    (out / "provenance.json").write_text(json.dumps({
-        "asset": name, "sha256": digest, "content_sha256": content.hexdigest(), "size": (out / name).stat().st_size, "format": FORMAT,
-        "built_at": built_at, "builder_commit": args.commit, "tracks": tracks,
-        "labels": dict(sorted(labels.items())),
-        "line_sources": dict(sorted(sources.items())),
-        "osm": {"source": "Geofabrik regional extracts", "timestamps": sorted(regions - {""}),
-                "attribution": ATTRIBUTION, "license": LICENSE},
-    }, indent=1) + "\n")
-    # what to drive (or fetch laps for): tracks without a reference line, and tracks whose outline is partly
-    # the line because OSM covers less than 90 %; an own .ibt lap of such a track becomes its line
-    catalogue, have, coverage = json.loads(Path(args.catalogue).read_text()), set(tracks), {}
-    for tid in tracks:
-        q = json.loads((built / f"{tid}.circuit.json").read_text())["quality"]
-        coverage[tid] = 1.0 if q["label"] == "fictional" else q["coverage"]  # no real place: nothing to drive for
-    needs = [{"track_id": t["id"], "track": t["name"], "layout": t["config"] or "", "reason": "no reference line"}
-             for t in catalogue if t["id"] not in have]
-    needs += [{"track_id": t["id"], "track": t["name"], "layout": t["config"] or "",
-               "reason": f"OSM covers {coverage[t['id']]:.0%}, the rest of the outline is the reference line"}
-              for t in catalogue if t["id"] in have and coverage[t["id"]] < 0.9]
-    (out / "needs-line.json").write_text(json.dumps(sorted(needs, key=lambda n: (n["track"], n["layout"])), indent=1, ensure_ascii=False) + "\n")
-    print(f"{name} {digest} {len(tracks)} tracks", file=sys.stderr)
 
 
 def main(argv=None):
@@ -755,13 +698,6 @@ def main(argv=None):
     b.add_argument("--out", required=True)
     b.add_argument("--ids", default="")
     b.set_defaults(fn=cmd_build)
-    c = sub.add_parser("bundle")
-    c.add_argument("--built", required=True, help="output directory of build")
-    c.add_argument("--version", required=True)
-    c.add_argument("--commit", required=True, help="builder git commit")
-    c.add_argument("--out", required=True)
-    c.add_argument("--catalogue", required=True, help="for needs-line.json: catalogue tracks without an outline")
-    c.set_defaults(fn=cmd_bundle)
     args = p.parse_args(argv)
     args.fn(args)
 
