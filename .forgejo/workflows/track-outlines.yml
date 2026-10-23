@@ -2,12 +2,12 @@ name: track-outlines
 
 # Circuit outlines (docs/track-outlines.md), built on the AI box runner (label ai-box, registered as ai-box:host:
 # jobs run directly in the runner container, which PR jobs share). State lives in the persistent host directory
-# /workspace/track-outlines: Geofabrik extracts, reference lines, iRacing track-map SVGs, the venv.
+# /workspace/track-outlines: reference lines, Geofabrik extracts, iRacing track-map SVGs.
 #
 # - Daily (incremental): catalogue tracks that have a reference line but are not in the latest release are
 #   planned, extracted, built and added to the latest release's files; nothing new means no run beyond the check.
-# - Mondays (full): every track is rebuilt from fresh extracts (downloads one region after another, unchanged
-#   files skipped by MD5) and SVGs (conditional GET).
+# - Mondays (full), and whenever the latest release has another format: every track from fresh extracts and
+#   re-checked SVGs; a track that cannot be rebuilt keeps its file from the latest release.
 # A release is published only when the geometry changed, never loses a track or a track's turns (the bundle step
 # refuses), and is created as a draft first. The Server looks the newest release up weekly by itself.
 on:
@@ -17,7 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full or incremental"
+        description: "Rebuild every track (full) or only tracks missing from the latest release (incremental)"
+        type: choice
+        options: [incremental, full]
         default: incremental
 
 concurrency:
@@ -34,6 +36,7 @@ jobs:
     env:
       STATE: /workspace/track-outlines
       CATALOGUE_URL: https://teammanager.cc/api/v1/public/track-catalogue
+      MODE_INPUT: ${{ inputs.mode }}
     steps:
       - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -46,61 +49,64 @@ jobs:
           # comes from the Server's public endpoint, the last good copy stays when it cannot be read.
           test -d "$STATE/lines"
           mkdir -p "$STATE/pbf" "$STATE/svg"
-          if curl -fsS -A "TeamManager-track-outlines/1" -o "$STATE/catalogue.new" "$CATALOGUE_URL"; then
-            python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["version"] == 1 and d["tracks"]; json.dump(d["tracks"], open(sys.argv[2], "w"))' "$STATE/catalogue.new" "$STATE/catalogue.json"
+          if curl -fsS --max-time 60 -A "TeamManager-track-outlines/1" -o "$STATE/catalogue.new" "$CATALOGUE_URL" \
+            && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["version"] == 1 and d["tracks"]; json.dump(d["tracks"], open(sys.argv[2], "w"))' "$STATE/catalogue.new" "$STATE/catalogue.json.new"; then
+            mv "$STATE/catalogue.json.new" "$STATE/catalogue.json"
+          else
+            echo "::warning::track catalogue not read from $CATALOGUE_URL; using the last good copy"
           fi
           test -s "$STATE/catalogue.json"
-          test -x "$STATE/venv/bin/python" || { python3 -m venv "$STATE/venv" && "$STATE/venv/bin/pip" install -q osmium==4.3.2; }
-          "$STATE/venv/bin/pip" install -q svgelements==1.9.6
-          mode="${{ inputs.mode }}"
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q --no-deps --require-hashes --only-binary=:all: -r scripts/requirements-outlines.txt
+          mode="$MODE_INPUT"
           [ -n "$mode" ] || mode=$([ "$(date -u +%u)" = 1 ] && echo full || echo incremental)
           echo "MODE=$mode" >> "$GITHUB_ENV"
       - name: Previous release
         run: |
           set -euo pipefail
           rm -rf "$STATE/previous" && mkdir -p "$STATE/previous"
-          tag=$(curl -fsS "$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases?limit=50" | python3 -c 'import json,sys; print(next((r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("track-outlines-") and not r["draft"]), ""))')
+          tag=$(curl -fsS --max-time 60 "$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases?limit=50" | python3 -c 'import json,sys; print(next((r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("track-outlines-") and not r["draft"]), ""))')
           echo "PREVIOUS_TAG=$tag" >> "$GITHUB_ENV"
           [ -n "$tag" ] || exit 0
           base="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag"
-          curl -fsSL -o "$STATE/previous/provenance.json" "$base/provenance.json"
-          if [ "$MODE" = incremental ]; then
-            curl -fsSL -o "$STATE/previous/release.zip" "$base/$tag.zip"
-            curl -fsSL -o "$STATE/previous/SHA256SUMS" "$base/SHA256SUMS"
-            (cd "$STATE/previous" && grep " $tag.zip$" SHA256SUMS | sed "s/ $tag.zip$/ release.zip/" | sha256sum -c --quiet)
+          for f in provenance.json SHA256SUMS "$tag.zip"; do curl -fsSL --max-time 600 -o "$STATE/previous/$f" "$base/$f"; done
+          # the zip must match both its SHA256SUMS line and the provenance hash
+          (cd "$STATE/previous" && grep " $tag.zip$" SHA256SUMS | sha256sum -c --quiet)
+          python3 -c 'import json,sys,hashlib; p=json.load(open(sys.argv[1])); sys.exit(0 if p["sha256"] == hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest() else "previous zip does not match its provenance")' "$STATE/previous/provenance.json" "$STATE/previous/$tag.zip"
+          if python3 -B scripts/track_release.py full --provenance "$STATE/previous/provenance.json"; then
+            echo "latest release has another format: full rebuild"; echo "MODE=full" >> "$GITHUB_ENV"
           fi
       - name: Build
         run: |
           set -euo pipefail
-          py="$STATE/venv/bin/python -B"
-          rm -rf "$STATE/cut" "$STATE/out" "$STATE/release" && mkdir -p "$STATE/cut" "$STATE/out" "$STATE/release"
-          ids=""
+          py="$RUNNER_TEMP/venv/bin/python -B"
+          rm -rf "$STATE/cut" "$STATE/out" "$STATE/new" "$STATE/release" && mkdir -p "$STATE/cut" "$STATE/out" "$STATE/new" "$STATE/release"
+          # both modes start from the latest release's files: a track that cannot be rebuilt keeps its file
+          [ -z "$PREVIOUS_TAG" ] || python3 -B scripts/track_release.py unpack --zip "$STATE/previous/$PREVIOUS_TAG.zip" --out "$STATE/out"
+          sel=""
+          curl -fsS --max-time 120 -A "TeamManager-track-outlines/1" -o "$STATE/pbf/index-v1.json" https://download.geofabrik.de/index-v1.json
           if [ "$MODE" = incremental ] && [ -n "$PREVIOUS_TAG" ]; then
-            # new: catalogue tracks with a line that the latest release does not have
             ids=$(python3 -B scripts/track_release.py new-ids --provenance "$STATE/previous/provenance.json" --catalogue "$STATE/catalogue.json" --lines "$STATE/lines")
+            [ -n "$ids" ] && $py scripts/osm_extract.py plan --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --index "$STATE/pbf/index-v1.json" --out "$STATE/plan.json" --ids "$ids"
+            [ -z "$ids" ] || ids=$(python3 -B scripts/track_release.py keep-ids --ids "$ids" --plan "$STATE/plan.json" --catalogue "$STATE/catalogue.json" --record "$STATE/skipped-no-region.json")
             if [ -z "$ids" ]; then echo "no new track"; echo "SKIP=1" >> "$GITHUB_ENV"; exit 0; fi
             echo "new tracks: $ids"
-            # start from the latest release's files; the new tracks are built next to them
-            python3 -B scripts/track_release.py unpack --zip "$STATE/previous/release.zip" --out "$STATE/out"
+            sel="--ids $ids"
+          else
+            $py scripts/osm_extract.py plan --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --index "$STATE/pbf/index-v1.json" --out "$STATE/plan.json"
           fi
-          sel=${ids:+--ids $ids}
-          curl -fsS -A "TeamManager-track-outlines/1" -o "$STATE/pbf/index-v1.json" https://download.geofabrik.de/index-v1.json
-          $py scripts/osm_extract.py plan --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --index "$STATE/pbf/index-v1.json" --out "$STATE/plan.json" $sel
           $py scripts/osm_extract.py download --plan "$STATE/plan.json" --out "$STATE/pbf"
           $py scripts/osm_extract.py extract --plan "$STATE/plan.json" --pbf "$STATE/pbf" --out "$STATE/cut" $sel
-          rm -rf "$STATE/new" && mkdir -p "$STATE/new"
           $py scripts/track_outlines.py build --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --osm "$STATE/cut" --out "$STATE/new" $sel
           $py scripts/track_turns.py fetch --catalogue "$STATE/catalogue.json" --out "$STATE/svg" --max-age-days 6 $sel
           $py scripts/track_turns.py place --built "$STATE/new" --lines "$STATE/lines" --svg "$STATE/svg" $sel
-          # the new build next to the previous files; quality.json keeps one row per track
           python3 -B scripts/track_release.py merge --new "$STATE/new" --out "$STATE/out"
-          rm -rf "$STATE/new"
           version=$(date -u +%Y%m%d)
-          if curl -fsS "$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases/tags/track-outlines-$version" > /dev/null 2>&1; then
+          if curl -fsS --max-time 60 "$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases/tags/track-outlines-$version" > /dev/null 2>&1; then
             version="$version-$(date -u +%H%M)"  # a second release that day
           fi
           $py scripts/track_bundle.py --built "$STATE/out" --version "$version" --commit "$GITHUB_SHA" --catalogue "$STATE/catalogue.json" \
-            --lines "$STATE/lines" ${PREVIOUS_TAG:+--previous "$STATE/previous/provenance.json"} --out "$STATE/release"
+            --lines "$STATE/lines" ${PREVIOUS_TAG:+--previous "$STATE/previous/provenance.json" --base-release "$PREVIOUS_TAG"} --out "$STATE/release"
       - name: Publish when the geometry changed
         if: env.SKIP != '1'
         env:
@@ -118,11 +124,11 @@ jobs:
           body="Circuit outlines and backgrounds for the telemetry map ($(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["tracks"]))' "$prov") tracks). Map data (c) OpenStreetMap contributors, ODbL 1.0; turn labels from iRacing's public track maps. Archive SHA-256 $(field "$prov" sha256). See provenance.json and docs/track-outlines.md. Immutable."
           # draft first, all assets, then publish: a failure leaves no half release behind
           id=$(python3 -c 'import json,sys; print(json.dumps({"tag_name": sys.argv[1], "target_commitish": sys.argv[2], "name": sys.argv[1], "body": sys.argv[3], "draft": True}))' "track-outlines-$version" "$GITHUB_SHA" "$body" \
-            | curl -fsS -X POST -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data @- "$api/releases" \
+            | curl -fsS --max-time 60 -X POST -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data @- "$api/releases" \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
-          trap 'curl -fsS -X DELETE -H "Authorization: token $TOKEN" "$api/releases/$id" || true; curl -fsS -X DELETE -H "Authorization: token $TOKEN" "$api/tags/track-outlines-$version" || true' ERR
+          trap 'curl -fsS --max-time 60 -X DELETE -H "Authorization: token $TOKEN" "$api/releases/$id" || true; curl -fsS --max-time 60 -X DELETE -H "Authorization: token $TOKEN" "$api/tags/track-outlines-$version" || true' ERR
           for f in "$STATE"/release/*; do
-            curl -fsS -X POST -H "Authorization: token $TOKEN" -F "attachment=@$f" "$api/releases/$id/assets?name=$(basename "$f")" > /dev/null
+            curl -fsS --max-time 600 -X POST -H "Authorization: token $TOKEN" -F "attachment=@$f" "$api/releases/$id/assets?name=$(basename "$f")" > /dev/null
           done
-          curl -fsS -X PATCH -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data '{"draft":false}' "$api/releases/$id" > /dev/null
+          curl -fsS --max-time 60 -X PATCH -H "Authorization: token $TOKEN" -H "Content-Type: application/json" --data '{"draft":false}' "$api/releases/$id" > /dev/null
           echo "published track-outlines-$version"

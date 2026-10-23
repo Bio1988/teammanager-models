@@ -100,7 +100,9 @@ def cmd_bundle(args):
     (out / "SHA256SUMS").write_text(f"{digest}  {name}\n{needs_digest}  needs-line.json\n")
     (out / "provenance.json").write_text(json.dumps({
         "asset": name, "sha256": digest, "content_sha256": content.hexdigest(), "size": (out / name).stat().st_size, "format": FORMAT,
-        "built_at": built_at, "builder_commit": args.commit, "tracks": tracks, "tracks_with_turns": with_turns,
+        # builder_commit is the last builder run; with base_release the other tracks' files come from that release
+        "built_at": built_at, "builder_commit": args.commit, "base_release": args.base_release or None,
+        "tracks": tracks, "tracks_with_turns": with_turns,
         "labels": dict(sorted(labels.items())),
         "line_sources": dict(sorted(sources.items())),
         "needs_line": {"asset": "needs-line.json", "sha256": needs_digest, "entries": len(needs)},
@@ -120,6 +122,7 @@ def main(argv=None):
     p.add_argument("--catalogue", required=True, help="for needs-line.json: catalogue tracks without an outline")
     p.add_argument("--lines", default="", help="reference lines, to tell a missing OSM extract from a missing line")
     p.add_argument("--previous", default="", help="the last release's provenance.json: refuse to lose tracks or turns")
+    p.add_argument("--base-release", default="", help="the release whose files the build started from (incremental)")
     cmd_bundle(p.parse_args(argv))
 
 

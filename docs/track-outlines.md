@@ -81,8 +81,9 @@ fetching laps), `SHA256SUMS` and `provenance.json` (asset hash,
 labels, line sources, OSM snapshot times, the `needs-line.json` hash, every iRacing SVG used, attribution);
 `SHA256SUMS` lists the zip and `needs-line.json`. With `--previous` it refuses a release that loses a track
 or a track's turns. Line-only and fictional outlines name the lap source (Garage 61 or the user's .ibt)
-as attribution instead of OSM. They are published as the Forgejo release `track-outlines-<version>`.
-The Server pins one release by URL and SHA-256; a newer release changes nothing until that pin moves.
+as attribution instead of OSM. `builder_commit` is the commit of the last builder run; `base_release`
+names the release whose files the other tracks come from (incremental runs). They are published as the
+Forgejo release `track-outlines-<version>`.
 
 ## Automatic rebuilds
 
@@ -90,10 +91,17 @@ The Server pins one release by URL and SHA-256; a newer release changes nothing 
 
 - **Daily, incremental** (02:47 UTC, not Mondays): catalogue tracks with a reference line that the latest
   release lacks (`track_release.py new-ids`) are planned, extracted, built and given turns, then added to the
-  latest release's files (`unpack`, `merge`). Without a new track the run stops after the check.
-- **Mondays, full** (01:17 UTC): every track from fresh Geofabrik extracts (one region after another,
-  unchanged files skipped by MD5) and re-checked SVGs (conditional GET after 6 days).
-- `workflow_dispatch` with `mode` `full` or `incremental`.
+  latest release's files. A new track without a Geofabrik region (and not fictional) is left out and recorded
+  once in `skipped-no-region.json` (`keep-ids`). Without a new track the run stops after the check.
+- **Mondays, full** (01:17 UTC), and whenever the latest release has another `format` (`track_release.py
+  full`): every track from fresh Geofabrik extracts (one region after another, unchanged files skipped by
+  MD5) and re-checked SVGs (conditional GET after 6 days).
+- Both modes start from the latest release's files (`unpack`; only `circuit/<id>.json` and
+  `background/<id>.json` members), checked against its `SHA256SUMS` and `provenance.json`, so a track that
+  cannot be rebuilt keeps its file; the new build is laid over them (`merge`).
+- `workflow_dispatch` with `mode` `incremental` or `full`.
+- pyosmium and svgelements come hash-pinned from `scripts/requirements-outlines.txt` into a fresh venv in
+  the runner's temp directory each run.
 
 The catalogue comes from the Server's public `GET /api/v1/public/track-catalogue` (last good copy kept when
 it cannot be read). A release is published only when `content_sha256` changed, never loses a track or a
@@ -108,8 +116,8 @@ on the host in `/workspace/track-outlines` (the runner's bind mount), outside an
 
 - `lines/`: `<id>.line.json` from the `lines` step (Garage 61) or from an own `.ibt` lap; seeded by the
   operator, since the Garage 61 data is not on the runner. A track gets an outline once it has a line here.
-- `pbf/`, `svg/`, `venv/`: kept between runs; `catalogue.json`, `plan.json`, `cut/`, `out/`, `previous/`,
-  `release/` are rewritten by each run.
+- `pbf/`, `svg/`, `skipped-no-region.json`: kept between runs; `catalogue.json` (the last good copy),
+  `plan.json`, `cut/`, `new/`, `out/`, `previous/`, `release/` are rewritten by each run.
 
 ## Output (format 1)
 
