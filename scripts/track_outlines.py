@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """Build GPS-aligned circuit outlines for iRacing tracks from OpenStreetMap ways.
 
-Standard library only. Two steps, each a subcommand:
+Standard library only. Subcommands:
 
-  lines   Garage 61 lap CSVs -> one reference line per iRacing track (the medoid lap,
-          5 m spacing, iRacing's own Lat/Lon frame). Only derived geometry is written:
-          no driver names, lap ids or raw rows.
+  lines   Garage 61 lap CSVs (telemetry/, telemetry-pro/, telemetry-pairs/, sessions-dirt/; names
+          from the lap indexes incl. _missing_laps.csv) -> one reference line per iRacing track: the
+          medoid of the agreeing closed laps (two at least for a loose match), 5 m spacing, in
+          iRacing's own Lat/Lon frame.
+          Catalogue names match exactly; a [Retired]/[Legacy] entry without an exact match falls back
+          to the plain name, but only to G61 tracks no exact catalogue entry claims and only with the
+          catalogue's lap length. A line already in the output from the user's own .ibt import
+          (source "ibt", derived outside this script from the Server's import blocks) is kept.
+          Only derived geometry is written: no driver names, lap ids or raw rows.
   build   reference line + OSM elements of the track area (Overpass `out geom` JSON shape)
           -> <id>.circuit.json (stitched outline, pit lane, quality) and
              <id>.background.json (landmarks), both in iRacing's frame.
+  bundle  built files -> release zip, SHA256SUMS, provenance.json.
 
 iRacing's Lat/Lon is a local model frame: at some tracks it is rotated or shifted against
 the real world (Le Mans -0.58 deg, up to 56 m on the far side). The build therefore fits a
@@ -37,6 +44,7 @@ FORMAT = 1
 M_PER_DEG = 111_320.0
 
 STEP_M = 5.0          # reference line spacing
+MIN_LINE_LAPS = 2     # a loose name match needs two agreeing closed laps; one lap may be another layout
 KEEP_M = 15.0         # an OSM point this close to the aligned line is on the circuit
 MIN_RUN_M = 40.0      # shorter on-line runs (crossing roads, bridges) are dropped
 MAX_ANGLE = 30.0      # deg between a run and the line
@@ -187,8 +195,10 @@ def read_lap(path: Path):
     """Lat/Lon of one G61 lap CSV (header row, unit row, samples)."""
     with path.open(newline="") as f:
         rows = csv.reader(f)
-        head = next(rows)
+        head = next(rows, [])
         next(rows, None)
+        if "Lat" not in head or "Lon" not in head:
+            return []
         ilat, ilon = head.index("Lat"), head.index("Lon")
         out = []
         for r in rows:
@@ -260,7 +270,15 @@ def loose_name(s: str) -> str:
 
 
 def g61_laps(root: Path, gids):
-    return [p for gid in gids for d in G61_DIRS for p in sorted((root / d / f"track_{gid}").rglob("*.csv"))]
+    """Lap CSVs of the G61 tracks; the same lap (file name = lap id) saved in several folders counts once."""
+    seen, out = set(), []
+    for gid in gids:
+        for d in G61_DIRS:
+            for p in sorted((root / d / f"track_{gid}").rglob("*.csv")):
+                if p.name not in seen:
+                    seen.add(p.name)
+                    out.append(p)
+    return out
 
 
 def cmd_lines(args):
@@ -270,6 +288,9 @@ def cmd_lines(args):
     for gid, (track, variant) in g61_index(root).items():
         by_name[(norm_name(track), norm_name(variant))].append(gid)
         by_loose[(loose_name(track), loose_name(variant))].append(gid)
+    # G61 tracks that a catalogue entry names exactly are that (current) layout: never lend them to a
+    # [Retired]/[Legacy] entry of the same name
+    exact_gids = {gid for t in catalogue for gid in by_name.get((norm_name(t["name"]), norm_name(t["config"])), [])}
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     wanted = set(map(int, args.ids.split(","))) if args.ids else None
@@ -277,10 +298,14 @@ def cmd_lines(args):
     for t in sorted(catalogue, key=lambda t: t["id"]):
         if wanted and t["id"] not in wanted:
             continue
+        existing = out / f"{t['id']}.line.json"
+        if existing.exists() and json.loads(existing.read_text()).get("source") == "ibt":
+            report.append({"id": t["id"], "kept": "ibt"})  # a line from the user's own .ibt import wins
+            continue
         gids = by_name.get((norm_name(t["name"]), norm_name(t["config"])), [])
         loose = not gids  # "[Retired] X / [Legacy] Y" matched by the plain names
         if loose:
-            gids = by_loose.get((loose_name(t["name"]), loose_name(t["config"])), [])
+            gids = [g for g in by_loose.get((loose_name(t["name"]), loose_name(t["config"])), []) if g not in exact_gids]
         files = g61_laps(root, gids)
         row = {"id": t["id"], "laps_found": len(files), "loose": loose and bool(files)}
         if files:
@@ -295,7 +320,7 @@ def cmd_lines(args):
                 row.update(laps_used=used, lap_m=round(lap_m), origin_far_m=round(far), length_ok=ok_len)
                 # the catalogue length is only a hint (configs often carry the full-course value), but a loose
                 # name match must also have the catalogue's length: a retired layout may differ from today's
-                if far < 15_000 and (ok_len or not row["loose"]):
+                if far < 15_000 and (ok_len or not row["loose"]) and (used >= MIN_LINE_LAPS or not row["loose"]):
                     (out / f"{t['id']}.line.json").write_text(json.dumps(
                         {"track_id": t["id"], "source": "garage61", "laps": used, "step_m": STEP_M, "line": line},
                         separators=(",", ":")))
