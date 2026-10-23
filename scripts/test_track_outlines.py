@@ -2,6 +2,7 @@ import json
 import math
 import tempfile
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -158,6 +159,25 @@ class BundleTest(unittest.TestCase):
 
 
 class LinesTest(unittest.TestCase):
+    def test_retired_layouts_match_loosely_only_with_the_catalogue_length(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "telemetry").mkdir()
+        (root / "telemetry" / "_missing_laps.csv").write_text("track_id,track,variant\n5,Phoenix Raceway - 2008,Rallycross\n")
+        lap_dir = root / "telemetry-pairs" / "track_5"
+        lap_dir.mkdir(parents=True)
+        for k in range(2):
+            rows = "".join(f"{i},{i / 60},0,0,{a},{b}\n" for i, (a, b) in enumerate(ll([(x, y + k) for x, y in stadium()])))
+            (lap_dir / f"{k}.csv").write_text("sample,t_s,Speed,LapDistPct,Lat,Lon\n#,60 Hz,m/s,0-1,deg,deg\n" + rows)
+        lap_m = T.length(stadium())
+        for miles, written in ((lap_m / 1609.344, True), (lap_m / 1609.344 * 1.5, False)):
+            catalogue = root / "catalogue.json"
+            catalogue.write_text(json.dumps([{"id": 306, "name": "[Legacy] Phoenix Raceway - 2008", "config": "Rallycross",
+                                              "lat": ORIGIN[0], "lon": ORIGIN[1], "length": miles}]))
+            out = root / f"lines-{written}"
+            with open(tempfile.mktemp(), "w") as sink, unittest.mock.patch("sys.stdout", sink):
+                T.cmd_lines(SimpleNamespace(g61=str(root), catalogue=str(catalogue), out=str(out), ids="", max_laps=12))
+            self.assertEqual((out / "306.line.json").exists(), written)
+
     def test_medoid_drops_partial_and_far_laps(self):
         lap = ll(stadium())
         noisy = ll([(x, y + 1.0) for x, y in stadium()])
