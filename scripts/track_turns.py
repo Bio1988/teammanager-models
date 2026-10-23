@@ -140,7 +140,8 @@ def place_turns(labels, m, line):
         if i < 0:
             continue
         number = re.match(r"\D*(\d+)", label)
-        out.append({"number": int(number.group(1)) if number else None, "label": label, "apex_pct": round(cum[i] / total, 5)})
+        if number:  # a word label ("Big", "Bend") names a place, not a turn
+            out.append({"number": int(number.group(1)), "label": label, "apex_pct": round(cum[i] / total, 5)})
     return sorted(out, key=lambda t: t["apex_pct"])
 
 

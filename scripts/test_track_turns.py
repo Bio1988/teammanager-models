@@ -27,8 +27,8 @@ class TurnsTest(unittest.TestCase):
         along = lambda i: T.length(lap[: i + 1]) / T.length(lap)
         labels = [("2", *to_svg((half[0], half[1] + 8))), ("1", *to_svg((quarter[0] + 8, quarter[1]))), ("Pit", 0.0, 0.0)]
         turns = T.place_turns(labels, m, lap)
-        numbered = [t for t in turns if t["number"] is not None]
-        self.assertEqual([t["label"] for t in numbered], ["1", "2"])
+        numbered = turns
+        self.assertEqual([t["label"] for t in turns], ["1", "2"])  # "Pit" is no turn
         self.assertAlmostEqual(numbered[0]["apex_pct"], along(len(lap) // 4), delta=0.01)
         self.assertAlmostEqual(numbered[1]["apex_pct"], along(len(lap) // 2), delta=0.01)
 
