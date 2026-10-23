@@ -27,9 +27,9 @@ PAD_M = 4000.0       # around the reference line: circuit plus the landmark back
 NO_LINE_PAD_M = 8000.0
 M_PER_DEG = 111_320.0
 
-CIRCUIT_KEYS = ("highway", "area:highway", "raceway")
+CIRCUIT_KEYS = ("highway", "area:highway", "raceway", "aeroway", "disused:highway")
 BG_KEYS = ("bridge", "power", "barrier", "building", "amenity", "natural", "landuse")
-KEEP_TAGS = ("name", "highway", "area:highway", "raceway", "service", "surface", "width", "bridge", "power",
+KEEP_TAGS = ("name", "highway", "area:highway", "raceway", "aeroway", "disused:highway", "service", "surface", "width", "bridge", "power",
              "barrier", "building", "amenity", "natural", "landuse")
 
 

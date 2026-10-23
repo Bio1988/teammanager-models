@@ -47,13 +47,25 @@ SCALE_LIMIT = 0.003   # the racing line cuts corners, so a free scale fit is bia
 # Anything far beyond that matched the wrong roads, so the line is kept unaligned.
 MAX_FIT_ROTATION_DEG = 2.0
 MAX_FIT_SHIFT_M = 100.0
+COARSE_SHIFT_M = 600  # search window for a frame that is hundreds of metres off
+COARSE_MIN_SHARE = 0.6     # share of the lap that must sit on parallel roads for the coarse fit to count
+COARSE_MIN_COVERAGE = 0.9  # and the finished outline must be this much OSM, else the track stays unaligned
 PIT_END_M = 50.0     # a pit lane joins the circuit: both ends of a pit way lie this close to the line
 PIT_MEDIAN_M = 40.0  # and it runs alongside it (another layout's pit lane does not)
 
 DRIVABLE = {"raceway", "motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential",
             "service", "road", "living_street", "motorway_link", "trunk_link", "primary_link", "secondary_link",
-            "tertiary_link"}
-FIT_ROADS = DRIVABLE - {"service", "residential", "living_street"}
+            "tertiary_link", "pedestrian", "track"}
+# Street circuits run over whatever the city offers: airport runways and taxiways, and ways OSM keeps only as a
+# disused raceway (St. Petersburg). Everything drivable counts for the selection; fitting stays on real roads.
+AERO = {"runway", "taxiway"}
+FIT_ROADS = DRIVABLE - {"service", "residential", "living_street", "pedestrian", "track"}
+
+def drivable(t) -> bool:
+    return (t.get("highway") in DRIVABLE or t.get("area:highway") == "raceway" or t.get("aeroway") in AERO
+            or t.get("disused:highway") == "raceway")
+
+
 PIT_NAME = re.compile(r"^(pit ?lane|pit entry|pit exit|pit road|boxengasse)$", re.I)
 
 # Background kinds in keep order with per-kind caps (the Server's former bgKinds).
@@ -343,8 +355,25 @@ def simplify(pts, tol: float):
 
 # ---------------------------------------------------------------- build
 
-def build_track(line_ll, elements, origin):
-    """Returns (circuit, background) dicts in iRacing's frame for one track."""
+def coarse_shift(line, lt, fit_pts, fit_tan):
+    """Best translation within COARSE_SHIFT_M as (transform, share of samples on a parallel road, same at zero offset)."""
+    grid, cos_fit = Grid(fit_pts, 20.0), math.cos(math.radians(FIT_ANGLE))
+    sample = list(range(0, len(line), 6))
+    hits_at = lambda dx, dy: sum(grid.near((line[i][0] + dx, line[i][1] + dy), 12.0,
+                                           lambda j: abs(lt[i][0] * fit_tan[j][0] + lt[i][1] * fit_tan[j][1]) >= cos_fit)[1] >= 0
+                                 for i in sample)
+    best, n = (0, 0), -1
+    for dx in range(-COARSE_SHIFT_M, COARSE_SHIFT_M + 1, 10):
+        for dy in range(-COARSE_SHIFT_M, COARSE_SHIFT_M + 1, 10):
+            if (hits := hits_at(dx, dy)) > n:
+                best, n = (dx, dy), hits
+    return (1.0, 0.0, float(best[0]), float(best[1])), n / len(sample), hits_at(0, 0) / len(sample)
+
+
+def build_track(line_ll, elements, origin, coarse=True):
+    """Returns (circuit, background) dicts in iRacing's frame for one track.
+
+    `coarse` allows the large-offset search; it is kept only if the result reaches COARSE_MIN_COVERAGE."""
     frame = Frame(*origin)
     line = [frame.xy(*p) for p in line_ll]
     if math.dist(line[0], line[-1]) > STEP_M:
@@ -362,15 +391,16 @@ def build_track(line_ll, elements, origin):
             ways.append((e["id"], t, [frame.xy(g["lat"], g["lon"]) for g in e["geometry"] if g]))
 
     # 1. fit iRacing line -> OSM on parallel roads
-    fit_pts, fit_tan = [], []
+    fit_pts, fit_tan, roads = [], [], []
     for _, t, pts in ways:
         if (t.get("highway") in FIT_ROADS or t.get("area:highway") == "raceway") and not is_pit(t):
             r = resample(pts, 3.0)
             fit_pts += r
+            roads.append(r)
             fit_tan += tangents(r)
-    m = (1.0, 0.0, 0.0, 0.0)
-    fitted = False
-    if fit_pts:
+    def icp(m, shift_limit):
+        """Slide the line onto the OSM roads from the start transform m; (transform, plausible)."""
+        fitted = False
         grid = Grid(fit_pts, 20.0)
         cos_fit = math.cos(math.radians(FIT_ANGLE))
         for thr in FIT_STEPS:
@@ -387,9 +417,20 @@ def build_track(line_ll, elements, origin):
             prev, m, fitted = m, similarity(src, dst), True
             if thr == FIT_STEPS[-1] and max(math.dist(apply(prev, p), apply(m, p)) for p in line[:: max(1, len(line) // 50)]) < 0.05:
                 break
-    if fitted and (abs(math.degrees(math.atan2(m[1], m[0]))) > MAX_FIT_ROTATION_DEG
-                   or max(math.dist(p, apply(m, p)) for p in line) > MAX_FIT_SHIFT_M):
-        fitted = False
+        ok = fitted and abs(math.degrees(math.atan2(m[1], m[0]))) <= MAX_FIT_ROTATION_DEG \
+            and max(math.dist(p, apply(m, p)) for p in line) <= shift_limit
+        return m, ok
+
+    m, fitted, used_coarse = (1.0, 0.0, 0.0, 0.0), False, False
+    if fit_pts:
+        m, fitted = icp(m, MAX_FIT_SHIFT_M)
+        # iRacing's frame can be hundreds of metres off (Wild West). The search costs seconds, so it runs only when
+        # the roads are long enough to carry most of the lap; its result must be a clear, mostly parallel match.
+        if not fitted and coarse and sum(length(r) for r in roads) >= COARSE_MIN_SHARE * length(line):
+            m0, share, zero = coarse_shift(line, lt, fit_pts, fit_tan)
+            if share >= COARSE_MIN_SHARE and share >= 2 * zero:
+                m, fitted = icp(m0, COARSE_SHIFT_M)
+                used_coarse = fitted
     if not fitted:
         m = (1.0, 0.0, 0.0, 0.0)
     aligned = [apply(m, p) for p in line]
@@ -419,7 +460,7 @@ def build_track(line_ll, elements, origin):
         if is_pit(t):
             pit_ways.append((wid, t, pts))
             continue
-        if not (t.get("highway") in DRIVABLE or t.get("area:highway") == "raceway"):
+        if not drivable(t):
             continue
         dense = resample(pts, 4.0) if length(pts) > 4 else pts
         wt = tangents(dense)
@@ -479,6 +520,8 @@ def build_track(line_ll, elements, origin):
         "lap_m": round(length(line)),
         "osm_ways": len({w for w, _, _ in runs}),
     }
+    if used_coarse and quality["coverage"] < COARSE_MIN_COVERAGE:
+        return build_track(line_ll, elements, origin, coarse=False)
     circuit = {"format": FORMAT, "frame": "iracing", "attribution": ATTRIBUTION, "license": LICENSE,
                "quality": quality, "outline": back(simplify(outline, 0.5)),
                "pit": [back(simplify(p, 0.5)) for p in pits]}
