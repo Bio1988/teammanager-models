@@ -110,6 +110,25 @@ class BuildTrackTest(unittest.TestCase):
         self.assertFalse(circuit["quality"]["aligned"])
         self.assertEqual(circuit["quality"]["rotation_deg"], 0)
 
+    def test_the_line_fills_where_osm_has_no_way_and_says_where(self):
+        half = [e for e in self.elements if e["id"] != 2]  # the public-road half of the lap is missing
+        circuit, _ = T.build_track(self.line, half, ORIGIN, width_m=9.0)
+        q = circuit["quality"]
+        self.assertEqual({k for _, _, k in q["sources"]}, {"osm", "line"})
+        self.assertEqual(q["sources"][0][0], 0.0)
+        self.assertEqual(q["label"], "mixed" if q["coverage"] >= 0.5 else "line")
+        self.assertEqual(circuit["width_m"], 9.0)
+        outline = [FRAME.xy(*p) for p in circuit["outline"]]
+        self.assertGreater(T.length(outline), 0.95 * q["lap_m"])  # the whole lap, OSM part and line part
+
+    def test_a_circuit_on_residential_roads_is_still_aligned(self):
+        residential = [{**e, "tags": {"highway": "residential"}} if e["id"] in (1, 2) else e for e in self.elements]
+        self.assertTrue(T.build_track(self.line, residential, ORIGIN)[0]["quality"]["aligned"])
+
+    def test_only_the_iracing_superspeedway_is_fictional(self):
+        self.assertTrue(T.FICTIONAL.match("iRacing Superspeedway"))
+        self.assertFalse(T.FICTIONAL.match("Daytona International Speedway"))
+
     def test_without_roads_keeps_the_line_and_says_so(self):
         circuit, _ = T.build_track(self.line, [], ORIGIN)
         self.assertFalse(circuit["quality"]["aligned"])
@@ -118,45 +137,47 @@ class BuildTrackTest(unittest.TestCase):
 
 
 class BundleTest(unittest.TestCase):
-    def test_bundle_is_reproducible_and_carries_provenance(self):
-        built = Path(tempfile.mkdtemp())
+    def built(self, coverages):
+        built = Path(self.enterContext(tempfile.TemporaryDirectory()))
         circuit, background = T.build_track(ll(stadium()), [], ORIGIN)
-        circuit["quality"]["coverage"] = 0.95
-        meta = {"track_id": 7, "built_at": "2026-10-22T00:00:00Z", "line_source": "garage61", "line_laps": 3, "osm_timestamp": "2026-10-21T20:00:00Z"}
-        (built / "7.circuit.json").write_text(json.dumps({**meta, **circuit}))
-        (built / "7.background.json").write_text(json.dumps({**meta, **background}))
-        (built / "quality.json").write_text("[]")
-        digests = []
-        for _ in range(2):
-            out = Path(tempfile.mkdtemp())
-            T.cmd_bundle(SimpleNamespace(built=str(built), version="t1", commit="abc", out=str(out), min_coverage=0.9))
-            digests.append((out / "SHA256SUMS").read_text())
-        self.assertEqual(digests[0], digests[1])
-        provenance = json.loads((out / "provenance.json").read_text())
-        self.assertEqual(provenance["tracks"], [7])
-        self.assertEqual(provenance["skipped_low_coverage"], [])
-        self.assertEqual(provenance["line_sources"], {"garage61": 1})
-        self.assertIn(provenance["sha256"], digests[0])
-        with zipfile.ZipFile(out / "track-outlines-t1.zip") as z:
-            self.assertEqual(z.namelist(), ["circuit/7.json", "background/7.json", "quality.json", "NOTICE.txt"])
-            self.assertIn(b"OpenStreetMap contributors", z.read("NOTICE.txt"))
-
-
-    def test_low_coverage_tracks_are_left_out_and_an_empty_bundle_fails(self):
-        built = Path(tempfile.mkdtemp())
-        circuit, background = T.build_track(ll(stadium()), [], ORIGIN)
-        for tid, coverage in ((7, 0.95), (8, 0.5)):
-            circuit["quality"]["coverage"] = coverage
-            meta = {"track_id": tid, "built_at": "2026-10-22T00:00:00Z", "line_source": "garage61", "line_laps": 3, "osm_timestamp": ""}
+        for tid, (coverage, label) in coverages.items():
+            circuit["quality"].update(coverage=coverage, label=label)
+            meta = {"track_id": tid, "built_at": "2026-10-22T00:00:00Z", "line_source": "garage61", "line_laps": 3, "osm_timestamp": "2026-10-21T20:00:00Z"}
             (built / f"{tid}.circuit.json").write_text(json.dumps({**meta, **circuit}))
             (built / f"{tid}.background.json").write_text(json.dumps({**meta, **background}))
         (built / "quality.json").write_text("[]")
-        out = Path(tempfile.mkdtemp())
-        T.cmd_bundle(SimpleNamespace(built=str(built), version="t1", commit="abc", out=str(out), min_coverage=0.9))
+        (built / "catalogue.json").write_text(json.dumps([{"id": i, "name": f"Track {i}", "config": ""} for i in (7, 8, 9)]))
+        return built
+
+    def bundle(self, built, version="t1"):
+        out = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        T.cmd_bundle(SimpleNamespace(built=str(built), version=version, commit="abc", out=str(out), catalogue=str(built / "catalogue.json")))
+        return out
+
+    def test_bundle_is_reproducible_and_carries_provenance(self):
+        built = self.built({7: (0.95, "osm")})
+        first, second = self.bundle(built), self.bundle(built)
+        self.assertEqual((first / "SHA256SUMS").read_text(), (second / "SHA256SUMS").read_text())
+        provenance = json.loads((second / "provenance.json").read_text())
+        self.assertEqual(provenance["tracks"], [7])
+        self.assertEqual(provenance["line_sources"], {"garage61": 1})
+        self.assertIn(provenance["sha256"], (second / "SHA256SUMS").read_text())
+        with zipfile.ZipFile(second / "track-outlines-t1.zip") as z:
+            self.assertEqual(z.namelist(), ["circuit/7.json", "background/7.json", "quality.json", "NOTICE.txt"])
+            self.assertIn(b"OpenStreetMap contributors", z.read("NOTICE.txt"))
+
+    def test_every_track_with_a_line_ships_and_the_rest_needs_a_line(self):
+        out = self.bundle(self.built({7: (0.95, "osm"), 8: (0.2, "line")}))
         provenance = json.loads((out / "provenance.json").read_text())
-        self.assertEqual((provenance["tracks"], provenance["skipped_low_coverage"]), ([7], [8]))
+        self.assertEqual((provenance["tracks"], provenance["labels"]), ([7, 8], {"line": 1, "osm": 1}))
+        self.assertEqual([(n["track_id"], n["reason"][:10]) for n in json.loads((out / "needs-line.json").read_text())],
+                         [(8, "OSM covers"), (9, "no referen")])
+
+    def test_an_empty_bundle_fails(self):
+        empty = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (empty / "catalogue.json").write_text("[]")
         with self.assertRaises(SystemExit):
-            T.cmd_bundle(SimpleNamespace(built=str(built), version="t2", commit="abc", out=str(Path(tempfile.mkdtemp())), min_coverage=0.99))
+            self.bundle(empty)
 
 
 class LinesTest(unittest.TestCase):

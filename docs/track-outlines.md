@@ -12,11 +12,14 @@ python3 scripts/osm_extract.py plan --catalogue catalogue.json --lines lines/ --
 python3 scripts/osm_extract.py download --plan plan.json --out pbf/
 python3 scripts/osm_extract.py extract --plan plan.json --pbf pbf/ --out osm/      # needs pyosmium
 python3 scripts/track_outlines.py build --catalogue catalogue.json --lines lines/ --osm osm/ --out out/
-python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --commit <builder sha> --out release/
+python3 scripts/track_turns.py fetch --catalogue catalogue.json --out svg/
+python3 scripts/track_turns.py place --built out/ --lines lines/ --svg svg/                    # needs svgelements
+python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --commit <builder sha> --catalogue catalogue.json --out release/
 ```
 
-- `catalogue.json` is the list `{id, name, config, lat, lon, length}` read from the Server's cached iRacing
-  track catalogue.
+- `catalogue.json` is the list `{id, name, config, lat, lon, length, track_map, layers}` read from the
+  Server's cached iRacing track catalogue (`track_map` is the track-map folder on iRacing's public CDN,
+  `layers` its file names).
 - **Line.** One reference line per track: the medoid of the agreeing closed Garage 61 laps of that
   track and configuration (at least two for a loose match below). Sources: `telemetry/`, `telemetry-pro/`, `telemetry-pairs/` and
   `sessions-dirt/` (a lap saved in several folders counts once); names come from `laps.csv`,
@@ -39,7 +42,24 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
   service roads and parking aisles, pedestrian ways, `highway=track`, airport runways and taxiways, and ways OSM keeps only
   as `disused:highway=raceway`, as at St. Petersburg) within 15 m of
   the aligned line, parallel to it and at least 40 m long, and stitches one outline along the line. A
-  sample with no OSM way within 15 m keeps the line itself.
+  sample with no OSM way within 15 m keeps the line itself, so every track with a line gets a whole outline:
+  `quality.sources` lists the `[from_pct, to_pct, "osm" | "line"]` runs along the lap and `quality.label`
+  says `osm` (at least 90 % OSM), `mixed` (50–90 %), `line` (under 50 %, mostly dirt, rallycross and closed
+  layouts OSM does not map) or `fictional`. `width_m` is the band width for the line parts: twice the
+  laps' p90 lateral spread plus 4 m (8–30 m) with three laps or more, else 12 m. If the main roads do not
+  give a fit (Mount Panorama runs on residential roads), the fit is retried on every drivable way.
+- **Fictional tracks.** The iRacing Superspeedway is no real place: it is built from the line alone,
+  without OSM ways or background, and labelled `fictional`.
+- **Turns.** `track_turns.py` fits iRacing's own track map (`active.svg`) onto the reference line (coarse
+  rotation search, then ICP with a similarity, as the Web map does) and places each `turns.svg` label on
+  the nearest line sample: `turns: [{number, label, apex_pct}]` in lap order, `apex_pct` measured along the
+  lap from the start/finish line like `LapDistPct`, and `turns_fit` (`error_m`, `scale_m_per_px`,
+  `rotation_deg`). A fit with a two-sided mean error over 30 m places no turns.
+- **No imagery.** Missing roads are filled from the driven line, not traced from aerial images:
+  commercial imagery (Esri, Google, Bing) may not be used to derive geometry outside OSM editing. Openly
+  licensed alternatives exist but are not used: Sentinel-2 (Copernicus, free and open, 10 m pixels, too
+  coarse for track edges), NAIP (US public domain, about 0.6 m, US only) and OpenAerialMap (per-image
+  licences, often CC BY).
 - **Pit lane.** Ways tagged `raceway=pitlane` or `service=pit`, or named pit lane, entry or exit, near the
   circuit.
 - **Frame.** Everything is moved back into iRacing's frame, where the laps are drawn.
@@ -47,8 +67,10 @@ python3 scripts/track_outlines.py bundle --built out/ --version <yyyymmdd> --com
 ## Release
 
 `bundle` writes `track-outlines-<version>.zip` (`circuit/<id>.json`, `background/<id>.json`,
-`quality.json`, `NOTICE.txt`; byte-reproducible; tracks under 90 % OSM coverage are left out so the
-Server keeps its fallback for them), `SHA256SUMS` and `provenance.json` (asset hash,
+`quality.json`, `NOTICE.txt`; byte-reproducible; every built track ships, its `quality.label` says how
+much is OSM), `needs-line.json` (`{track_id, track, layout, reason}` sorted by name: tracks without a reference line,
+and tracks whose outline is partly the line because OSM covers under 90 %; the list for driving or
+fetching laps), `SHA256SUMS` and `provenance.json` (asset hash,
 `content_sha256` over the geometry only, build time, builder commit, track ids, line sources, OSM
 snapshot times, attribution). They are published as the Forgejo release `track-outlines-<version>`.
 The Server pins one release by URL and SHA-256; a newer release changes nothing until that pin moves.
@@ -74,7 +96,7 @@ on the host in `/workspace/track-outlines` (the runner's bind mount), outside an
 
 | File | Contents |
 |---|---|
-| `<id>.circuit.json` | `outline` (closed [lat, lon] ring), `pit` (polylines), `quality`, attribution |
+| `<id>.circuit.json` | `outline` (closed [lat, lon] ring), `pit` (polylines), `width_m`, `turns`, `turns_fit`, `quality`, attribution |
 | `<id>.background.json` | landmark `ways` (`kind` as in the Server's background contract), attribution |
 
 Each file also carries `track_id`, `built_at`, `line_source`, `line_laps`, `osm_timestamp`.
@@ -88,6 +110,7 @@ Each file also carries `track_id`, `built_at`, `line_source`, `line_laps`, `osm_
 - `rotation_deg`, `scale`, `shift_m` and `max_shift_m`: the fitted iRacing-to-OSM transform
 - `lap_m`
 - `osm_ways`
+- `sources` and `label` (see Alignment)
 
 OSM data © OpenStreetMap contributors, ODbL 1.0. The outputs are a derived database under the same
 licence and must keep the attribution.

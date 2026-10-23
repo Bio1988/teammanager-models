@@ -35,6 +35,7 @@ jobs:
           test -s "$STATE/catalogue.json" && test -d "$STATE/lines"
           mkdir -p "$STATE/pbf" "$STATE/cut" "$STATE/out" "$STATE/release"
           test -x "$STATE/venv/bin/python" || { python3 -m venv "$STATE/venv" && "$STATE/venv/bin/pip" install -q osmium==4.3.2; }
+          "$STATE/venv/bin/pip" install -q svgelements==1.9.6
       - name: Download, extract, build
         run: |
           py="$STATE/venv/bin/python -B"
@@ -44,8 +45,10 @@ jobs:
           rm -rf "$STATE/cut" "$STATE/out" && mkdir -p "$STATE/cut" "$STATE/out"
           $py scripts/osm_extract.py extract --plan "$STATE/plan.json" --pbf "$STATE/pbf" --out "$STATE/cut"
           $py scripts/track_outlines.py build --catalogue "$STATE/catalogue.json" --lines "$STATE/lines" --osm "$STATE/cut" --out "$STATE/out"
+          $py scripts/track_turns.py fetch --catalogue "$STATE/catalogue.json" --out "$STATE/svg"
+          $py scripts/track_turns.py place --built "$STATE/out" --lines "$STATE/lines" --svg "$STATE/svg"
           rm -rf "$STATE/release" && mkdir -p "$STATE/release"
-          $py scripts/track_outlines.py bundle --built "$STATE/out" --version "$(date -u +%Y%m%d)" --commit "$GITHUB_SHA" --out "$STATE/release" --min-coverage 0.9
+          $py scripts/track_outlines.py bundle --built "$STATE/out" --version "$(date -u +%Y%m%d)" --commit "$GITHUB_SHA" --catalogue "$STATE/catalogue.json" --out "$STATE/release"
       - name: Publish when the geometry changed
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
