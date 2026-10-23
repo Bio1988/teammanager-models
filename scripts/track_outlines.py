@@ -727,7 +727,8 @@ def cmd_bundle(args):
     # the line because OSM covers less than 90 %; an own .ibt lap of such a track becomes its line
     catalogue, have, coverage = json.loads(Path(args.catalogue).read_text()), set(tracks), {}
     for tid in tracks:
-        coverage[tid] = json.loads((built / f"{tid}.circuit.json").read_text())["quality"]["coverage"]
+        q = json.loads((built / f"{tid}.circuit.json").read_text())["quality"]
+        coverage[tid] = 1.0 if q["label"] == "fictional" else q["coverage"]  # no real place: nothing to drive for
     needs = [{"track_id": t["id"], "track": t["name"], "layout": t["config"] or "", "reason": "no reference line"}
              for t in catalogue if t["id"] not in have]
     needs += [{"track_id": t["id"], "track": t["name"], "layout": t["config"] or "",
