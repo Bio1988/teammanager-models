@@ -54,8 +54,8 @@ class TurnsTest(unittest.TestCase):
         d = self.tmp()
         (d / "turns.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"><text transform="matrix(1 0 0 1 10 20)">'
                                      '<tspan x="0" y="0">1</tspan><tspan x="7" y="0">1</tspan></text>'
-                                     '<text x="5" y="6">3a</text></svg>')
-        self.assertEqual(T.svg_labels(d / "turns.svg"), [("11", 10.0, -20.0), ("3a", 5.0, -6.0)])
+                                     '<text x="5" y="6">3a</text><text transform="translate(1602.99 718.33)">4</text></svg>')
+        self.assertEqual(T.svg_labels(d / "turns.svg"), [("11", 10.0, -20.0), ("3a", 5.0, -6.0), ("4", 1602.99, -718.33)])
 
     @unittest.skipUnless(HAS_SVG, "svgelements not installed")
     def test_place_writes_turns_in_lap_order_and_survives_a_broken_svg(self):

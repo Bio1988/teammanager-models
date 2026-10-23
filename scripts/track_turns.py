@@ -195,19 +195,23 @@ def svg_points(path: Path, step_px: float = 6.0):
 
 
 MATRIX = re.compile(r"matrix\(\s*" + r"[\s,]+".join([r"(-?[\d.]+)"] * 6) + r"\s*\)")
+TRANSLATE = re.compile(r"translate\(\s*(-?[\d.]+)(?:[\s,]+(-?[\d.]+))?\s*\)")
 
 
 def svg_labels(path: Path):
-    """(label, x, -y) per <text>: its tspans joined ("1"+"1" is "11"), placed by the text's own matrix or x/y,
-    as the Web map reads them."""
+    """(label, x, -y) per <text>: its tspans joined ("1"+"1" is "11"), placed by the text's own matrix(), translate()
+    or x/y."""
     out = []
     for el in ET.parse(path).getroot().iter():
         if el.tag.rsplit("}", 1)[-1] != "text":
             continue
         label = "".join(el.itertext()).strip()
-        m = MATRIX.search(el.get("transform") or "")
+        transform = el.get("transform") or ""
+        m, t = MATRIX.search(transform), TRANSLATE.search(transform)
         if m:
             x, y = float(m.group(5)), float(m.group(6))
+        elif t:
+            x, y = float(t.group(1)), float(t.group(2) or 0)
         elif el.get("x") is not None:
             x, y = float(el.get("x")), float(el.get("y", 0))
         else:
