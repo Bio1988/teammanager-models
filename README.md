@@ -46,7 +46,7 @@ not network URLs, and is not a model catalog or authority.
 
 ## Repository map
 
-- `scripts/track_outlines.py`, `scripts/osm_extract.py`, `scripts/track_turns.py` and `scripts/track_bundle.py` build the GPS-aligned circuit
+- `scripts/track_outlines.py`, `scripts/osm_extract.py`, `scripts/track_turns.py`, `scripts/track_bundle.py` and `scripts/track_release.py` build the GPS-aligned circuit
   outlines for the Web telemetry map from Garage 61 reference laps (or the user's own .ibt laps) and
   Geofabrik OSM extracts, with iRacing's own turn numbers; see [docs/track-outlines.md](docs/track-outlines.md).
 - `scripts/package-moonshine-models.py` verifies pinned upstream files and

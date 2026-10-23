@@ -164,7 +164,7 @@ class BundleTest(unittest.TestCase):
     def bundle(self, built, version="t1", lines="", previous=""):
         out = Path(self.enterContext(tempfile.TemporaryDirectory()))
         B.cmd_bundle(SimpleNamespace(built=str(built), version=version, commit="abc", out=str(out),
-                                     catalogue=str(built / "catalogue.json"), lines=lines, previous=previous))
+                                     catalogue=str(built / "catalogue.json"), lines=lines, previous=previous, base_release=""))
         return out
 
     def test_bundle_is_reproducible_and_carries_provenance(self):

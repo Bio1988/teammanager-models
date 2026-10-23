@@ -1,0 +1,7 @@
+# The two libraries of the outline build (pyosmium for extract, svgelements for turns), hash-pinned for the
+# ai-box runner (Python 3.12, x86-64 Linux): pip install --no-deps --require-hashes --only-binary=:all: -r this file
+# (osmium declares requests for its replication module, which the build does not use).
+osmium==4.3.2 \
+    --hash=sha256:604a3145aa755790b91e3eefac7ddbb74d31f188fddbbbb988877cba50e88eb7
+svgelements==1.9.6 \
+    --hash=sha256:8a5cf2cc066d98e713d5b875b1d6e5eeb9b92e855e835ebd7caab2713ae1dcad
