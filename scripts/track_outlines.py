@@ -41,6 +41,7 @@ FORMAT = 1
 M_PER_DEG = 111_320.0
 
 STEP_M = 5.0          # reference line spacing
+MIN_LAP_M = 150.0     # shorter closed laps are fragments; the shortest iRacing ovals (Kern mini, Sonoma oval) run about 210-270 m
 MIN_LINE_LAPS = 2     # a loose name match needs two agreeing closed laps; one lap may be another layout
 KEEP_M = 15.0         # an OSM point this close to the aligned line is on the circuit
 DEFAULT_WIDTH_M = 12.0  # outline width when too few laps show the lateral spread (typical road course)
@@ -226,7 +227,7 @@ def medoid_line(laps_ll, max_laps=12):
         if len(pts) < 100 or math.dist(pts[0], pts[-1]) > 100 or any(math.dist(a, b) > 50 for a, b in zip(pts, pts[1:])):
             continue
         r = resample(pts, STEP_M)
-        if len(r) * STEP_M >= 300:
+        if len(r) * STEP_M >= MIN_LAP_M:
             laps.append(r)
             source.append(lap)
     if not laps:
@@ -335,7 +336,9 @@ def cmd_lines(args):
                 row.update(laps_used=used, lap_m=round(lap_m), origin_far_m=round(far), length_ok=ok_len)
                 # the catalogue length is only a hint (configs often carry the full-course value), but a loose
                 # name match must also have the catalogue's length: a retired layout may differ from today's
-                if far < 15_000 and (ok_len or not row["loose"]) and (used >= MIN_LINE_LAPS or not row["loose"]):
+                # an exact name match is trusted even when the catalogue origin is far off (the Indianapolis ovals' origin
+                # sits 37 km away); a loose match must also sit near its origin
+                if (far < 15_000 or not row["loose"]) and (ok_len or not row["loose"]) and (used >= MIN_LINE_LAPS or not row["loose"]):
                     (out / f"{t['id']}.line.json").write_text(json.dumps(
                         {"track_id": t["id"], "source": "garage61", "laps": used, "step_m": STEP_M,
                          "spread_m": lap_spread(line, agreed), "line": line},

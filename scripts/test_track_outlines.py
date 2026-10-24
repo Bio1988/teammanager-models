@@ -264,6 +264,18 @@ class LinesTest(unittest.TestCase):
         self.assertEqual(found, [18])
         self.assertEqual(json.loads((out / "18.line.json").read_text())["source"], "ibt")
 
+    def test_a_short_oval_and_an_exact_match_far_from_its_origin_get_lines(self):
+        small = [(x / 10, y / 10) for x, y in stadium()]  # a 285 m oval
+        root = self.g61({5: ("Sonoma Raceway", "Oval", 2)})
+        for k in range(2):
+            rows = "".join(f"{i},0,0,0,{a},{b}\n" for i, (a, b) in enumerate(ll([(x, y + k) for x, y in small])))
+            (root / "telemetry-pairs" / "track_5" / f"lap5-{k}.csv").write_text("sample,t_s,Speed,LapDistPct,Lat,Lon\n#,60 Hz,m/s,0-1,deg,deg\n" + rows)
+        self.assertEqual(self.lines(root, [{"id": 568, "name": "Sonoma Raceway", "config": "Oval", "length": T.length(small) / 1609.344}]), [568])
+        far = self.g61({6: ("Indianapolis Motor Speedway", "NASCAR Oval", 2)})
+        catalogue = {"id": 522, "name": "Indianapolis Motor Speedway", "config": "NASCAR Oval"}
+        found = self.lines(far, [catalogue | {"lat": ORIGIN[0] + 0.35}])  # the catalogue origin 39 km north of the laps
+        self.assertEqual(found, [522])
+
     def test_a_lap_file_without_coordinates_is_empty(self):
         d = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (d / "empty.csv").write_text("")
