@@ -46,10 +46,11 @@ jobs:
     steps:
       - name: Checkout and tools
         # the slim image has neither node (for actions/checkout) nor git or curl: the public repository archive of
-        # this commit, and curl from Debian
+        # this commit, and curl (plus libexpat1 for pyosmium) from Debian
         run: |
           set -euo pipefail
-          apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates > /dev/null
+          # libexpat1: the pyosmium wheel links the system expat (the slim image does not have it)
+          apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates libexpat1 > /dev/null
           curl -fsSL --max-time 120 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/archive/$GITHUB_SHA.tar.gz" | tar -xz --strip-components=1
           test -f scripts/track_outlines.py
       - name: Inputs
