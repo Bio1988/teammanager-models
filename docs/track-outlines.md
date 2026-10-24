@@ -87,7 +87,7 @@ Forgejo release `track-outlines-<version>`.
 
 ## Automatic rebuilds
 
-`.forgejo/workflows/track-outlines.yml` runs on the `ai-box` runner:
+`.forgejo/workflows/track-outlines.yml` runs on the AI box runner:
 
 - **Daily, incremental** (02:47 UTC, not Mondays): catalogue tracks with a reference line that the latest
   release lacks (`track_release.py new-ids`) are planned, extracted, built and given turns, then added to the
@@ -110,9 +110,11 @@ published; a failure deletes the draft and its tag. A second release on one day 
 Server finds the newest release by itself (weekly, through Forgejo's releases API) and checks it against
 `SHA256SUMS`, the size cap and the same superset rule.
 
-The job runs on the `ai-box` runner label, which the AI box runner registers as `ai-box:host`: jobs run
-directly in the runner container, which pull-request jobs of every repository share. State therefore lives
-on the host in `/workspace/track-outlines` (the runner's bind mount), outside any job's work tree:
+The job runs on the runner's `linux` label in its own job container: a digest-pinned
+`python:3.12-slim-bookworm` (glibc), because the runner's own container is Alpine (musl) and pyosmium has
+no musl wheel. The job fetches this commit's repository archive (the image has no git or node) and installs
+curl from Debian. State lives on the host in `/workspace/track-outlines`, mounted into the job container
+(the runner allows any volume), outside any job's work tree:
 
 - `lines/`: `<id>.line.json` from the `lines` step (Garage 61) or from an own `.ibt` lap; seeded by the
   operator, since the Garage 61 data is not on the runner. A track gets an outline once it has a line here.
